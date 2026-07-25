@@ -1,11 +1,389 @@
-@import 'tailwindcss';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+[x-cloak] {
+    display: none !important;
+}
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+/* Floating AI assistant — always available at bottom-right */
+.psis-ai-widget {
+    position: fixed !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.psis-ai-widget > * {
+    pointer-events: auto;
+}
+
+.psis-ai-fab {
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    border: 2px solid #F4B400;
+    border-radius: 9999px;
+    background: #fff;
+    color: #0B3C91;
+    box-shadow: 0 10px 25px rgba(11, 60, 145, 0.35);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.psis-ai-fab:hover {
+    transform: scale(1.05);
+}
+
+.psis-ai-fab-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.psis-ai-fab-close {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #0B3C91;
+}
+
+.psis-ai-panel {
+    width: min(calc(100vw - 2rem), 24rem);
+    height: min(70vh, 32rem);
+    display: flex;
+    flex-direction: column;
+    border-radius: 1rem;
+    border: 1px solid var(--psis-border, #E2E8F0);
+    background: var(--psis-surface, #fff);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+}
+
+.psis-ai-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #0B3C91;
+    color: #fff;
+}
+
+.psis-ai-panel-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.psis-ai-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid #F4B400;
+    background: #fff;
+}
+
+.psis-ai-panel-title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.psis-ai-panel-sub {
+    margin: 0.15rem 0 0;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.psis-ai-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.psis-ai-link,
+.psis-ai-icon-btn {
+    color: #fff;
+    background: transparent;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.7rem;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.psis-ai-link:hover,
+.psis-ai-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.psis-ai-suggestions {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--psis-border, #E2E8F0);
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.dark .psis-ai-suggestions {
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.psis-ai-suggestions-label {
+    margin: 0 0 0.4rem;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+}
+
+.psis-ai-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.psis-ai-chip {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    border: 1px solid var(--psis-border, #E2E8F0);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.psis-ai-chip:hover {
+    border-color: #0B3C91;
+    color: #0B3C91;
+}
+
+.psis-ai-thread {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.psis-ai-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+
+.psis-ai-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.45rem;
+}
+
+.psis-ai-row.is-user {
+    justify-content: flex-end;
+}
+
+.psis-ai-row.is-bot {
+    justify-content: flex-start;
+}
+
+.psis-ai-bubble {
+    max-width: calc(100% - 2.5rem);
+    border-radius: 1rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+}
+
+.psis-ai-typing {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 3rem;
+    min-height: 1.75rem;
+}
+
+.psis-ai-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: #94a3b8;
+    animation: psis-ai-bounce 1.2s infinite ease-in-out;
+}
+
+.psis-ai-typing span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.psis-ai-typing span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes psis-ai-bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+    40% { transform: translateY(-4px); opacity: 1; }
+}
+
+.psis-ai-bubble.is-user {
+    background: #0B3C91;
+    color: #fff;
+    border-bottom-right-radius: 0.35rem;
+}
+
+.psis-ai-bubble.is-bot {
+    background: #f1f5f9;
+    color: inherit;
+    border-bottom-left-radius: 0.35rem;
+}
+
+.dark .psis-ai-bubble.is-bot {
+    background: #1e293b;
+}
+
+.psis-ai-form {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-top: 1px solid var(--psis-border, #E2E8F0);
+}
+
+.psis-ai-input {
+    flex: 1;
+    min-width: 0;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    background: transparent;
+    color: inherit;
+}
+
+.psis-ai-send {
+    border: none;
+    border-radius: 0.5rem;
+    background: #0B3C91;
+    color: #fff;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.psis-ai-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@layer base {
+    :root {
+        --pecit-blue: #0B3C91;
+        --pecit-blue-light: #3B6EBF;
+        --pecit-blue-dark: #072457;
+        --pecit-gold: #F4B400;
+        --pecit-gold-light: #F7D455;
+        --pecit-gold-dark: #B8860B;
+
+        --psis-bg: #F4F6FA;
+        --psis-surface: #FFFFFF;
+        --psis-surface-elevated: #FFFFFF;
+        --psis-text: #1A202C;
+        --psis-text-muted: #64748B;
+        --psis-border: #E2E8F0;
+        --psis-sidebar-bg: #0B3C91;
+        --psis-sidebar-text: #FFFFFF;
+        --psis-sidebar-hover: rgba(255, 255, 255, 0.12);
+        --psis-sidebar-active: rgba(244, 180, 0, 0.2);
+    }
+
+    .dark {
+        --psis-bg: #0F172A;
+        --psis-surface: #1E293B;
+        --psis-surface-elevated: #334155;
+        --psis-text: #F1F5F9;
+        --psis-text-muted: #94A3B8;
+        --psis-border: #334155;
+        --psis-sidebar-bg: #05183A;
+        --psis-sidebar-text: #E2E8F0;
+        --psis-sidebar-hover: rgba(255, 255, 255, 0.08);
+        --psis-sidebar-active: rgba(244, 180, 0, 0.15);
+    }
+}
+
+@layer components {
+    .psis-card {
+        @apply bg-white dark:bg-slate-800 rounded-xl shadow-soft border border-slate-200/60 dark:border-slate-700/60 transition-shadow duration-200 hover:shadow-soft-lg;
+    }
+
+    .psis-btn-primary {
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-pecit-blue hover:bg-pecit-blue-700 text-white font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pecit-blue/50 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+    }
+
+    .psis-btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-pecit-gold hover:bg-pecit-gold-600 text-pecit-blue-900 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pecit-gold/50 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+    }
+
+    .psis-btn-outline {
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium rounded-lg transition-all duration-200;
+    }
+
+    .psis-input {
+        @apply w-full rounded-lg border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white shadow-sm focus:border-pecit-blue focus:ring-pecit-blue/30 transition-colors duration-200;
+    }
+
+    .psis-label {
+        @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5;
+    }
+
+    .psis-page-title {
+        @apply text-2xl font-bold text-slate-900 dark:text-white;
+    }
+
+    .psis-page-subtitle {
+        @apply text-sm text-slate-500 dark:text-slate-400 mt-1;
+    }
+
+    .psis-sidebar-link {
+        @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200;
+    }
+
+    .psis-sidebar-link-active {
+        @apply bg-white/15 text-pecit-gold border-l-2 border-pecit-gold;
+    }
+
+    .psis-sidebar-link-inactive {
+        @apply text-white/80 hover:bg-white/10 hover:text-white;
+    }
+}
+
+@layer utilities {
+    .scrollbar-thin {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.3);
+        border-radius: 9999px;
+    }
 }

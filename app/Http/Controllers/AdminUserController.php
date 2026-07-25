@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\AuditLog;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+class AdminUserController extends Controller
+{
+    public function index(): View
+    {
+        $users = User::with(['department', 'roles'])->latest()->paginate(15);
+
+        return view('admin.users.index', compact('users'));
+    }
+
+    public function create(): View
+    {
+        return view('admin.users.form', ['user' => new User]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $this->validated($request);
+        $user = User::create(collect($data)->except('role')->toArray());
+        $user->forceFill(['email_verified_at' => now()])->save();
+        $user->syncRoles([$data['role']]);
+
+        return redirect()->route('admin.users.index')->with('success', 'User created.');
+    }
+
+    public function edit(User $user): View
+    {
+        return view('admin.users.form', compact('user'));
+    }
+
+    public function update(Request $request, User $user): RedirectResponse
+    {
+        $data = $this->validated($request, $user);
+        $payload = collect($data)->except(['password', 'role'])->toArray();
+
+        if (! empty($data['password'])) {
+            $payload['password'] = $data['password'];
+        }
+
+        $user->update($payload);
+        $user->syncRoles([$data['role']]);
+
+        return redirect()->route('admin.users.index')->with('success', 'User updated.');
+    }
+
+    public function auditLogs(): View
+    {
+        $logs = AuditLog::with('user')->latest()->paginate(20);
+
+        return view('admin.audit-logs', compact('logs'));
+    }
+
+    protected function validated(Request $request, ?User $user = null): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user?->id)],
+            'employee_id' => ['nullable', 'string', 'max:50', Rule::unique('users', 'employee_id')->ignore($user?->id)],
+            'department_id' => ['nullable', 'exists:departments,id'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'is_active' => ['sometimes', 'boolean'],
+            'password' => [$user ? 'nullable' : 'required', 'string', 'min:8'],
+            'role' => ['required', Rule::in(['Administrator', 'Accounting', 'Supply Personnel', 'Faculty', 'Student'])],
+        ]) + ['is_active' => $request->boolean('is_active', true)];
+    }
+}
