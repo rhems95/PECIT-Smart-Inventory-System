@@ -25,17 +25,24 @@ class LoginRequest extends FormRequest
     {
         if ($this->isStudentLogin()) {
             return [
-                'login_as' => ['required', 'in:student,staff'],
+                'login_as' => ['nullable', 'in:student,staff'],
                 'student_id' => ['required', 'string', 'max:50'],
                 'last_name' => ['required', 'string', 'max:255'],
             ];
         }
 
         return [
-            'login_as' => ['required', 'in:student,staff'],
+            'login_as' => ['nullable', 'in:student,staff'],
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('login_as')) {
+            $this->merge(['login_as' => 'staff']);
+        }
     }
 
     /**
