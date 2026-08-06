@@ -3,15 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\Department;
 use App\Models\Inventory;
-use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 
 class DemoInventorySeeder extends Seeder
 {
     public function run(): void
     {
-        $supplier = Supplier::first();
         $items = [
             ['Bond Paper A4', 'Office Supplies', 'ream', 285, 120, 30, 'Supply Room A'],
             ['Board Marker (Black)', 'Classroom Supplies', 'piece', 45, 85, 25, 'Supply Room A'],
@@ -38,9 +37,81 @@ class DemoInventorySeeder extends Seeder
                     'quantity' => $qty,
                     'reserved_quantity' => 0,
                     'minimum_stock' => $min,
-                    'supplier_id' => $supplier?->id,
                     'location' => $location,
+                    'student_shop' => false,
+                    'department_id' => null,
                     'status' => $qty <= 0 ? 'out_of_stock' : ($qty <= $min ? 'low_stock' : 'available'),
+                ],
+            );
+        }
+
+        $this->seedUniforms();
+    }
+
+    protected function seedUniforms(): void
+    {
+        $uniforms = Category::where('slug', 'uniforms')->first();
+        if (! $uniforms) {
+            return;
+        }
+
+        // Shared: every student may buy these (no department lock).
+        $shared = [
+            ['Uniform P.E.', 'UNI-PE', 650, 80, 15, 'Physical Education uniform — available to all students.'],
+            ['Uniform NSTP', 'UNI-NSTP', 550, 60, 15, 'NSTP uniform — available to all students.'],
+            ['Lanyard for ID', 'UNI-LANYARD', 80, 200, 30, 'ID lanyard — available to all students.'],
+        ];
+
+        foreach ($shared as [$name, $code, $price, $qty, $min, $description]) {
+            Inventory::updateOrCreate(
+                ['item_code' => $code],
+                [
+                    'item_name' => $name,
+                    'description' => $description,
+                    'category_id' => $uniforms->id,
+                    'unit' => 'piece',
+                    'unit_price' => $price,
+                    'quantity' => $qty,
+                    'reserved_quantity' => 0,
+                    'minimum_stock' => $min,
+                    'location' => 'Uniform Store',
+                    'student_shop' => true,
+                    'department_id' => null,
+                    'status' => 'available',
+                ],
+            );
+        }
+
+        // Exclusive: ONLY students of that department can buy.
+        $deptUniforms = [
+            'COE' => ['Engineering Uniform (Exclusive)', 'UNI-COE', 'Exclusive to College of Engineering students only.'],
+            'CIT' => ['IT Uniform (Exclusive)', 'UNI-CIT', 'Exclusive to College of Information Technology students only.'],
+            'CCS' => ['Computer Studies Uniform (Exclusive)', 'UNI-CCS', 'Exclusive to College of Computer Studies students only.'],
+            'COB' => ['Business Uniform (Exclusive)', 'UNI-COB', 'Exclusive to College of Business students only.'],
+            'SHS' => ['SHS Uniform (Exclusive)', 'UNI-SHS', 'Exclusive to Senior High School students only.'],
+        ];
+
+        foreach ($deptUniforms as $code => [$name, $itemCode, $description]) {
+            $department = Department::where('code', $code)->first();
+            if (! $department) {
+                continue;
+            }
+
+            Inventory::updateOrCreate(
+                ['item_code' => $itemCode],
+                [
+                    'item_name' => $name,
+                    'description' => $description,
+                    'category_id' => $uniforms->id,
+                    'unit' => 'set',
+                    'unit_price' => 1200,
+                    'quantity' => 40,
+                    'reserved_quantity' => 0,
+                    'minimum_stock' => 10,
+                    'location' => 'Uniform Store',
+                    'student_shop' => true,
+                    'department_id' => $department->id,
+                    'status' => 'available',
                 ],
             );
         }

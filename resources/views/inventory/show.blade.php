@@ -8,6 +8,16 @@
     <div class="lg:col-span-2 psis-card p-6 space-y-3">
         <p><span class="text-slate-500">Code:</span> {{ $inventory->item_code }}</p>
         <p><span class="text-slate-500">Category:</span> {{ $inventory->category?->name }}</p>
+        <p><span class="text-slate-500">Student shop:</span> {{ $inventory->student_shop ? 'Yes' : 'No' }}</p>
+        <p><span class="text-slate-500">Shop access:</span>
+            @if (! $inventory->student_shop)
+                —
+            @elseif ($inventory->department)
+                Exclusive to {{ $inventory->department->name }} only
+            @else
+                Shared (all students — e.g. P.E. / NSTP / lanyard)
+            @endif
+        </p>
         <p><span class="text-slate-500">Description:</span> {{ $inventory->description ?: '—' }}</p>
         <p><span class="text-slate-500">On hand:</span> {{ $inventory->quantity }} {{ $inventory->unit }} (reserved: {{ $inventory->reserved_quantity }})</p>
         <p><span class="text-slate-500">Available:</span> {{ $inventory->availableQuantity() }}</p>

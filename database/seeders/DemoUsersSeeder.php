@@ -5,28 +5,33 @@ namespace Database\Seeders;
 use App\Models\Department;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+
 class DemoUsersSeeder extends Seeder
 {
     public function run(): void
     {
         $adminDept = Department::where('name', 'Administration')->first();
         $supplyDept = Department::where('name', 'Supply Office')->first();
-        $engDept = Department::where('name', 'College of Engineering')->first();
-        $itDept = Department::where('name', 'College of Information Technology')->first();
+        $engDept = Department::where('code', 'COE')->first()
+            ?? Department::where('name', 'College of Engineering')->first();
+        $itDept = Department::where('code', 'CIT')->first()
+            ?? Department::where('name', 'College of Information Technology')->first();
 
         $users = [
-            ['Administrator', 'PECIT Admin', 'admin@pecit.edu.ph', 'ADM-001', $adminDept?->id],
-            ['Accounting', 'PECIT Accounting', 'accounting@pecit.edu.ph', 'ACC-001', $adminDept?->id],
-            ['Supply Personnel', 'Supply Officer', 'supply@pecit.edu.ph', 'SUP-001', $supplyDept?->id],
-            ['Faculty', 'Prof. Juan Dela Cruz', 'faculty@pecit.edu.ph', 'FAC-001', $engDept?->id],
-            ['Student', 'Maria Santos', 'student@pecit.edu.ph', 'STU-001', $itDept?->id],
+            ['Administrator', 'PECIT Admin', null, 'admin@pecit.edu.ph', 'ADM-001', $adminDept?->id],
+            ['Accounting', 'PECIT Accounting', null, 'accounting@pecit.edu.ph', 'ACC-001', $adminDept?->id],
+            ['Supply Personnel', 'Supply Officer', null, 'supply@pecit.edu.ph', 'SUP-001', $supplyDept?->id],
+            ['Faculty', 'Prof. Juan Dela Cruz', null, 'faculty@pecit.edu.ph', 'FAC-001', $engDept?->id],
+            ['Student', 'Maria Santos', 'Santos', 'student@pecit.edu.ph', 'STU-001', $itDept?->id],
+            ['Student', 'Carlos Mendoza', 'Mendoza', 'engineering.student@pecit.edu.ph', 'STU-COE-001', $engDept?->id],
         ];
 
-        foreach ($users as [$role, $name, $email, $employeeId, $departmentId]) {
+        foreach ($users as [$role, $name, $lastName, $email, $employeeId, $departmentId]) {
             $user = User::firstOrCreate(
                 ['email' => $email],
                 [
                     'name' => $name,
+                    'last_name' => $lastName,
                     // Plain value: User model casts password as hashed.
                     'password' => 'password',
                     'employee_id' => $employeeId,
@@ -35,6 +40,18 @@ class DemoUsersSeeder extends Seeder
                     'email_verified_at' => now(),
                 ],
             );
+
+            $user->fill([
+                'name' => $name,
+                'last_name' => $lastName,
+                'employee_id' => $employeeId,
+                'department_id' => $departmentId,
+                'is_active' => true,
+            ])->save();
+
+            if (! $user->email_verified_at) {
+                $user->forceFill(['email_verified_at' => now()])->save();
+            }
 
             $user->syncRoles([$role]);
         }

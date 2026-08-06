@@ -11,7 +11,10 @@ class ShopController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Inventory::with('category')->where('status', '!=', 'discontinued');
+        $user = $request->user();
+
+        $query = Inventory::with(['category', 'department'])
+            ->forStudentShop($user);
 
         if ($search = $request->string('search')->trim()->toString()) {
             $query->where('item_name', 'like', "%{$search}%");
@@ -30,6 +33,12 @@ class ShopController extends Controller
             'quantity' => ['required', 'integer', 'min:1'],
         ]);
 
+        $item = Inventory::findOrFail($data['inventory_id']);
+
+        if (! $item->isAvailableInStudentShop($request->user())) {
+            return back()->with('error', 'That item is not available for your department.');
+        }
+
         $cart = session('cart', []);
         $cart[$data['inventory_id']] = ($cart[$data['inventory_id']] ?? 0) + $data['quantity'];
         session(['cart' => $cart]);
@@ -39,8 +48,19 @@ class ShopController extends Controller
 
     public function cart(): View
     {
+        $user = request()->user();
         $cart = session('cart', []);
         $items = Inventory::whereIn('id', array_keys($cart))->get()->keyBy('id');
+
+        // Drop cart lines the student is no longer allowed to buy.
+        foreach (array_keys($cart) as $inventoryId) {
+            $item = $items->get($inventoryId);
+            if (! $item || ! $item->isAvailableInStudentShop($user)) {
+                unset($cart[$inventoryId]);
+                $items->forget($inventoryId);
+            }
+        }
+        session(['cart' => $cart]);
 
         return view('shop.cart', compact('cart', 'items'));
     }

@@ -9,12 +9,12 @@ class InventoryPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->hasAnyRole(['Administrator', 'Accounting', 'Supply Personnel', 'Faculty']);
     }
 
     public function view(User $user, Inventory $inventory): bool
     {
-        return true;
+        return $user->hasAnyRole(['Administrator', 'Accounting', 'Supply Personnel', 'Faculty']);
     }
 
     public function create(User $user): bool

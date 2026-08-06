@@ -16,6 +16,33 @@ class DashboardController extends Controller
     public function __invoke(AiInsightService $ai): View
     {
         $user = Auth::user();
+        $isStudent = $user->hasRole('Student');
+
+        $announcements = Announcement::active()
+            ->with('creator')
+            ->latest('published_at')
+            ->limit(5)
+            ->get();
+
+        if ($isStudent) {
+            $studentPurchases = PurchaseRequest::where('user_id', $user->id)->latest()->limit(5)->get();
+            $shopCount = Inventory::forStudentShop($user)->count();
+            $aiSummary = 'Buy uniforms for your department in the Uniform Shop. Shared items (P.E., NSTP, and ID lanyard) are available to all students.';
+
+            return view('dashboard.index', [
+                'isStudent' => true,
+                'stats' => [],
+                'chartLabels' => [],
+                'chartData' => [],
+                'recentRequests' => collect(),
+                'forecasts' => [],
+                'aiSummary' => $aiSummary,
+                'studentPurchases' => $studentPurchases,
+                'shopCount' => $shopCount,
+                'announcements' => $announcements,
+            ]);
+        }
+
         $inventory = Inventory::all();
 
         $stats = [
@@ -44,25 +71,17 @@ class DashboardController extends Controller
         $forecasts = $ai->inventoryForecasts(5);
         $aiSummary = $ai->monthlySummary();
 
-        $studentPurchases = $user->hasRole('Student')
-            ? PurchaseRequest::where('user_id', $user->id)->latest()->limit(5)->get()
-            : collect();
-
-        $announcements = Announcement::active()
-            ->with('creator')
-            ->latest('published_at')
-            ->limit(5)
-            ->get();
-
-        return view('dashboard.index', compact(
-            'stats',
-            'chartLabels',
-            'chartData',
-            'recentRequests',
-            'forecasts',
-            'aiSummary',
-            'studentPurchases',
-            'announcements',
-        ));
+        return view('dashboard.index', [
+            'isStudent' => false,
+            'stats' => $stats,
+            'chartLabels' => $chartLabels,
+            'chartData' => $chartData,
+            'recentRequests' => $recentRequests,
+            'forecasts' => $forecasts,
+            'aiSummary' => $aiSummary,
+            'studentPurchases' => collect(),
+            'shopCount' => 0,
+            'announcements' => $announcements,
+        ]);
     }
 }

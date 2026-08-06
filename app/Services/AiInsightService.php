@@ -22,7 +22,6 @@ class AiInsightService
      *     item: string,
      *     item_code: string,
      *     category: string|null,
-     *     supplier: string|null,
      *     unit: string,
      *     on_hand: int,
      *     reserved: int,
@@ -89,30 +88,73 @@ class AiInsightService
 
     public function chatResponse(User $user, string $question): string
     {
-        $q = strtolower(trim($question));
+        $q = $this->normalizeQuestion($question);
         $role = $user->getRoleNames()->first() ?? 'User';
 
-        if ($this->matches($q, ['help', 'what can you', 'how do i'])) {
-            return $this->helpForRole($user);
+        // Specific how-to / intent handlers FIRST (never let generic "how do i" steal these).
+        if ($this->matches($q, [
+            'how do i buy', 'how to buy', 'buy uniform', 'buying uniform',
+            'uniform shop', 'checkout', 'payment slip', 'upload receipt',
+        ])) {
+            return $this->answerHowToBuy($user);
         }
 
-        if ($this->matches($q, ['how do i request', 'how to request', 'submit request'])) {
-            return 'Faculty: go to New Request, pick items and purpose, then submit. Flow: Accounting review → Admin approval → Supply release.';
+        if ($this->matches($q, [
+            'what uniform', 'which uniform', 'uniforms can i', 'can i buy',
+            'available uniform', 'my uniform', 'department uniform',
+        ])) {
+            return $this->answerUniformsForStudent($user);
         }
 
-        if ($this->matches($q, ['how do i buy', 'how to buy', 'payment', 'checkout'])) {
-            return 'Students: open Shop → add to cart → Checkout → pay over the counter → upload receipt → Accounting verifies → Supply releases items.';
+        if ($this->matches($q, [
+            'how do i request', 'how to request', 'submit request', 'request supplies', 'new request',
+        ])) {
+            return $this->answerHowToRequest($user);
         }
 
-        if ($this->matches($q, ['low stock', 'low-stock'])) {
-            return $this->answerLowStock();
+        if ($this->matches($q, [
+            'my purchase', 'purchase status', 'what did i buy', 'my order', 'my orders',
+        ])) {
+            return $this->answerMyPurchases($user);
         }
 
-        if ($this->matches($q, ['out of stock', 'out-of-stock', 'no stock'])) {
-            return $this->answerOutOfStock();
+        if ($this->matches($q, [
+            'my request', 'request status', 'status of my request', 'status request', 'my pending request',
+        ])) {
+            return $this->answerMyRequests($user);
         }
 
-        if ($this->matches($q, ['forecast', 'reorder', 'restock', 'run out'])) {
+        if ($this->matches($q, ['pending payment', 'verify payment', 'payments to verify', 'to verify'])) {
+            return $this->answerPayments($user);
+        }
+
+        if ($this->matches($q, ['pending request', 'pending'])) {
+            return $this->answerPending($user);
+        }
+
+        if ($this->matches($q, ['approve', 'admin review', 'for approval', 'waiting for approval'])) {
+            return $this->answerApprovals($user);
+        }
+
+        if ($this->matches($q, ['release', 'ready for release'])) {
+            return $this->answerReleases($user);
+        }
+
+        if ($this->matches($q, ['payment']) && $user->hasAnyRole(['Accounting', 'Administrator', 'Student'])) {
+            return $this->answerPayments($user);
+        }
+
+        if ($this->matches($q, [
+            'low stock', 'low-stock', 'low in stock', 'below minimum', 'running low', 'items are low',
+        ])) {
+            return $this->answerLowStock($user);
+        }
+
+        if ($this->matches($q, ['out of stock', 'out-of-stock', 'no stock', 'zero stock'])) {
+            return $this->answerOutOfStock($user);
+        }
+
+        if ($this->matches($q, ['forecast', 'reorder', 'restock', 'run out', 'recommendation'])) {
             return $this->answerForecasts();
         }
 
@@ -120,33 +162,17 @@ class AiInsightService
             return $this->monthlySummary();
         }
 
-        if ($this->matches($q, ['pending'])) {
-            return $this->answerPending($user);
+        // Category-aware stock query: "computer supplies" / "laboratory"
+        if (preg_match('/\b(office|classroom|laboratory|computer|cleaning|pantry|maintenance|furniture|uniform)\b/', $q, $m)) {
+            if ($m[1] === 'uniform') {
+                return $this->answerUniformsForStudent($user);
+            }
+
+            return $this->answerCategoryStock($m[1], $user);
         }
 
-        if ($this->matches($q, ['my request', 'request status', 'status of my request', 'status request'])) {
-            return $this->answerMyRequests($user);
-        }
-
-        if ($this->matches($q, ['my purchase', 'purchase status', 'what did i buy', 'my order'])) {
-            return $this->answerMyPurchases($user);
-        }
-
-        if ($this->matches($q, ['release', 'ready for release'])) {
-            return $this->answerReleases($user);
-        }
-
-        if ($this->matches($q, ['payment', 'verify', 'to verify'])) {
-            return $this->answerPayments($user);
-        }
-
-        if ($this->matches($q, ['approve', 'admin review', 'for approval'])) {
-            return $this->answerApprovals($user);
-        }
-
-        // Category-aware stock query: "computer supplies low" / "items in laboratory"
-        if (preg_match('/\b(office|classroom|laboratory|computer|cleaning|pantry|maintenance|furniture)\b/', $q, $m)) {
-            return $this->answerCategoryStock($m[1]);
+        if ($this->matches($q, ['help', 'what can you', 'commands', 'frequent question'])) {
+            return $this->helpForRole($user);
         }
 
         return "I'm your {$role} assistant. ".$this->helpForRole($user);
@@ -157,7 +183,7 @@ class AiInsightService
      */
     public function lowStockItems(): Collection
     {
-        return Inventory::with(['category', 'supplier'])->get()->filter(fn (Inventory $i) => $i->isLowStock());
+        return Inventory::with(['category'])->get()->filter(fn (Inventory $i) => $i->isLowStock());
     }
 
     /**
@@ -177,8 +203,8 @@ class AiInsightService
             $user->hasRole('Student') => [
                 'My purchases',
                 'Purchase status',
-                'Out of stock',
-                'How do I buy?',
+                'How do I buy uniforms?',
+                'What uniforms can I buy?',
             ],
             $user->hasRole('Accounting') => [
                 'Pending payments',
@@ -218,7 +244,7 @@ class AiInsightService
 
         $forecasts = [];
 
-        Inventory::with(['category', 'supplier'])->orderBy('item_name')->get()->each(
+        Inventory::with(['category'])->orderBy('item_name')->get()->each(
             function (Inventory $item) use ($usageByInventory, $maxDays, &$forecasts) {
                 $used = (int) ($usageByInventory[$item->id] ?? 0);
                 $dailyRate = $used > 0 ? round($used / $this->lookbackDays, 3) : 0.0;
@@ -253,7 +279,6 @@ class AiInsightService
                     'item' => $item->item_name,
                     'item_code' => $item->item_code,
                     'category' => $item->category?->name,
-                    'supplier' => $item->supplier?->name,
                     'unit' => $item->unit,
                     'on_hand' => $onHand,
                     'reserved' => (int) $item->reserved_quantity,
@@ -296,6 +321,15 @@ class AiInsightService
         return 'low';
     }
 
+    protected function normalizeQuestion(string $question): string
+    {
+        $q = strtolower(trim($question));
+        $q = preg_replace('/[^\p{L}\p{N}\s\-?]/u', ' ', $q) ?? $q;
+        $q = preg_replace('/\s+/', ' ', $q) ?? $q;
+
+        return trim($q);
+    }
+
     protected function matches(string $q, array $needles): bool
     {
         foreach ($needles as $needle) {
@@ -310,26 +344,98 @@ class AiInsightService
     protected function helpForRole(User $user): string
     {
         if ($user->hasRole('Faculty')) {
-            return 'Try: "status of my request", "my pending requests", "low stock", "how do I request supplies?"';
+            return 'Try: "Status of my request", "My pending requests", "What items are low in stock?", "How do I request supplies?"';
         }
         if ($user->hasRole('Student')) {
-            return 'Try: "my purchases", "purchase status", "how do I buy?", "out of stock".';
+            return 'Try: "My purchases", "Purchase status", "How do I buy uniforms?", "What uniforms can I buy?"';
         }
         if ($user->hasRole('Accounting')) {
-            return 'Try: "pending payments", "pending requests", "monthly summary", "low stock".';
+            return 'Try: "Pending payments", "Pending requests", "Monthly summary", "Low stock".';
         }
         if ($user->hasRole('Supply Personnel')) {
-            return 'Try: "reorder", "ready for release", "low stock", "forecast", "computer supplies".';
+            return 'Try: "Reorder recommendations", "Ready for release", "Low stock", "Computer supplies".';
         }
         if ($user->hasRole('Administrator')) {
-            return 'Try: "for approval", "monthly summary", "reorder", "low stock", "pending requests".';
+            return 'Try: "For approval", "Monthly summary", "Reorder", "Pending requests".';
         }
 
         return 'Try: "low stock", "monthly summary", or "help".';
     }
 
-    protected function answerLowStock(): string
+    protected function answerHowToBuy(User $user): string
     {
+        if (! $user->hasRole('Student') && ! $user->hasRole('Administrator')) {
+            return 'Uniform purchases are for Student accounts. Students use Uniform Shop with Student ID + last name login.';
+        }
+
+        $dept = $user->department?->name ?? 'your department';
+
+        return "To buy uniforms: open Uniform Shop → add your department items (and shared P.E., NSTP, or ID lanyard) → View Cart → Checkout "
+            .'→ pay over the counter → upload your receipt → Accounting verifies → Supply releases. '
+            ."You only see exclusive uniforms for {$dept}, plus shared items. Ask \"What uniforms can I buy?\" to list them.";
+    }
+
+    protected function answerHowToRequest(User $user): string
+    {
+        if ($user->hasRole('Student')) {
+            return 'Students do not submit faculty supply requests. Use Uniform Shop to buy uniforms. Ask "How do I buy uniforms?" for steps.';
+        }
+
+        return 'Faculty: go to New Request, pick items and purpose, then submit. Flow: Accounting review → Admin approval → Supply release. '
+            .'Track progress under My Requests.';
+    }
+
+    protected function answerUniformsForStudent(User $user): string
+    {
+        if (! $user->hasRole('Student') && ! $user->hasRole('Administrator')) {
+            return 'Uniform Shop listings are for students. Supply/Admin manage uniforms under Inventory (student shop + exclusive department).';
+        }
+
+        if (! $user->department_id && $user->hasRole('Student')) {
+            return 'Your account has no department assigned, so you can only buy shared items (P.E., NSTP, ID lanyard). Contact Supply to set your department for exclusive uniforms.';
+        }
+
+        $items = Inventory::with('department')
+            ->forStudentShop($user)
+            ->orderByRaw('department_id is null')
+            ->orderBy('item_name')
+            ->get();
+
+        if ($items->isEmpty()) {
+            return 'No uniforms are available for your department right now. Please contact Supply Personnel.';
+        }
+
+        $dept = $user->department?->name ?? 'your department';
+        $list = $items->map(function (Inventory $i) {
+            $tag = $i->isDepartmentExclusive()
+                ? 'exclusive'
+                : 'shared';
+            $stock = $i->availableQuantity() > 0
+                ? "{$i->availableQuantity()} {$i->unit} avail"
+                : 'out of stock';
+
+            return "{$i->item_name} ({$tag}, ₱".number_format((float) $i->unit_price, 2).", {$stock})";
+        })->join('; ');
+
+        return "Uniforms you can buy for {$dept}: {$list}. Open Uniform Shop to add items to your cart.";
+    }
+
+    protected function answerLowStock(?User $user = null): string
+    {
+        if ($user?->hasRole('Student')) {
+            $items = Inventory::forStudentShop($user)
+                ->get()
+                ->filter(fn (Inventory $i) => $i->isLowStock() || $i->isOutOfStock());
+
+            if ($items->isEmpty()) {
+                return 'Your available uniforms currently have healthy stock. Ask "What uniforms can I buy?" to see the list.';
+            }
+
+            return 'Uniform stock attention: '.$items->map(
+                fn (Inventory $i) => "{$i->item_name} ({$i->availableQuantity()} {$i->unit})"
+            )->join('; ').'.';
+        }
+
         $items = $this->lowStockItems();
 
         if ($items->isEmpty()) {
@@ -341,8 +447,18 @@ class AiInsightService
         )->take(15)->join('; ').'.';
     }
 
-    protected function answerOutOfStock(): string
+    protected function answerOutOfStock(?User $user = null): string
     {
+        if ($user?->hasRole('Student')) {
+            $items = Inventory::forStudentShop($user)
+                ->get()
+                ->filter(fn (Inventory $i) => $i->isOutOfStock());
+
+            return $items->isEmpty()
+                ? 'None of your available uniforms are out of stock right now.'
+                : 'Out of stock for you: '.$items->pluck('item_name')->join(', ').'.';
+        }
+
         $items = Inventory::all()->filter(fn (Inventory $i) => $i->isOutOfStock());
 
         return $items->isEmpty()
@@ -359,8 +475,7 @@ class AiInsightService
         }
 
         return collect($forecasts)->map(function (array $f) {
-            return "{$f['message']} Suggested reorder: {$f['recommended_reorder']} {$f['unit']}"
-                .($f['supplier'] ? " (supplier: {$f['supplier']})" : '').'.';
+            return "{$f['message']} Suggested reorder: {$f['recommended_reorder']} {$f['unit']}.";
         })->join(' ');
     }
 
@@ -377,12 +492,12 @@ class AiInsightService
         $requests = SupplyRequest::where('user_id', $user->id)->latest()->limit(5)->get();
 
         if ($requests->isEmpty()) {
-            return 'You have not submitted any supply requests yet.';
+            return 'You have not submitted any supply requests yet. Open New Request to submit one.';
         }
 
         return 'Your recent requests: '.$requests->map(
             fn (SupplyRequest $r) => "{$r->request_number} (".str_replace('_', ' ', $r->status).')'
-        )->join('; ').'.';
+        )->join('; ').'. Open My Requests for full details.';
     }
 
     protected function answerMyPurchases(User $user): string
@@ -394,13 +509,13 @@ class AiInsightService
         $purchases = PurchaseRequest::where('user_id', $user->id)->latest()->limit(5)->get();
 
         if ($purchases->isEmpty()) {
-            return 'You have no purchases yet. Open Shop to buy available items.';
+            return 'You have no purchases yet. Open Uniform Shop to buy department uniforms or shared P.E. / NSTP / lanyard items.';
         }
 
         return 'Your recent purchases: '.$purchases->map(
-            fn (PurchaseRequest $p) => "{$p->purchase_number} — ₱".number_format($p->total_amount, 2)
+            fn (PurchaseRequest $p) => "{$p->purchase_number} — ₱".number_format((float) $p->total_amount, 2)
                 .' ('.str_replace('_', ' ', $p->status).')'
-        )->join('; ').'.';
+        )->join('; ').'. Open My Purchases to view slips and upload receipts.';
     }
 
     protected function answerPending(User $user): string
@@ -410,7 +525,7 @@ class AiInsightService
                 ->whereIn('status', ['pending', 'accounting_review', 'admin_review', 'approved'])
                 ->count();
 
-            return "You have {$count} open/pending supply request(s). Ask \"status of my request\" for details.";
+            return "You have {$count} open/pending supply request(s). Ask \"Status of my request\" for details.";
         }
 
         if ($user->hasRole('Student')) {
@@ -418,7 +533,7 @@ class AiInsightService
                 ->whereNotIn('status', ['released', 'cancelled'])
                 ->count();
 
-            return "You have {$count} open purchase(s). Ask \"my purchases\" for details.";
+            return "You have {$count} open purchase(s). Ask \"My purchases\" for details.";
         }
 
         if ($user->hasAnyRole(['Accounting', 'Administrator'])) {
@@ -475,8 +590,12 @@ class AiInsightService
         return "There are {$count} faculty request(s) waiting for admin approval. Open Approve Requests.";
     }
 
-    protected function answerCategoryStock(string $keyword): string
+    protected function answerCategoryStock(string $keyword, ?User $user = null): string
     {
+        if ($user?->hasRole('Student')) {
+            return $this->answerUniformsForStudent($user);
+        }
+
         $map = [
             'office' => 'Office Supplies',
             'classroom' => 'Classroom Supplies',

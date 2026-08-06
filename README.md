@@ -2,7 +2,7 @@
 
 Centralized inventory and requisition management system for the **Philippine Electronic and Communication Institute of Technology (PECIT)**.
 
-PSIS manages school supplies and inventory (office, classroom, laboratory, computer, cleaning, pantry, maintenance, furniture, and more) with role-based workflows for requests, purchasing, approvals, stock release, reporting, notifications, and AI-assisted insights.
+PSIS manages school supplies and student uniforms with role-based workflows for requests, purchasing, approvals, stock release, reporting, notifications, and AI-assisted insights.
 
 ---
 
@@ -73,7 +73,9 @@ public/images/chatbot.png
 
 ## Demo Accounts
 
-Password for all demo users: `password`
+### Staff (email + password)
+
+Password for all staff demo users: `password`
 
 | Role | Email |
 |------|-------|
@@ -81,7 +83,19 @@ Password for all demo users: `password`
 | Accounting | accounting@pecit.edu.ph |
 | Supply Personnel | supply@pecit.edu.ph |
 | Faculty | faculty@pecit.edu.ph |
-| Student | student@pecit.edu.ph |
+
+### Student (Student ID + last name)
+
+Students do **not** log in with email/password. Email is kept for notifications only.
+
+| Student ID | Last name | Email (notifications) | Department | Sees in shop |
+|------------|-----------|----------------------|------------|--------------|
+| `STU-001` | `Santos` | student@pecit.edu.ph | CIT | IT Exclusive + P.E. / NSTP / lanyard |
+| `STU-COE-001` | `Mendoza` | engineering.student@pecit.edu.ph | COE (Engineering) | Engineering Exclusive + P.E. / NSTP / lanyard |
+
+On the login page, use the **Student** tab.
+
+**Exclusivity rule:** a department uniform (e.g. Engineering) can be bought **only** by students of that department. Students cannot buy another department’s exclusive uniform. P.E., NSTP, and ID lanyard stay shared for everyone.
 
 ---
 
@@ -96,10 +110,25 @@ Password for all demo users: `password`
 **Flow:** Faculty Request → Accounting Review → Admin Approval → Supply Release → Inventory Deducted
 
 ### 2. Student
-- Browse shop, cart, checkout
-- Download payment slip (PDF)
-- Upload payment receipt
+- Log in with **Student ID + last name**
+- **Cannot** browse the main Inventory module (menu, routes, API blocked)
+- Buy only through **Uniform Shop**
+- Cart, checkout, payment slip (PDF), receipt upload
 - View purchase history & status
+- Student dashboard shows shop/purchases only (no stock KPIs)
+
+**Uniform Shop exclusivity:**
+
+| Item | Who can buy |
+|------|-------------|
+| Engineering Uniform (Exclusive) | College of Engineering (`COE`) students **only** |
+| IT Uniform (Exclusive) | CIT students **only** |
+| Other `* Uniform (Exclusive)` | That department’s students **only** |
+| Uniform P.E. | All students |
+| Uniform NSTP | All students |
+| Lanyard for ID | All students |
+
+Example: an Engineering student can buy **Engineering Uniform (Exclusive)** + P.E. / NSTP / lanyard, and **cannot** buy the IT exclusive uniform (and the reverse).
 
 **Flow:** Purchase → OTC Payment → Receipt Upload → Accounting Verification → Supply Release → Inventory Deducted
 
@@ -112,13 +141,14 @@ Password for all demo users: `password`
 - Inventory CRUD (with Admin)
 - Stock in / inventory adjustment
 - Release faculty requests & student purchases
+- **Add / edit students** and **CSV bulk import**
 - Restock recommendations (AI)
 - Low-stock monitoring
 
 ### 5. Administrator
 - Approve / reject faculty requests
-- User management (create/edit, roles, departments)
-- Categories, suppliers, departments, announcements
+- Full user management (all roles)
+- Categories, departments, announcements
 - Audit logs & full reports access
 
 ---
@@ -138,12 +168,28 @@ If cancelled before release, reserved quantity is restored.
 
 Inventory list shows **On Hand**, **Reserved**, and **Available**.
 
+### Student shop flags (inventory item)
+
+| Field | Meaning |
+|-------|---------|
+| `student_shop` | Must be **on** for the item to appear in Uniform Shop |
+| `department_id` | **Set** = exclusive to that department only; **empty/null** = shared (P.E., NSTP, lanyard) |
+
+How Supply / Admin configures an exclusive uniform:
+
+1. Enable **Available in Uniform Shop**
+2. Set **Exclusive to department** (e.g. College of Engineering)
+3. Leave department empty only for shared items (P.E., NSTP, ID lanyard)
+
+Cart add and checkout re-check exclusivity so students cannot purchase another department’s uniform via crafted requests.
+
 ---
 
 ## Current Features
 
 ### Authentication & Security
-- Login / logout, forgot & reset password, change password (profile)
+- **Dual login:** Staff (email + password) · Student (Student ID + last name)
+- Forgot & reset password, change password (profile) — staff
 - Email verification support
 - Session timeout (idle logout)
 - Active-user enforcement
@@ -151,23 +197,31 @@ Inventory list shows **On Hand**, **Reserved**, and **Available**.
 - Role middleware + authorization policies (inventory, supply requests, purchases)
 
 ### Dashboard
-- Stock KPIs (total items, available, low stock, out of stock)
-- Pending / approved / released request counts
-- Monthly transaction chart (Chart.js)
-- AI restock insights + announcements feed
-- Role-relevant recent activity
+- Staff/faculty: stock KPIs, request counts, transaction chart, AI restock insights
+- Students: Uniform Shop shortcut + recent purchases only (no inventory stats)
 
 ### Inventory
-- CRUD for Admin / Supply
+- CRUD for Admin / Supply (Faculty may view; Students cannot)
 - Search & filters (category, status)
-- Fields: code, name, description, category, unit, price, qty, min stock, supplier, location, status
+- Fields: code, name, description, category, unit, price, qty, min stock, location, status, student shop, exclusive department
 - QR code on item detail
 - Barcode-ready field
 
+### Uniform Shop (students)
+- Department-exclusive uniforms + shared P.E. / NSTP / ID lanyard
+- Exclusive badge in shop UI; other departments’ exclusives are hidden
+- Enforced in listing, cart, and checkout
+
 ### Master Data (Admin)
-- Categories, suppliers, departments (add / edit / delete where safe)
+- Categories, departments (add / edit / delete where safe)
 - Announcements (priority; shown on dashboard)
-- User management with roles & departments
+- Full user management with roles & departments
+
+### Student accounts (Supply / Admin)
+- List, add, and edit student accounts (`/supply/students`)
+- CSV bulk import with downloadable template
+- CSV columns: `student_id,last_name,name,email,department_code,phone`
+- Students sign in with Student ID + last name; email used for notifications
 
 ### Notifications
 - In-app notification center (bell icon)
@@ -285,29 +339,28 @@ npm run dev
 
 ---
 
-## Database / ER Diagram
+## Database / Diagrams
 
-See the full entity-relationship documentation (Mermaid diagrams + table summary):
+Documentation diagrams (Mermaid — preview in GitHub/Cursor or export via [mermaid.live](https://mermaid.live)):
 
-- [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md)
-
-View on GitHub Markdown preview or [mermaid.live](https://mermaid.live) to export PNG/SVG for reports.
+- [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md) — entity-relationship diagrams
+- [`docs/FLOWCHART.md`](docs/FLOWCHART.md) — system & process flowcharts
 
 ## Project Structure
 
 ```text
 app/
   Console/Commands/     # psis:low-stock-alert
-  Http/Controllers/     # Web, Admin, Auth, API
+  Http/Controllers/     # Web, Admin, Auth, Supply, API
   Mail/                 # Email notification mailable
   Models/               # Eloquent models
   Policies/             # Authorization policies
-  Services/             # Inventory, requests, purchases, AI, notifications, audit
+  Services/             # Inventory, requests, purchases, students, AI, notifications, audit
   Support/PsisMenu.php  # Role-based sidebar + active states
 config/psis.php         # PSIS_MAIL_NOTIFICATIONS and related flags
 database/migrations/    # Schema
-database/seeders/       # Roles, master data, demo users & inventory
-docs/ER-DIAGRAM.md      # ER diagrams for documentation
+database/seeders/       # Roles, master data, demo users & inventory/uniforms
+docs/                   # ER-DIAGRAM.md, FLOWCHART.md
 public/images/          # pecit-logo.png, chatbot.png
 resources/views/        # Blade UI (layouts, modules, emails, AI widget)
 routes/web.php          # Application routes
@@ -322,6 +375,10 @@ routes/auth.php         # Breeze auth routes
 |------|--------|
 | Core multi-role workflows | Complete |
 | Inventory reserve / release | Complete |
+| Student shop (department exclusives) | Complete |
+| Student blocked from inventory module | Complete |
+| Student ID + last name login | Complete |
+| Supply student add / CSV import | Complete |
 | Reports | Complete |
 | Notifications + email | Complete |
 | AI assistant + floating chat | Complete |

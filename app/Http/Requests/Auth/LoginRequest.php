@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,36 +13,57 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
+        if ($this->isStudentLogin()) {
+            return [
+                'login_as' => ['required', 'in:student,staff'],
+                'student_id' => ['required', 'string', 'max:50'],
+                'last_name' => ['required', 'string', 'max:255'],
+            ];
+        }
+
         return [
+            'login_as' => ['required', 'in:student,staff'],
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
         ];
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
-     *
      * @throws ValidationException
      */
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
 
+        if ($this->isStudentLogin()) {
+            $this->authenticateStudent();
+        } else {
+            $this->authenticateStaff();
+        }
+
+        RateLimiter::clear($this->throttleKey());
+    }
+
+    protected function isStudentLogin(): bool
+    {
+        return $this->input('login_as', 'staff') === 'student';
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    protected function authenticateStaff(): void
+    {
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
@@ -50,12 +72,46 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey());
+        if (Auth::user()?->hasRole('Student')) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Students must sign in with Student ID and last name.',
+            ]);
+        }
     }
 
     /**
-     * Ensure the login request is not rate limited.
-     *
+     * @throws ValidationException
+     */
+    protected function authenticateStudent(): void
+    {
+        $studentId = trim((string) $this->input('student_id'));
+        $lastName = trim((string) $this->input('last_name'));
+
+        $user = User::query()
+            ->where('employee_id', $studentId)
+            ->where('is_active', true)
+            ->first();
+
+        $matches = $user
+            && $user->hasRole('Student')
+            && $user->last_name
+            && strcasecmp($user->last_name, $lastName) === 0;
+
+        if (! $matches) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'student_id' => 'These credentials do not match our records.',
+            ]);
+        }
+
+        Auth::login($user, $this->boolean('remember'));
+    }
+
+    /**
      * @throws ValidationException
      */
     public function ensureIsNotRateLimited(): void
@@ -68,19 +124,22 @@ class LoginRequest extends FormRequest
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
+        $field = $this->isStudentLogin() ? 'student_id' : 'email';
+
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            $field => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
         ]);
     }
 
-    /**
-     * Get the rate limiting throttle key for the request.
-     */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        $identity = $this->isStudentLogin()
+            ? (string) $this->string('student_id')
+            : (string) $this->string('email');
+
+        return Str::transliterate(Str::lower($identity).'|'.$this->ip());
     }
 }
