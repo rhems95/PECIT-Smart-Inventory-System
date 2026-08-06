@@ -31,90 +31,118 @@
     </div>
     @endif
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        @foreach ([
-            ['Total Items', $stats['total_items']],
-            ['Available Stock', number_format($stats['available_stock'])],
-            ['Low Stock', $stats['low_stock']],
-            ['Out of Stock', $stats['out_of_stock']],
-            ['Pending Requests', $stats['pending_requests']],
-            ['Approved', $stats['approved_requests']],
-            ['Released', $stats['released_requests']],
-            ['Monthly Txns', $stats['monthly_transactions']],
-        ] as [$label, $value])
-            <div class="psis-card p-4">
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $label }}</p>
-                <p class="text-2xl font-bold mt-1 text-pecit-blue dark:text-pecit-gold">{{ $value }}</p>
+    @if ($isStudent)
+        <div class="grid sm:grid-cols-2 gap-4">
+            <div class="psis-card p-5">
+                <p class="text-xs uppercase tracking-wide text-slate-500">Uniforms for you</p>
+                <p class="text-2xl font-bold mt-1 text-pecit-blue dark:text-pecit-gold">{{ $shopCount }}</p>
+                <p class="text-sm text-slate-500 mt-2">Department + shared items (P.E., NSTP, ID lanyard)</p>
+                <a href="{{ route('shop.index') }}" class="psis-btn-primary inline-flex mt-4">Open Uniform Shop</a>
             </div>
-        @endforeach
-    </div>
-
-    <div class="grid lg:grid-cols-2 gap-6">
-        <div class="psis-card p-5">
-            <h3 class="font-semibold mb-4">Monthly Transactions</h3>
-            <canvas id="txnChart" height="120"></canvas>
+            <div class="psis-card p-5">
+                <p class="text-xs uppercase tracking-wide text-slate-500">My purchases</p>
+                <p class="text-2xl font-bold mt-1 text-pecit-blue dark:text-pecit-gold">{{ $studentPurchases->count() }}</p>
+                <p class="text-sm text-slate-500 mt-2">Recent orders shown below</p>
+                <a href="{{ route('purchases.index') }}" class="psis-btn-outline inline-flex mt-4">View all purchases</a>
+            </div>
         </div>
+
+        @if ($studentPurchases->isNotEmpty())
         <div class="psis-card p-5">
-            <h3 class="font-semibold mb-4">AI Restocking Insights</h3>
-            @forelse ($forecasts as $forecast)
-                <div class="py-2 border-b border-[var(--psis-border)] last:border-0 text-sm">
-                    <p>{{ $forecast['message'] }}</p>
-                    @if ($forecast['recommended_reorder'])
-                        <p class="text-pecit-blue dark:text-pecit-gold text-xs mt-1">Recommended reorder: {{ $forecast['recommended_reorder'] }}</p>
-                    @endif
+            <h3 class="font-semibold mb-4">My Recent Purchases</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-slate-500">
+                            <th class="px-4 py-3">Number</th>
+                            <th class="px-4 py-3">Total</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach ($studentPurchases as $purchase)
+                        <tr class="border-t border-[var(--psis-border)]">
+                            <td class="px-4 py-3"><a href="{{ route('purchases.show', $purchase) }}" class="text-pecit-blue dark:text-pecit-gold hover:underline">{{ $purchase->purchase_number }}</a></td>
+                            <td class="px-4 py-3">₱{{ number_format($purchase->total_amount, 2) }}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{{ str_replace('_', ' ', $purchase->status) }}</span></td>
+                            <td class="px-4 py-3">{{ $purchase->created_at?->format('M d, Y') }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+    @else
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            @foreach ([
+                ['Total Items', $stats['total_items']],
+                ['Available Stock', number_format($stats['available_stock'])],
+                ['Low Stock', $stats['low_stock']],
+                ['Out of Stock', $stats['out_of_stock']],
+                ['Pending Requests', $stats['pending_requests']],
+                ['Approved', $stats['approved_requests']],
+                ['Released', $stats['released_requests']],
+                ['Monthly Txns', $stats['monthly_transactions']],
+            ] as [$label, $value])
+                <div class="psis-card p-4">
+                    <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $label }}</p>
+                    <p class="text-2xl font-bold mt-1 text-pecit-blue dark:text-pecit-gold">{{ $value }}</p>
                 </div>
-            @empty
-                <p class="text-sm text-slate-500">No urgent forecasts.</p>
-            @endforelse
+            @endforeach
         </div>
-    </div>
 
-    @if ($studentPurchases->isNotEmpty())
-    <div class="psis-card p-5">
-        <h3 class="font-semibold mb-4">My Recent Purchases</h3>
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead><tr class="text-left text-slate-500"><th class="py-2">Number</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
-                <tbody>
-                @foreach ($studentPurchases as $purchase)
-                    <tr class="border-t border-[var(--psis-border)]">
-                        <td class="py-2"><a href="{{ route('purchases.show', $purchase) }}" class="text-pecit-blue dark:text-pecit-gold hover:underline">{{ $purchase->purchase_number }}</a></td>
-                        <td>₱{{ number_format($purchase->total_amount, 2) }}</td>
-                        <td><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{{ str_replace('_', ' ', $purchase->status) }}</span></td>
-                        <td>{{ $purchase->created_at?->format('M d, Y') }}</td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
+        <div class="grid lg:grid-cols-2 gap-6">
+            <div class="psis-card p-5">
+                <h3 class="font-semibold mb-4">Monthly Transactions</h3>
+                <canvas id="txnChart" height="120"></canvas>
+            </div>
+            <div class="psis-card p-5">
+                <h3 class="font-semibold mb-4">AI Restocking Insights</h3>
+                @forelse ($forecasts as $forecast)
+                    <div class="py-2 border-b border-[var(--psis-border)] last:border-0 text-sm">
+                        <p>{{ $forecast['message'] }}</p>
+                        @if ($forecast['recommended_reorder'])
+                            <p class="text-pecit-blue dark:text-pecit-gold text-xs mt-1">Recommended reorder: {{ $forecast['recommended_reorder'] }}</p>
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">No urgent forecasts.</p>
+                @endforelse
+            </div>
         </div>
-    </div>
+
+        <div class="psis-card p-5">
+            <h3 class="font-semibold mb-4">Recent Faculty Requests</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead><tr class="text-left text-slate-500"><th class="py-2">Number</th><th>Requester</th><th>Status</th><th>Date</th></tr></thead>
+                    <tbody>
+                    @foreach ($recentRequests as $req)
+                        <tr class="border-t border-[var(--psis-border)]">
+                            <td class="py-2">{{ $req->request_number }}</td>
+                            <td>{{ $req->user?->name }}</td>
+                            <td><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{{ $req->status }}</span></td>
+                            <td>{{ $req->created_at?->format('M d, Y') }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
     @endif
-
-    <div class="psis-card p-5">
-        <h3 class="font-semibold mb-4">Recent Faculty Requests</h3>
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead><tr class="text-left text-slate-500"><th class="py-2">Number</th><th>Requester</th><th>Status</th><th>Date</th></tr></thead>
-                <tbody>
-                @foreach ($recentRequests as $req)
-                    <tr class="border-t border-[var(--psis-border)]">
-                        <td class="py-2">{{ $req->request_number }}</td>
-                        <td>{{ $req->user?->name }}</td>
-                        <td><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{{ $req->status }}</span></td>
-                        <td>{{ $req->created_at?->format('M d, Y') }}</td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
 </div>
 @endsection
 
 @push('scripts')
+@unless ($isStudent)
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    new Chart(document.getElementById('txnChart'), {
+    const el = document.getElementById('txnChart');
+    if (! el) return;
+
+    new Chart(el, {
         type: 'line',
         data: {
             labels: @json($chartLabels),
@@ -127,8 +155,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 fill: true,
             }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
     });
 });
 </script>
+@endunless
 @endpush

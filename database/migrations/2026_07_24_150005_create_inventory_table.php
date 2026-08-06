@@ -16,7 +16,6 @@ return new class extends Migration {
             $table->integer('quantity')->default(0);
             $table->integer('reserved_quantity')->default(0);
             $table->integer('minimum_stock')->default(10);
-            $table->foreignId('supplier_id')->nullable()->constrained()->nullOnDelete();
             $table->string('location')->nullable();
             $table->enum('status', ['available','low_stock','out_of_stock','discontinued'])->default('available');
             $table->string('barcode')->nullable();

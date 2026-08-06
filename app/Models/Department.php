@@ -26,6 +26,11 @@ class Department extends Model
         return $this->hasMany(User::class);
     }
 
+    public function inventoryItems(): HasMany
+    {
+        return $this->hasMany(Inventory::class);
+    }
+
     public function supplyRequests(): HasMany
     {
         return $this->hasMany(SupplyRequest::class);

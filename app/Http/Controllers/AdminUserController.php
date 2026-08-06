@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -26,6 +27,11 @@ class AdminUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
+
+        if ($data['role'] === 'Student' && empty($data['password'])) {
+            $data['password'] = Str::password(32);
+        }
+
         $user = User::create(collect($data)->except('role')->toArray());
         $user->forceFill(['email_verified_at' => now()])->save();
         $user->syncRoles([$data['role']]);
@@ -62,14 +68,27 @@ class AdminUserController extends Controller
 
     protected function validated(Request $request, ?User $user = null): array
     {
+        $isStudent = $request->input('role') === 'Student';
+
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'last_name' => [$isStudent ? 'required' : 'nullable', 'string', 'max:255'],
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user?->id)],
-            'employee_id' => ['nullable', 'string', 'max:50', Rule::unique('users', 'employee_id')->ignore($user?->id)],
-            'department_id' => ['nullable', 'exists:departments,id'],
+            'employee_id' => [
+                $isStudent ? 'required' : 'nullable',
+                'string',
+                'max:50',
+                Rule::unique('users', 'employee_id')->ignore($user?->id),
+            ],
+            'department_id' => [$isStudent ? 'required' : 'nullable', 'exists:departments,id'],
             'phone' => ['nullable', 'string', 'max:50'],
             'is_active' => ['sometimes', 'boolean'],
-            'password' => [$user ? 'nullable' : 'required', 'string', 'min:8'],
+            'password' => [
+                Rule::requiredIf(fn () => ! $user && ! $isStudent),
+                'nullable',
+                'string',
+                'min:8',
+            ],
             'role' => ['required', Rule::in(['Administrator', 'Accounting', 'Supply Personnel', 'Faculty', 'Student'])],
         ]) + ['is_active' => $request->boolean('is_active', true)];
     }

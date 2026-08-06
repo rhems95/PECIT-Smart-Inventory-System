@@ -28,7 +28,6 @@
                         <p class="text-xs text-pecit-blue dark:text-pecit-gold mt-1">
                             Reorder {{ $f['recommended_reorder'] }} {{ $f['unit'] }}
                             · {{ ucfirst($f['urgency']) }}
-                            @if ($f['supplier']) · {{ $f['supplier'] }} @endif
                         </p>
                     </li>
                 @empty

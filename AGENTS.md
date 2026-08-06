@@ -11,7 +11,7 @@ Guidance for AI coding agents working in this repository.
 - **Path:** `C:\xampp\htdocs\pecit-sis` (XAMPP)
 - **Database:** MySQL `pecit_sis`
 - **UI:** Blade + Tailwind + Alpine.js (not React/Inertia)
-- **Auth:** Laravel Breeze + Spatie Permission (roles)
+- **Auth:** Laravel Breeze + Spatie Permission (roles); dual login (staff vs student)
 - **Primary layout:** `resources/views/layouts/psis.blade.php`
 
 Human-facing docs: `README.md`.
@@ -22,11 +22,11 @@ Human-facing docs: `README.md`.
 
 | Role | Purpose |
 |------|---------|
-| `Administrator` | Approvals, users, master data, audit, reports |
+| `Administrator` | Approvals, all users, master data, audit, reports |
 | `Accounting` | Review faculty requests, verify student payments |
-| `Supply Personnel` | Stock ops, release faculty + student orders |
+| `Supply Personnel` | Stock ops, release orders, **student accounts** (add/import) |
 | `Faculty` | Submit/cancel supply requests |
-| `Student` | Shop, cart, checkout, receipts, purchases |
+| `Student` | Uniform shop (department), cart, checkout, receipts, purchases — **no inventory module** |
 
 Do **not** rename roles without updating seeders, menus, middleware, and policies.
 
@@ -57,6 +57,34 @@ available = quantity - reserved_quantity
 
 Inventory UI should show **On Hand**, **Reserved**, and **Available**.
 
+### Student shop / department exclusivity (do not break)
+
+Students **cannot** access `/inventory` (menu, routes, policy, API). They buy only via **Uniform Shop** (`shop.*`).
+
+**Rules:**
+
+1. Item must have `student_shop = true`
+2. `department_id` **null** → shared for all students (P.E., NSTP, ID lanyard only in practice)
+3. `department_id` **set** → exclusive; **only** students whose `users.department_id` matches may see/buy it
+4. A student must **not** see or buy another department’s exclusive uniform
+
+Example: Engineering (`COE`) exclusive uniform is buyable only by COE students. CIT students see IT exclusive + shared, never the Engineering exclusive.
+
+Helpers (keep logic here):
+
+- `Inventory::scopeForStudentShop(User $user)`
+- `Inventory::isAvailableInStudentShop(?User $user)`
+- `Inventory::isDepartmentExclusive()`
+
+Enforce the same checks in `ShopController` (list/cart/add) and `PurchaseRequestService::checkout`.
+
+When creating shop items in admin/supply inventory form:
+
+- Shared → student shop on, department empty
+- Exclusive → student shop on, department selected
+
+There is **no suppliers** module — do not reintroduce supplier CRUD or `supplier_id` unless explicitly requested.
+
 ---
 
 ## Architecture map
@@ -66,7 +94,7 @@ routes/web.php          # Main app routes (role middleware)
 routes/auth.php         # Breeze auth
 routes/api.php          # Mostly unused; session JSON APIs live under web /api
 
-app/Http/Controllers/   # Thin controllers
+app/Http/Controllers/   # Thin controllers (incl. SupplyStudentController)
 app/Services/           # Business logic
 app/Policies/           # Inventory, SupplyRequest, PurchaseRequest
 app/Support/PsisMenu.php# Sidebar items + isActive() matching
@@ -75,6 +103,8 @@ config/psis.php         # PSIS_MAIL_NOTIFICATIONS
 
 resources/views/
   layouts/psis.blade.php
+  auth/login.blade.php          # Staff / Student tabs
+  supply/students/              # Supply student list, form, CSV import
   partials/ai-chat-widget.blade.php
   emails/
 public/images/          # pecit-logo.png, chatbot.png
@@ -84,16 +114,23 @@ public/images/          # pecit-logo.png, chatbot.png
 
 | Model | Table | Notes |
 |-------|-------|-------|
+| `User` | `users` | `employee_id` = Student ID for students; `last_name` for student login; `email` for notifications |
 | `SupplyRequest` | `requests` | Faculty requisitions |
 | `RequestItem` | `request_items` | |
 | `PurchaseRequest` | `purchase_requests` | Student purchases |
-| `Inventory` | `inventory` | |
+| `Inventory` | `inventory` | `student_shop`; `department_id` null = shared shop item, set = department-exclusive |
 | `PsisNotification` | `psis_notifications` | Custom in-app notifications (not Laravel notifications table) |
 | `Payment` | `payments` | Includes `receipt_path` |
 
 ---
 
 ## Workflows (quick reference)
+
+### Auth
+
+- **Staff:** email + password (`login_as=staff`) via `LoginRequest`
+- **Student:** `employee_id` (Student ID) + `last_name` (`login_as=student`); case-insensitive last name match; students cannot use the staff email login
+- Keep `email` on student accounts for `NotificationService` / mail
 
 ### Faculty supply request
 
@@ -103,9 +140,24 @@ Routes under `requests.*` (Faculty only). Accounting: `accounting.requests*`. Ad
 
 ### Student purchase
 
-Shop cart (session) → checkout → `payment_submitted` → optional receipt upload → Accounting verify (reserve) → `payment_verified` → Supply release → `released`
+Uniform Shop cart (session) → checkout → `payment_submitted` → optional receipt upload → Accounting verify (reserve) → `payment_verified` → Supply release → `released`
+
+Shop listing is filtered by department exclusivity + shared items. Cart/checkout reject cross-department exclusives.
 
 Student: `shop.*`, `purchases.*`. Accounting: `accounting.payments*`. Supply: `supply.purchases*`.
+
+### Student account management (Supply / Admin)
+
+Routes: `supply.students.*`
+
+- List / create / edit students only (`Student` role)
+- CSV import: `student_id,last_name,name,email,department_code,phone`
+- Logic in `app/Services/StudentAccountService.php` (create, update, import, template)
+- Controllers: `SupplyStudentController`
+- Auto-generates a random password (students do not use password login)
+- Sets `email_verified_at` so `verified` middleware allows access
+
+Admin still manages all roles via `admin.users.*`.
 
 ---
 
@@ -152,8 +204,10 @@ Keep AI answers grounded in DB data; do not invent stock numbers.
 - Base controller uses `AuthorizesRequests` (`app/Http/Controllers/Controller.php`) — required for `$this->authorize()`
 - `SessionTimeout` middleware uses **session** `last_activity_at` (not only DB) so old DB stamps do not kick users out immediately after login
 - Login must reset activity: see `AuthenticatedSessionController@store`
-- New admin-created users should get `email_verified_at` set so `verified` middleware allows login
+- New users (admin or supply-created students) should get `email_verified_at` set so `verified` middleware allows login
 - User model casts `password` as `hashed` — pass plain password on create/update (do not double `Hash::make`)
+- Student create: password optional / auto-generated; **require** `employee_id`, `last_name`, `department_id`, `email`
+- Login form uses Alpine tabs (`login_as`); keep staff and student validation paths in `LoginRequest` in sync with the Blade form
 
 ---
 
@@ -167,15 +221,23 @@ Keep AI answers grounded in DB data; do not invent stock numbers.
 
 ## Demo credentials
 
-All passwords: `password`
+**Staff** — password: `password`
 
 - admin@pecit.edu.ph
 - accounting@pecit.edu.ph
 - supply@pecit.edu.ph
 - faculty@pecit.edu.ph
-- student@pecit.edu.ph
 
-Seeders: `RoleAndPermissionSeeder`, `MasterDataSeeder`, `DemoUsersSeeder`, `DemoInventorySeeder`.
+**Student** — login tab (**Student ID + last name**):
+
+| Student ID | Last name | Department | Uniform Shop sees |
+|------------|-----------|------------|-------------------|
+| `STU-001` | `Santos` | CIT | IT Exclusive + P.E. / NSTP / lanyard |
+| `STU-COE-001` | `Mendoza` | COE (Engineering) | Engineering Exclusive + P.E. / NSTP / lanyard |
+
+Seeded exclusive uniforms (via `DemoInventorySeeder`): `UNI-COE`, `UNI-CIT`, `UNI-CCS`, `UNI-COB`, `UNI-SHS` plus shared `UNI-PE`, `UNI-NSTP`, `UNI-LANYARD`.
+
+Seeders: `RoleAndPermissionSeeder`, `MasterDataSeeder` (includes Uniforms category), `DemoUsersSeeder`, `DemoInventorySeeder`.
 
 ---
 
@@ -184,7 +246,7 @@ Seeders: `RoleAndPermissionSeeder`, `MasterDataSeeder`, `DemoUsersSeeder`, `Demo
 - Laravel Sanctum token API (session `/api/*` under web auth exists only)
 - Broad domain PHPUnit coverage (mostly Breeze auth tests)
 - External LLM integration
-- Public self-registration (admin creates users)
+- Public self-registration (Admin / Supply create student accounts)
 
 Do not add Sanctum/LLM unless the user asks.
 
@@ -196,11 +258,13 @@ Do not add Sanctum/LLM unless the user asks.
 2. **Minimal diffs** — change only what the task needs; avoid drive-by refactors.
 3. **Do not commit** unless the user explicitly asks.
 4. **Do not put secrets** in git; never echo real mail passwords into README/chat logs.
-5. Prefer fixing inventory/request logic in **Services**, not duplicating in controllers/views.
+5. Prefer fixing inventory/request/student logic in **Services**, not duplicating in controllers/views.
 6. When adding notifications, use `NotificationService` so email stays in sync.
 7. When adding sidebar links, update `PsisMenu` and ensure `isActive()` behaves correctly for sibling routes.
 8. Run `npm run build` after changing `resources/css` or `resources/js` if the user needs to see UI changes under `php artisan serve`.
-
+9. Keep student shop exclusivity on `Inventory` helpers; never bypass in checkout/cart.
+10. Supply student features stay under `supply.students.*` — do not open full admin user CRUD to Supply.
+11. Do not give Students inventory menu/routes; Uniform Shop is their only purchase UI.
 ---
 
 ## Common commands
@@ -227,7 +291,10 @@ Windows scheduler (optional): run `php artisan schedule:run` every minute for da
 | Sidebar | `app/Support/PsisMenu.php` |
 | Stock math | `app/Services/InventoryService.php` |
 | Faculty flow | `app/Services/SupplyRequestService.php` |
-| Student flow | `app/Services/PurchaseRequestService.php` |
+| Student purchase flow | `app/Services/PurchaseRequestService.php` |
+| Student shop filter | `app/Http/Controllers/ShopController.php`, `Inventory` scopes |
+| Student accounts / CSV | `app/Services/StudentAccountService.php`, `SupplyStudentController` |
+| Login (staff + student) | `app/Http/Requests/Auth/LoginRequest.php`, `resources/views/auth/login.blade.php` |
 | AI | `app/Services/AiInsightService.php` |
 | Email + bell | `app/Services/NotificationService.php` |
 | Layout / FAB | `resources/views/layouts/psis.blade.php`, `partials/ai-chat-widget.blade.php` |

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Department;
 use App\Models\Inventory;
-use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,7 +14,9 @@ class InventoryController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Inventory::with(['category', 'supplier']);
+        $this->authorize('viewAny', Inventory::class);
+
+        $query = Inventory::with(['category', 'department']);
 
         if ($search = $request->string('search')->trim()->toString()) {
             $query->where(function ($q) use ($search) {
@@ -45,7 +47,7 @@ class InventoryController extends Controller
 
         return view('inventory.create', [
             'categories' => Category::orderBy('name')->get(),
-            'suppliers' => Supplier::orderBy('name')->get(),
+            'departments' => Department::orderBy('name')->get(),
         ]);
     }
 
@@ -53,19 +55,7 @@ class InventoryController extends Controller
     {
         $this->authorize('create', Inventory::class);
 
-        $data = $request->validate([
-            'item_code' => ['required', 'string', 'max:50', 'unique:inventory,item_code'],
-            'item_name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'category_id' => ['required', 'exists:categories,id'],
-            'unit' => ['required', 'string', 'max:50'],
-            'unit_price' => ['required', 'numeric', 'min:0'],
-            'quantity' => ['required', 'integer', 'min:0'],
-            'minimum_stock' => ['required', 'integer', 'min:0'],
-            'supplier_id' => ['nullable', 'exists:suppliers,id'],
-            'location' => ['nullable', 'string', 'max:255'],
-        ]);
-
+        $data = $this->validatedItem($request);
         $item = Inventory::create($data + ['reserved_quantity' => 0]);
         $item->updateStatus();
 
@@ -74,7 +64,9 @@ class InventoryController extends Controller
 
     public function show(Inventory $inventory): View
     {
-        $inventory->load(['category', 'supplier', 'transactions' => fn ($q) => $q->latest()->limit(10)]);
+        $this->authorize('view', $inventory);
+
+        $inventory->load(['category', 'department', 'transactions' => fn ($q) => $q->latest()->limit(10)]);
 
         $qrSvg = QrCode::size(120)->generate($inventory->item_code);
 
@@ -88,7 +80,7 @@ class InventoryController extends Controller
         return view('inventory.edit', [
             'inventory' => $inventory,
             'categories' => Category::orderBy('name')->get(),
-            'suppliers' => Supplier::orderBy('name')->get(),
+            'departments' => Department::orderBy('name')->get(),
         ]);
     }
 
@@ -96,24 +88,42 @@ class InventoryController extends Controller
     {
         $this->authorize('update', $inventory);
 
-        $data = $request->validate([
-            'item_code' => ['required', 'string', 'max:50', 'unique:inventory,item_code,'.$inventory->id],
-            'item_name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'category_id' => ['required', 'exists:categories,id'],
-            'unit' => ['required', 'string', 'max:50'],
-            'unit_price' => ['required', 'numeric', 'min:0'],
-            'minimum_stock' => ['required', 'integer', 'min:0'],
-            'supplier_id' => ['nullable', 'exists:suppliers,id'],
-            'location' => ['nullable', 'string', 'max:255'],
-            'status' => ['nullable', 'in:available,low_stock,out_of_stock,discontinued'],
-        ]);
-
+        $data = $this->validatedItem($request, $inventory);
         $inventory->update($data);
         if (! isset($data['status']) || $data['status'] !== 'discontinued') {
             $inventory->updateStatus();
         }
 
         return redirect()->route('inventory.show', $inventory)->with('success', 'Inventory item updated.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validatedItem(Request $request, ?Inventory $inventory = null): array
+    {
+        $rules = [
+            'item_code' => ['required', 'string', 'max:50', 'unique:inventory,item_code'.($inventory ? ','.$inventory->id : '')],
+            'item_name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'category_id' => ['required', 'exists:categories,id'],
+            'unit' => ['required', 'string', 'max:50'],
+            'unit_price' => ['required', 'numeric', 'min:0'],
+            'minimum_stock' => ['required', 'integer', 'min:0'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'student_shop' => ['sometimes', 'boolean'],
+            'department_id' => ['nullable', 'exists:departments,id'],
+        ];
+
+        if (! $inventory) {
+            $rules['quantity'] = ['required', 'integer', 'min:0'];
+        } else {
+            $rules['status'] = ['nullable', 'in:available,low_stock,out_of_stock,discontinued'];
+        }
+
+        $data = $request->validate($rules);
+        $data['student_shop'] = $request->boolean('student_shop');
+
+        return $data;
     }
 }

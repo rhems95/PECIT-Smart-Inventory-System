@@ -22,7 +22,6 @@
                     <th class="px-4 py-3 font-medium">Days Left</th>
                     <th class="px-4 py-3 font-medium">Daily Use</th>
                     <th class="px-4 py-3 font-medium">Reorder Qty</th>
-                    <th class="px-4 py-3 font-medium">Supplier</th>
                 </tr>
             </thead>
             <tbody>
@@ -47,11 +46,10 @@
                         <td class="px-4 py-3">{{ $row['days_until_depletion'] ?? '—' }}</td>
                         <td class="px-4 py-3">{{ $row['daily_rate'] }}</td>
                         <td class="px-4 py-3 font-semibold text-pecit-blue dark:text-pecit-gold">{{ $row['recommended_reorder'] }} {{ $row['unit'] }}</td>
-                        <td class="px-4 py-3">{{ $row['supplier'] ?? '—' }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="px-4 py-8 text-center text-slate-500">No restock recommendations right now.</td>
+                        <td colspan="8" class="px-4 py-8 text-center text-slate-500">No restock recommendations right now.</td>
                     </tr>
                 @endforelse
             </tbody>

@@ -39,16 +39,26 @@
         <input type="number" name="minimum_stock" value="{{ old('minimum_stock', $item?->minimum_stock ?? 10) }}" class="psis-input" required>
     </div>
     <div>
-        <label class="psis-label">Supplier</label>
-        <select name="supplier_id" class="psis-input">
-            <option value="">—</option>
-            @foreach ($suppliers as $supplier)
-                <option value="{{ $supplier->id }}" @selected(old('supplier_id', $item?->supplier_id) == $supplier->id)>{{ $supplier->name }}</option>
-            @endforeach
-        </select>
-    </div>
-    <div>
         <label class="psis-label">Location</label>
         <input name="location" value="{{ old('location', $item?->location) }}" class="psis-input">
+    </div>
+    <div class="md:col-span-2">
+        <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="student_shop" value="1" @checked(old('student_shop', $item?->student_shop))>
+            Available in Uniform Shop (students)
+        </label>
+        <p class="text-xs text-slate-500 mt-1">
+            <strong>Shared</strong> (leave department empty): P.E., NSTP, ID lanyard — all students can buy.<br>
+            <strong>Exclusive</strong> (select a department): only that department’s students can buy; other departments cannot.
+        </p>
+    </div>
+    <div>
+        <label class="psis-label">Exclusive to department</label>
+        <select name="department_id" class="psis-input">
+            <option value="">Shared — all students (P.E. / NSTP / lanyard)</option>
+            @foreach (($departments ?? []) as $dept)
+                <option value="{{ $dept->id }}" @selected(old('department_id', $item?->department_id) == $dept->id)>{{ $dept->name }} ({{ $dept->code }})</option>
+            @endforeach
+        </select>
     </div>
 </div>

@@ -11,7 +11,7 @@ class InventoryApiController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Inventory::with(['category', 'supplier']);
+        $query = Inventory::with(['category']);
 
         if ($search = $request->string('search')->trim()->toString()) {
             $query->where('item_name', 'like', "%{$search}%");
@@ -22,7 +22,7 @@ class InventoryApiController extends Controller
 
     public function show(Inventory $inventory): JsonResponse
     {
-        $inventory->load(['category', 'supplier']);
+        $inventory->load(['category']);
 
         return response()->json($inventory);
     }

@@ -38,6 +38,13 @@ class PurchaseRequestService
                 $inventory = Inventory::findOrFail($inventoryId);
                 $qty = (int) $quantity;
 
+                if (! $inventory->isAvailableInStudentShop($user)) {
+                    $label = $inventory->department
+                        ? "exclusive to {$inventory->department->name}"
+                        : 'not available in the Uniform Shop';
+                    throw new RuntimeException("{$inventory->item_name} is {$label}.");
+                }
+
                 if ($qty <= 0 || $inventory->availableQuantity() < $qty) {
                     throw new RuntimeException("Insufficient stock for {$inventory->item_name}.");
                 }
