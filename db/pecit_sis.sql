@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 25, 2026 at 07:30 AM
+-- Generation Time: Aug 18, 2026 at 06:49 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -99,7 +99,8 @@ INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `model_type`, `model_id`, `
 (25, 3, 'supply_request.released', 'App\\Models\\SupplyRequest', 4, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-24 20:13:57', '2026-07-24 20:13:57'),
 (26, 7, 'purchase.created', 'App\\Models\\PurchaseRequest', 4, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-24 20:46:30', '2026-07-24 20:46:30'),
 (27, 2, 'purchase.payment_verified', 'App\\Models\\PurchaseRequest', 4, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-24 20:47:33', '2026-07-24 20:47:33'),
-(28, 3, 'purchase.released', 'App\\Models\\PurchaseRequest', 4, NULL, '{\"deducted\":[\"Bottled Water 500ml x1\"]}', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-24 20:48:48', '2026-07-24 20:48:48');
+(28, 3, 'purchase.released', 'App\\Models\\PurchaseRequest', 4, NULL, '{\"deducted\":[\"Bottled Water 500ml x1\"]}', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', '2026-07-24 20:48:48', '2026-07-24 20:48:48'),
+(29, 3, 'student.updated', 'App\\Models\\User', 7, NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36', '2026-08-05 20:15:48', '2026-08-05 20:15:48');
 
 -- --------------------------------------------------------
 
@@ -120,7 +121,7 @@ CREATE TABLE `cache` (
 INSERT INTO `cache` (`key`, `value`, `expiration`) VALUES
 ('pecit-smart-inventory-system-cache-admin@edu.ph|127.0.0.1', 'i:1;', 1784906065),
 ('pecit-smart-inventory-system-cache-admin@edu.ph|127.0.0.1:timer', 'i:1784906065;', 1784906065),
-('pecit-smart-inventory-system-cache-spatie.permission.cache', 'a:3:{s:5:\"alias\";a:4:{s:1:\"a\";s:2:\"id\";s:1:\"b\";s:4:\"name\";s:1:\"c\";s:10:\"guard_name\";s:1:\"r\";s:5:\"roles\";}s:11:\"permissions\";a:12:{i:0;a:4:{s:1:\"a\";i:1;s:1:\"b\";s:14:\"inventory.view\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:5:{i:0;i:1;i:1;i:2;i:2;i:3;i:3;i:4;i:4;i:5;}}i:1;a:4:{s:1:\"a\";i:2;s:1:\"b\";s:16:\"inventory.manage\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:3;}}i:2;a:4:{s:1:\"a\";i:3;s:1:\"b\";s:15:\"requests.submit\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:4;}}i:3;a:4:{s:1:\"a\";i:4;s:1:\"b\";s:15:\"requests.review\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:2;}}i:4;a:4:{s:1:\"a\";i:5;s:1:\"b\";s:16:\"requests.approve\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:1:{i:0;i:1;}}i:5;a:4:{s:1:\"a\";i:6;s:1:\"b\";s:16:\"requests.release\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:3;}}i:6;a:4:{s:1:\"a\";i:7;s:1:\"b\";s:18:\"purchases.checkout\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:5;}}i:7;a:4:{s:1:\"a\";i:8;s:1:\"b\";s:16:\"purchases.verify\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:2;}}i:8;a:4:{s:1:\"a\";i:9;s:1:\"b\";s:12:\"users.manage\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:1:{i:0;i:1;}}i:9;a:4:{s:1:\"a\";i:10;s:1:\"b\";s:12:\"reports.view\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:3:{i:0;i:1;i:1;i:2;i:2;i:3;}}i:10;a:4:{s:1:\"a\";i:11;s:1:\"b\";s:10:\"audit.view\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:1:{i:0;i:1;}}i:11;a:4:{s:1:\"a\";i:12;s:1:\"b\";s:20:\"announcements.manage\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:1:{i:0;i:1;}}}s:5:\"roles\";a:5:{i:0;a:3:{s:1:\"a\";i:1;s:1:\"b\";s:13:\"Administrator\";s:1:\"c\";s:3:\"web\";}i:1;a:3:{s:1:\"a\";i:2;s:1:\"b\";s:10:\"Accounting\";s:1:\"c\";s:3:\"web\";}i:2;a:3:{s:1:\"a\";i:3;s:1:\"b\";s:16:\"Supply Personnel\";s:1:\"c\";s:3:\"web\";}i:3;a:3:{s:1:\"a\";i:4;s:1:\"b\";s:7:\"Faculty\";s:1:\"c\";s:3:\"web\";}i:4;a:3:{s:1:\"a\";i:5;s:1:\"b\";s:7:\"Student\";s:1:\"c\";s:3:\"web\";}}}', 1784993573);
+('pecit-smart-inventory-system-cache-spatie.permission.cache', 'a:3:{s:5:\"alias\";a:4:{s:1:\"a\";s:2:\"id\";s:1:\"b\";s:4:\"name\";s:1:\"c\";s:10:\"guard_name\";s:1:\"r\";s:5:\"roles\";}s:11:\"permissions\";a:12:{i:0;a:4:{s:1:\"a\";i:1;s:1:\"b\";s:14:\"inventory.view\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:5:{i:0;i:1;i:1;i:2;i:2;i:3;i:3;i:4;i:4;i:5;}}i:1;a:4:{s:1:\"a\";i:2;s:1:\"b\";s:16:\"inventory.manage\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:3;}}i:2;a:4:{s:1:\"a\";i:3;s:1:\"b\";s:15:\"requests.submit\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:4;}}i:3;a:4:{s:1:\"a\";i:4;s:1:\"b\";s:15:\"requests.review\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:2;}}i:4;a:4:{s:1:\"a\";i:5;s:1:\"b\";s:16:\"requests.approve\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:1:{i:0;i:1;}}i:5;a:4:{s:1:\"a\";i:6;s:1:\"b\";s:16:\"requests.release\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:3;}}i:6;a:4:{s:1:\"a\";i:7;s:1:\"b\";s:18:\"purchases.checkout\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:5;}}i:7;a:4:{s:1:\"a\";i:8;s:1:\"b\";s:16:\"purchases.verify\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:2:{i:0;i:1;i:1;i:2;}}i:8;a:4:{s:1:\"a\";i:9;s:1:\"b\";s:12:\"users.manage\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:1:{i:0;i:1;}}i:9;a:4:{s:1:\"a\";i:10;s:1:\"b\";s:12:\"reports.view\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:3:{i:0;i:1;i:1;i:2;i:2;i:3;}}i:10;a:4:{s:1:\"a\";i:11;s:1:\"b\";s:10:\"audit.view\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:1:{i:0;i:1;}}i:11;a:4:{s:1:\"a\";i:12;s:1:\"b\";s:20:\"announcements.manage\";s:1:\"c\";s:3:\"web\";s:1:\"r\";a:1:{i:0;i:1;}}}s:5:\"roles\";a:5:{i:0;a:3:{s:1:\"a\";i:1;s:1:\"b\";s:13:\"Administrator\";s:1:\"c\";s:3:\"web\";}i:1;a:3:{s:1:\"a\";i:2;s:1:\"b\";s:10:\"Accounting\";s:1:\"c\";s:3:\"web\";}i:2;a:3:{s:1:\"a\";i:3;s:1:\"b\";s:16:\"Supply Personnel\";s:1:\"c\";s:3:\"web\";}i:3;a:3:{s:1:\"a\";i:4;s:1:\"b\";s:7:\"Faculty\";s:1:\"c\";s:3:\"web\";}i:4;a:3:{s:1:\"a\";i:5;s:1:\"b\";s:7:\"Student\";s:1:\"c\";s:3:\"web\";}}}', 1786076301);
 
 -- --------------------------------------------------------
 
@@ -164,7 +165,8 @@ INSERT INTO `categories` (`id`, `name`, `slug`, `description`, `is_active`, `cre
 (7, 'Maintenance Supplies', 'maintenance-supplies', 'Maintenance Supplies for PECIT campuses.', 1, '2026-07-24 06:42:41', '2026-07-24 06:42:41'),
 (8, 'Furniture', 'furniture', 'Furniture for PECIT campuses.', 1, '2026-07-24 06:42:41', '2026-07-24 06:42:41'),
 (9, 'Others', 'others', 'Others for PECIT campuses.', 1, '2026-07-24 06:42:41', '2026-07-24 06:42:41'),
-(10, 'Shirts', 'shirts', NULL, 1, '2026-07-24 07:47:35', '2026-07-24 07:47:35');
+(10, 'Shirts', 'shirts', NULL, 1, '2026-07-24 07:47:35', '2026-07-24 07:47:35'),
+(11, 'Uniforms', 'uniforms', 'Student uniforms and related items for the shop.', 1, '2026-08-05 19:57:20', '2026-08-05 19:57:20');
 
 -- --------------------------------------------------------
 
@@ -231,6 +233,8 @@ CREATE TABLE `inventory` (
   `minimum_stock` int(11) NOT NULL DEFAULT 10,
   `location` varchar(255) DEFAULT NULL,
   `status` enum('available','low_stock','out_of_stock','discontinued') NOT NULL DEFAULT 'available',
+  `student_shop` tinyint(1) NOT NULL DEFAULT 0,
+  `department_id` bigint(20) UNSIGNED DEFAULT NULL,
   `barcode` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -240,15 +244,23 @@ CREATE TABLE `inventory` (
 -- Dumping data for table `inventory`
 --
 
-INSERT INTO `inventory` (`id`, `item_code`, `item_name`, `description`, `category_id`, `unit`, `unit_price`, `quantity`, `reserved_quantity`, `minimum_stock`, `location`, `status`, `barcode`, `created_at`, `updated_at`) VALUES
-(1, 'PECIT-BONDPAPE', 'Bond Paper A4', 'PECIT standard Bond Paper A4', 1, 'ream', 285.00, 119, 0, 30, 'Supply Room A', 'available', NULL, '2026-07-24 06:43:04', '2026-07-24 08:35:16'),
-(2, 'PECIT-BOARDMAR', 'Board Marker (Black)', 'PECIT standard Board Marker (Black)', 2, 'piece', 45.00, 80, 0, 25, 'Supply Room A', 'available', NULL, '2026-07-24 06:43:04', '2026-07-24 08:18:00'),
-(3, 'PECIT-WHITEBOA', 'Whiteboard Eraser', 'PECIT standard Whiteboard Eraser', 2, 'piece', 35.00, 39, 0, 15, 'Supply Room A', 'available', NULL, '2026-07-24 06:43:04', '2026-07-24 19:11:50'),
-(4, 'PECIT-BOTTLEDW', 'Bottled Water 500ml', 'PECIT standard Bottled Water 500ml', 6, 'case', 250.00, 58, 0, 20, 'Pantry', 'available', NULL, '2026-07-24 06:43:04', '2026-07-24 20:48:44'),
-(5, 'PECIT-ETHERNET', 'Ethernet Cable Cat6', 'PECIT standard Ethernet Cable Cat6', 4, 'piece', 120.00, 35, 0, 10, 'IT Stock Room', 'available', NULL, '2026-07-24 06:43:04', '2026-07-24 06:43:04'),
-(6, 'PECIT-DISINFEC', 'Disinfectant Spray', 'PECIT standard Disinfectant Spray', 5, 'bottle', 95.00, 27, 0, 12, 'Janitorial', 'available', NULL, '2026-07-24 06:43:04', '2026-07-24 08:26:28'),
-(7, 'PECIT-LABORATO', 'Laboratory Gloves', 'PECIT standard Laboratory Gloves', 3, 'box', 180.00, 2, 0, 8, 'Lab Store', 'low_stock', NULL, '2026-07-24 06:43:04', '2026-07-24 08:44:31'),
-(8, 'PECIT-OFFICECH', 'Office Chair', 'PECIT standard Office Chair', 8, 'unit', 3500.00, 5, 0, 2, 'Warehouse', 'available', NULL, '2026-07-24 06:43:04', '2026-07-24 20:13:53');
+INSERT INTO `inventory` (`id`, `item_code`, `item_name`, `description`, `category_id`, `unit`, `unit_price`, `quantity`, `reserved_quantity`, `minimum_stock`, `location`, `status`, `student_shop`, `department_id`, `barcode`, `created_at`, `updated_at`) VALUES
+(1, 'PECIT-BONDPAPE', 'Bond Paper A4', 'PECIT standard Bond Paper A4', 1, 'ream', 285.00, 119, 0, 30, 'Supply Room A', 'available', 0, NULL, NULL, '2026-07-24 06:43:04', '2026-07-24 08:35:16'),
+(2, 'PECIT-BOARDMAR', 'Board Marker (Black)', 'PECIT standard Board Marker (Black)', 2, 'piece', 45.00, 80, 0, 25, 'Supply Room A', 'available', 0, NULL, NULL, '2026-07-24 06:43:04', '2026-07-24 08:18:00'),
+(3, 'PECIT-WHITEBOA', 'Whiteboard Eraser', 'PECIT standard Whiteboard Eraser', 2, 'piece', 35.00, 39, 0, 15, 'Supply Room A', 'available', 0, NULL, NULL, '2026-07-24 06:43:04', '2026-07-24 19:11:50'),
+(4, 'PECIT-BOTTLEDW', 'Bottled Water 500ml', 'PECIT standard Bottled Water 500ml', 6, 'case', 250.00, 58, 0, 20, 'Pantry', 'available', 0, NULL, NULL, '2026-07-24 06:43:04', '2026-07-24 20:48:44'),
+(5, 'PECIT-ETHERNET', 'Ethernet Cable Cat6', 'PECIT standard Ethernet Cable Cat6', 4, 'piece', 120.00, 35, 0, 10, 'IT Stock Room', 'available', 0, NULL, NULL, '2026-07-24 06:43:04', '2026-07-24 06:43:04'),
+(6, 'PECIT-DISINFEC', 'Disinfectant Spray', 'PECIT standard Disinfectant Spray', 5, 'bottle', 95.00, 27, 0, 12, 'Janitorial', 'available', 0, NULL, NULL, '2026-07-24 06:43:04', '2026-07-24 08:26:28'),
+(7, 'PECIT-LABORATO', 'Laboratory Gloves', 'PECIT standard Laboratory Gloves', 3, 'box', 180.00, 10, 0, 8, 'Lab Store', 'available', 0, NULL, NULL, '2026-07-24 06:43:04', '2026-08-05 19:39:03'),
+(8, 'PECIT-OFFICECH', 'Office Chair', 'PECIT standard Office Chair', 8, 'unit', 3500.00, 5, 0, 2, 'Warehouse', 'available', 0, NULL, NULL, '2026-07-24 06:43:04', '2026-07-24 20:13:53'),
+(9, 'UNI-PE', 'Uniform P.E.', 'Physical Education uniform — available to all students.', 11, 'piece', 650.00, 80, 0, 15, 'Uniform Store', 'available', 1, NULL, NULL, '2026-08-05 19:57:21', '2026-08-05 20:32:59'),
+(10, 'UNI-NSTP', 'Uniform NSTP', 'NSTP uniform — available to all students.', 11, 'piece', 550.00, 60, 0, 15, 'Uniform Store', 'available', 1, NULL, NULL, '2026-08-05 19:57:21', '2026-08-05 20:32:59'),
+(11, 'UNI-LANYARD', 'Lanyard for ID', 'ID lanyard — available to all students.', 11, 'piece', 80.00, 200, 0, 30, 'Uniform Store', 'available', 1, NULL, NULL, '2026-08-05 19:57:21', '2026-08-05 20:32:59'),
+(12, 'UNI-CIT', 'IT Uniform (Exclusive)', 'Exclusive to College of Information Technology students only.', 11, 'set', 1200.00, 40, 0, 10, 'Uniform Store', 'available', 1, 4, NULL, '2026-08-05 19:57:21', '2026-08-05 20:32:59'),
+(13, 'UNI-COE', 'Engineering Uniform (Exclusive)', 'Exclusive to College of Engineering students only.', 11, 'set', 1200.00, 40, 0, 10, 'Uniform Store', 'available', 1, 3, NULL, '2026-08-05 19:57:21', '2026-08-05 20:32:59'),
+(14, 'UNI-COB', 'Business Uniform (Exclusive)', 'Exclusive to College of Business students only.', 11, 'set', 1200.00, 40, 0, 10, 'Uniform Store', 'available', 1, 5, NULL, '2026-08-05 19:57:21', '2026-08-05 20:32:59'),
+(15, 'UNI-SHS', 'SHS Uniform (Exclusive)', 'Exclusive to Senior High School students only.', 11, 'set', 1200.00, 40, 0, 10, 'Uniform Store', 'available', 1, 6, NULL, '2026-08-05 19:57:21', '2026-08-05 20:32:59'),
+(16, 'UNI-CCS', 'Computer Studies Uniform (Exclusive)', 'Exclusive to College of Computer Studies students only.', 11, 'set', 1200.00, 40, 0, 10, 'Uniform Store', 'available', 1, 9, NULL, '2026-08-05 20:32:59', '2026-08-05 20:32:59');
 
 -- --------------------------------------------------------
 
@@ -309,18 +321,20 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (5, '2026_07_24_150001_add_fields_to_users_table', 2),
 (6, '2026_07_24_150002_create_departments_table', 2),
 (7, '2026_07_24_150003_create_categories_table', 2),
-(8, '2026_07_24_150005_create_inventory_table', 2),
-(9, '2026_07_24_150006_create_requests_table', 2),
-(10, '2026_07_24_150007_create_request_items_table', 2),
-(11, '2026_07_24_150008_create_purchase_requests_table', 2),
-(12, '2026_07_24_150009_create_payments_table', 2),
-(13, '2026_07_24_150010_create_transactions_table', 2),
-(14, '2026_07_24_150011_create_stock_logs_table', 2),
-(15, '2026_07_24_150012_create_psis_notifications_table', 2),
-(16, '2026_07_24_150013_create_audit_logs_table', 2),
-(17, '2026_07_24_150014_create_announcements_table', 2),
-(18, '2026_07_24_150015_add_users_department_foreign_key', 2),
-(19, '2026_08_06_000001_drop_suppliers_from_inventory', 3);
+(8, '2026_07_24_150004_create_suppliers_table', 2),
+(9, '2026_07_24_150005_create_inventory_table', 2),
+(10, '2026_07_24_150006_create_requests_table', 2),
+(11, '2026_07_24_150007_create_request_items_table', 2),
+(12, '2026_07_24_150008_create_purchase_requests_table', 2),
+(13, '2026_07_24_150009_create_payments_table', 2),
+(14, '2026_07_24_150010_create_transactions_table', 2),
+(15, '2026_07_24_150011_create_stock_logs_table', 2),
+(16, '2026_07_24_150012_create_psis_notifications_table', 2),
+(17, '2026_07_24_150013_create_audit_logs_table', 2),
+(18, '2026_07_24_150014_create_announcements_table', 2),
+(19, '2026_07_24_150015_add_users_department_foreign_key', 2),
+(20, '2026_08_06_000001_drop_suppliers_from_inventory', 3),
+(21, '2026_08_06_120000_add_student_shop_and_last_name', 4);
 
 -- --------------------------------------------------------
 
@@ -357,7 +371,8 @@ INSERT INTO `model_has_roles` (`role_id`, `model_type`, `model_id`) VALUES
 (4, 'App\\Models\\User', 4),
 (4, 'App\\Models\\User', 6),
 (5, 'App\\Models\\User', 5),
-(5, 'App\\Models\\User', 7);
+(5, 'App\\Models\\User', 7),
+(5, 'App\\Models\\User', 8);
 
 -- --------------------------------------------------------
 
@@ -705,11 +720,7 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('2JaaCTts2LtwwzTO2RoG92EcN6rXXv5NiXq5eKA2', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiSUQxTkh1UFlRM1NTeEFFSVN1ckFYb0p4VmxjWHJQU3M4N1pRdnlmRCI7czozOiJ1cmwiO2E6MTp7czo4OiJpbnRlbmRlZCI7czozMjoiaHR0cDovLzEyNy4wLjAuMTo4MDAwL3JlcXVlc3RzLzQiO31zOjk6Il9wcmV2aW91cyI7YToyOntzOjM6InVybCI7czoyNzoiaHR0cDovLzEyNy4wLjAuMTo4MDAwL2xvZ2luIjtzOjU6InJvdXRlIjtzOjU6ImxvZ2luIjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1784952871),
-('8OszwDN5R7DKrIxa7uQEn0w6LGmv4VgSrLJ178Vm', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.130.0 Chrome/148.0.7778.280 Electron/42.6.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiWWFzU2FQcUZCOE1ERUlXakpxc0tkUzh1dXNXVXR5RnZibHBFeW8xTCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9sb2dpbiI7czo1OiJyb3V0ZSI7czo1OiJsb2dpbiI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1784948568),
-('p0FhtMVbJ07GHxIhrrQNOzBNFAB9OeDMGzZQeDRx', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoiTUlrWENQeHBpV3NNbFZJTU1oaXZPazVCM2IzTTlES3J0aHdzd3ZiYyI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJuZXciO2E6MDp7fXM6Mzoib2xkIjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9kYXNoYm9hcmQiO3M6NToicm91dGUiO3M6OToiZGFzaGJvYXJkIjt9czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjE2OiJsYXN0X2FjdGl2aXR5X2F0IjtpOjE3ODQ5NTE5OTI7fQ==', 1784951992),
-('QkDWCNQbUhTWJtO2tc2C5z4E3N9vW4C9QKby915v', 3, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoiZzZ6VVdIVnRTNzhLRjY4emFsTW5tSk1PMFprWlhMYk1IalY5R3pTNCI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MzE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9kYXNoYm9hcmQiO3M6NToicm91dGUiO3M6OToiZGFzaGJvYXJkIjt9czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MztzOjE2OiJsYXN0X2FjdGl2aXR5X2F0IjtpOjE3ODQ5NTQ5NjQ7fQ==', 1784954964),
-('Zjgb693Y8BfGzV3SOvLeTc2x21dynAwVNZ9zu1jN', NULL, '127.0.0.1', 'Symfony', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiWGtFaFpRbDFxR1RsTWZoU1N3S1Fuejh5ZHNPb3VaRWxQbU9URE5PRCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjI6Imh0dHA6Ly9sb2NhbGhvc3QvbG9naW4iO3M6NToicm91dGUiO3M6NToibG9naW4iO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 1784955882);
+('nHjNrT0or47nIdVhV08uvBqLAq5PZPhx7zvndVaO', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiQTJZYWJURWRDeVlKRk52U1pPVW1ZYW83UzF0UXpMaVk0dWFsSnJyZCI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mjc6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9sb2dpbiI7czo1OiJyb3V0ZSI7czo1OiJsb2dpbiI7fX0=', 1786069342);
 
 -- --------------------------------------------------------
 
@@ -742,7 +753,9 @@ INSERT INTO `stock_logs` (`id`, `inventory_id`, `action`, `quantity`, `balance_a
 (5, 7, 'delivery', 20, 2, 'Vea Villaver', 'Released for REQ-JYDE6HY8', 3, '2026-07-24 08:44:31', '2026-07-24 08:44:31'),
 (6, 3, 'delivery', 1, 39, 'Joy Tienes', 'Student purchase PUR-PD8IZ03C', 3, '2026-07-24 19:11:50', '2026-07-24 19:11:50'),
 (7, 8, 'delivery', 3, 5, 'Vea Villaver', 'Released for REQ-2YCLVJ4C', 3, '2026-07-24 20:13:53', '2026-07-24 20:13:53'),
-(8, 4, 'delivery', 1, 58, 'Joy Tienes', 'Student purchase PUR-MWGYFIIS', 3, '2026-07-24 20:48:44', '2026-07-24 20:48:44');
+(8, 4, 'delivery', 1, 58, 'Joy Tienes', 'Student purchase PUR-MWGYFIIS', 3, '2026-07-24 20:48:44', '2026-07-24 20:48:44'),
+(9, 7, 'stock_in', 3, 5, NULL, NULL, 3, '2026-08-05 19:38:35', '2026-08-05 19:38:35'),
+(10, 7, 'stock_in', 5, 10, NULL, NULL, 3, '2026-08-05 19:39:03', '2026-08-05 19:39:03');
 
 -- --------------------------------------------------------
 
@@ -786,7 +799,9 @@ INSERT INTO `transactions` (`id`, `transaction_number`, `inventory_id`, `type`, 
 (13, 'TXN-RTGGLV7UX0', 8, 'reserve', 3, 8, 8, 'App\\Models\\SupplyRequest', 4, 'Reserved for REQ-2YCLVJ4C', 1, '2026-07-24 20:11:56', '2026-07-24 20:11:56'),
 (14, 'TXN-TY86WEMWOD', 8, 'release', 3, 8, 5, 'App\\Models\\SupplyRequest', 4, 'Released for REQ-2YCLVJ4C', 3, '2026-07-24 20:13:53', '2026-07-24 20:13:53'),
 (15, 'TXN-KFO8OKEHNH', 4, 'reserve', 1, 59, 59, 'App\\Models\\PurchaseRequest', 4, 'Reserved for PUR-MWGYFIIS', 2, '2026-07-24 20:47:26', '2026-07-24 20:47:26'),
-(16, 'TXN-JAHNCNBZLP', 4, 'release', 1, 59, 58, 'App\\Models\\PurchaseRequest', 4, 'Student purchase PUR-MWGYFIIS', 3, '2026-07-24 20:48:44', '2026-07-24 20:48:44');
+(16, 'TXN-JAHNCNBZLP', 4, 'release', 1, 59, 58, 'App\\Models\\PurchaseRequest', 4, 'Student purchase PUR-MWGYFIIS', 3, '2026-07-24 20:48:44', '2026-07-24 20:48:44'),
+(17, 'TXN-5I3MYBNXVS', 7, 'stock_in', 3, 2, 5, NULL, NULL, NULL, 3, '2026-08-05 19:38:35', '2026-08-05 19:38:35'),
+(18, 'TXN-F8PX9NLJCR', 7, 'stock_in', 5, 5, 10, NULL, NULL, NULL, 3, '2026-08-05 19:39:03', '2026-08-05 19:39:03');
 
 -- --------------------------------------------------------
 
@@ -798,6 +813,7 @@ CREATE TABLE `users` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `employee_id` varchar(255) DEFAULT NULL,
   `name` varchar(255) NOT NULL,
+  `last_name` varchar(255) DEFAULT NULL,
   `email` varchar(255) NOT NULL,
   `email_verified_at` timestamp NULL DEFAULT NULL,
   `password` varchar(255) NOT NULL,
@@ -814,14 +830,15 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `employee_id`, `name`, `email`, `email_verified_at`, `password`, `remember_token`, `created_at`, `updated_at`, `department_id`, `phone`, `is_active`, `last_activity_at`) VALUES
-(1, 'ADM-001', 'PECIT Admin', 'admin@pecit.edu.ph', '2026-07-24 06:43:05', '$2y$12$uBKLRahlwQGoB//1TcUWhu1MoxC5s0KXFbrosSwz/QcuWv458SlG2', NULL, '2026-07-24 06:43:05', '2026-07-24 20:12:16', 7, NULL, 1, '2026-07-24 20:12:16'),
-(2, 'ACC-001', 'PECIT Accounting', 'accounting@pecit.edu.ph', '2026-07-24 06:43:05', '$2y$12$k/qp1KIBk9Xk/eeW.D52cO01p3rC/z8cv2diKZ0z3sNeDnfsnD2VW', NULL, '2026-07-24 06:43:05', '2026-07-24 20:47:46', 7, NULL, 1, '2026-07-24 20:47:46'),
-(3, 'SUP-001', 'Supply Officer', 'supply@pecit.edu.ph', '2026-07-24 06:43:05', '$2y$12$PdnxkklDtWHi3Dmj3UZUd.PCTqf1GXk5ptoYk1hoawRZHAmwO/vdS', NULL, '2026-07-24 06:43:05', '2026-07-24 20:49:24', 8, NULL, 1, '2026-07-24 20:49:24'),
-(4, 'FAC-001', 'Prof. Juan Dela Cruz', 'faculty@pecit.edu.ph', '2026-07-24 06:43:06', '$2y$12$PAQWnYmtyK6MjCLINX8j0uOgqq9t2CjmSV0vjFux7pRCqrYuhv5H6', NULL, '2026-07-24 06:43:06', '2026-07-24 08:31:45', 1, NULL, 1, '2026-07-24 08:31:45'),
-(5, 'STU-001', 'Maria Santos', 'student@pecit.edu.ph', '2026-07-24 06:43:06', '$2y$12$GG/Hx2.Pq//baFYJ/8zQl./eqcxDpoLT67kloWblECrxdFUjtkjUy', NULL, '2026-07-24 06:43:06', '2026-07-24 08:25:31', 4, NULL, 1, '2026-07-24 08:25:31'),
-(6, '20231-00245', 'Vea Villaver', 'veapecit.edu@gmail.com', '2026-07-24 08:40:15', '$2y$12$Vcn7obbxA.yEmD/MIsUMgu2muLnXMXWUESZ.0N6f9ebXt7vfSFMI2', NULL, '2026-07-24 08:40:15', '2026-07-24 20:16:18', 9, '09123456789', 1, '2026-07-24 20:16:18'),
-(7, '20231-00246', 'Joy Tienes', 'tienesmaryjoy6@gmail.com', '2026-07-24 19:07:21', '$2y$12$k4YyeQ8njXjJ50N1Lqir9Os0/zrr8Ls4G.KDbWnLkNGYGnzC7J7gS', NULL, '2026-07-24 19:07:21', '2026-07-24 20:46:53', 9, '09123456789', 1, '2026-07-24 20:46:53');
+INSERT INTO `users` (`id`, `employee_id`, `name`, `last_name`, `email`, `email_verified_at`, `password`, `remember_token`, `created_at`, `updated_at`, `department_id`, `phone`, `is_active`, `last_activity_at`) VALUES
+(1, 'ADM-001', 'PECIT Admin', NULL, 'admin@pecit.edu.ph', '2026-07-24 06:43:05', '$2y$12$uBKLRahlwQGoB//1TcUWhu1MoxC5s0KXFbrosSwz/QcuWv458SlG2', NULL, '2026-07-24 06:43:05', '2026-08-05 20:01:33', 7, NULL, 1, '2026-08-05 20:01:33'),
+(2, 'ACC-001', 'PECIT Accounting', NULL, 'accounting@pecit.edu.ph', '2026-07-24 06:43:05', '$2y$12$k/qp1KIBk9Xk/eeW.D52cO01p3rC/z8cv2diKZ0z3sNeDnfsnD2VW', NULL, '2026-07-24 06:43:05', '2026-07-24 20:47:46', 7, NULL, 1, '2026-07-24 20:47:46'),
+(3, 'SUP-001', 'Supply Officer', NULL, 'supply@pecit.edu.ph', '2026-07-24 06:43:05', '$2y$12$PdnxkklDtWHi3Dmj3UZUd.PCTqf1GXk5ptoYk1hoawRZHAmwO/vdS', NULL, '2026-07-24 06:43:05', '2026-08-06 18:14:32', 8, NULL, 1, '2026-08-06 18:14:32'),
+(4, 'FAC-001', 'Prof. Juan Dela Cruz', NULL, 'faculty@pecit.edu.ph', '2026-07-24 06:43:06', '$2y$12$PAQWnYmtyK6MjCLINX8j0uOgqq9t2CjmSV0vjFux7pRCqrYuhv5H6', NULL, '2026-07-24 06:43:06', '2026-08-05 20:33:00', 3, NULL, 1, '2026-07-24 08:31:45'),
+(5, 'STU-001', 'Maria Santos', 'Santos', 'student@pecit.edu.ph', '2026-07-24 06:43:06', '$2y$12$GG/Hx2.Pq//baFYJ/8zQl./eqcxDpoLT67kloWblECrxdFUjtkjUy', NULL, '2026-07-24 06:43:06', '2026-08-05 19:57:21', 4, NULL, 1, '2026-07-24 08:25:31'),
+(6, '20231-00245', 'Vea Villaver', NULL, 'veapecit.edu@gmail.com', '2026-07-24 08:40:15', '$2y$12$Vcn7obbxA.yEmD/MIsUMgu2muLnXMXWUESZ.0N6f9ebXt7vfSFMI2', NULL, '2026-07-24 08:40:15', '2026-07-24 20:16:18', 9, '09123456789', 1, '2026-07-24 20:16:18'),
+(7, '20231-00246', 'Joy Tienes', 'Tienes', 'tienesmaryjoy6@gmail.com', '2026-07-24 19:07:21', '$2y$12$k4YyeQ8njXjJ50N1Lqir9Os0/zrr8Ls4G.KDbWnLkNGYGnzC7J7gS', NULL, '2026-07-24 19:07:21', '2026-08-06 18:08:58', 9, '09123456789', 1, '2026-08-06 18:08:58'),
+(8, 'STU-COE-001', 'Carlos Mendoza', 'Mendoza', 'engineering.student@pecit.edu.ph', '2026-08-05 20:33:00', '$2y$12$86hoJzI9M9FJynZgJefvT.MwMPgzj1np.bvYgGoHuKPe1AOg0zyFa', NULL, '2026-08-05 20:33:00', '2026-08-05 20:33:00', 3, NULL, 1, NULL);
 
 --
 -- Indexes for dumped tables
@@ -882,7 +899,8 @@ ALTER TABLE `failed_jobs`
 ALTER TABLE `inventory`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `inventory_item_code_unique` (`item_code`),
-  ADD KEY `inventory_category_id_foreign` (`category_id`);
+  ADD KEY `inventory_category_id_foreign` (`category_id`),
+  ADD KEY `inventory_department_id_foreign` (`department_id`);
 
 --
 -- Indexes for table `jobs`
@@ -1046,13 +1064,13 @@ ALTER TABLE `announcements`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `departments`
@@ -1070,7 +1088,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `inventory`
 --
 ALTER TABLE `inventory`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -1082,7 +1100,7 @@ ALTER TABLE `jobs`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -1136,19 +1154,19 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `stock_logs`
 --
 ALTER TABLE `stock_logs`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Constraints for dumped tables
@@ -1170,7 +1188,8 @@ ALTER TABLE `audit_logs`
 -- Constraints for table `inventory`
 --
 ALTER TABLE `inventory`
-  ADD CONSTRAINT `inventory_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `inventory_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `inventory_department_id_foreign` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `model_has_permissions`

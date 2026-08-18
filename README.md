@@ -341,10 +341,232 @@ npm run dev
 
 ## Database / Diagrams
 
-Documentation diagrams (Mermaid — preview in GitHub/Cursor or export via [mermaid.live](https://mermaid.live)):
+GitHub renders the Mermaid ERD below on this README. Workflow notes and cardinality tables: [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md). Process charts: [`docs/FLOWCHART.md`](docs/FLOWCHART.md).
 
-- [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md) — entity-relationship diagrams
-- [`docs/FLOWCHART.md`](docs/FLOWCHART.md) — system & process flowcharts
+There is no `suppliers` table. Available quantity is not stored: `available = quantity - reserved_quantity`. Uniform Shop exclusivity is `inventory.student_shop` plus `inventory.department_id` (null = shared; set = department-exclusive).
+
+```mermaid
+erDiagram
+    DEPARTMENTS ||--o{ USERS : "home department"
+    DEPARTMENTS ||--o{ REQUESTS : "requesting dept"
+    DEPARTMENTS ||--o{ INVENTORY : "exclusive shop item"
+
+    USERS ||--o{ REQUESTS : "submits"
+    USERS ||--o{ PURCHASE_REQUESTS : "buys"
+    USERS ||--o{ PAYMENTS : "pays"
+    USERS ||--o{ PSIS_NOTIFICATIONS : "receives"
+    USERS ||--o{ ANNOUNCEMENTS : "creates"
+    USERS ||--o{ AUDIT_LOGS : "performs"
+    USERS ||--o{ TRANSACTIONS : "performs"
+    USERS ||--o{ STOCK_LOGS : "performs"
+
+    CATEGORIES ||--o{ INVENTORY : "classifies"
+
+    REQUESTS ||--|{ REQUEST_ITEMS : "contains"
+    INVENTORY ||--o{ REQUEST_ITEMS : "requested as"
+
+    PURCHASE_REQUESTS ||--|{ PURCHASE_REQUEST_ITEMS : "contains"
+    INVENTORY ||--o{ PURCHASE_REQUEST_ITEMS : "purchased as"
+    PURCHASE_REQUESTS ||--o{ PAYMENTS : "paid via"
+
+    INVENTORY ||--o{ TRANSACTIONS : "stock movement"
+    INVENTORY ||--o{ STOCK_LOGS : "delivery log"
+
+    ROLES ||--o{ MODEL_HAS_ROLES : "assigned"
+    USERS ||--o{ MODEL_HAS_ROLES : "has role"
+    PERMISSIONS ||--o{ MODEL_HAS_PERMISSIONS : "direct grant"
+    USERS ||--o{ MODEL_HAS_PERMISSIONS : "has permission"
+    PERMISSIONS ||--o{ ROLE_HAS_PERMISSIONS : "granted"
+    ROLES ||--o{ ROLE_HAS_PERMISSIONS : "includes"
+
+    DEPARTMENTS {
+        bigint id PK
+        string name
+        string code UK
+        text description
+        boolean is_active
+    }
+
+    USERS {
+        bigint id PK
+        string employee_id UK
+        bigint department_id FK
+        string name
+        string last_name
+        string email UK
+        string phone
+        boolean is_active
+        timestamp email_verified_at
+        timestamp last_activity_at
+        string password
+    }
+
+    CATEGORIES {
+        bigint id PK
+        string name
+        string slug UK
+        text description
+        boolean is_active
+    }
+
+    INVENTORY {
+        bigint id PK
+        string item_code UK
+        string item_name
+        text description
+        bigint category_id FK
+        bigint department_id FK
+        string unit
+        decimal unit_price
+        int quantity
+        int reserved_quantity
+        int minimum_stock
+        string location
+        enum status
+        boolean student_shop
+        string barcode
+    }
+
+    REQUESTS {
+        bigint id PK
+        string request_number UK
+        bigint user_id FK
+        bigint department_id FK
+        enum type
+        enum status
+        text purpose
+        decimal total_amount
+        bigint reviewed_by FK
+        bigint approved_by FK
+        bigint released_by FK
+    }
+
+    REQUEST_ITEMS {
+        bigint id PK
+        bigint request_id FK
+        bigint inventory_id FK
+        int quantity_requested
+        int quantity_approved
+        int quantity_released
+        decimal unit_price
+        decimal subtotal
+    }
+
+    PURCHASE_REQUESTS {
+        bigint id PK
+        string purchase_number UK
+        bigint user_id FK
+        enum status
+        decimal total_amount
+        bigint verified_by FK
+        bigint released_by FK
+    }
+
+    PURCHASE_REQUEST_ITEMS {
+        bigint id PK
+        bigint purchase_request_id FK
+        bigint inventory_id FK
+        int quantity
+        decimal unit_price
+        decimal subtotal
+    }
+
+    PAYMENTS {
+        bigint id PK
+        string reference_number UK
+        bigint purchase_request_id FK
+        bigint user_id FK
+        decimal amount
+        enum status
+        string payment_method
+        string receipt_path
+        bigint verified_by FK
+    }
+
+    TRANSACTIONS {
+        bigint id PK
+        string transaction_number UK
+        bigint inventory_id FK
+        enum type
+        int quantity
+        int quantity_before
+        int quantity_after
+        string reference_type
+        bigint reference_id
+        bigint performed_by FK
+    }
+
+    STOCK_LOGS {
+        bigint id PK
+        bigint inventory_id FK
+        enum action
+        int quantity
+        int balance_after
+        string delivery_recipient
+        bigint performed_by FK
+    }
+
+    PSIS_NOTIFICATIONS {
+        bigint id PK
+        bigint user_id FK
+        string type
+        string title
+        text message
+        string link
+        boolean is_read
+    }
+
+    AUDIT_LOGS {
+        bigint id PK
+        bigint user_id FK
+        string action
+        string model_type
+        bigint model_id
+        json old_values
+        json new_values
+        string ip_address
+    }
+
+    ANNOUNCEMENTS {
+        bigint id PK
+        string title
+        text content
+        enum priority
+        boolean is_active
+        timestamp published_at
+        timestamp expires_at
+        bigint created_by FK
+    }
+
+    ROLES {
+        bigint id PK
+        string name
+        string guard_name
+    }
+
+    PERMISSIONS {
+        bigint id PK
+        string name
+        string guard_name
+    }
+
+    MODEL_HAS_ROLES {
+        bigint role_id FK
+        string model_type
+        bigint model_id
+    }
+
+    MODEL_HAS_PERMISSIONS {
+        bigint permission_id FK
+        string model_type
+        bigint model_id
+    }
+
+    ROLE_HAS_PERMISSIONS {
+        bigint permission_id FK
+        bigint role_id FK
+    }
+```
 
 ## Project Structure
 
