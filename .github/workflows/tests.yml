@@ -44,4 +44,12 @@ jobs:
         run: php artisan key:generate
 
       - name: Execute tests
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          DB_URL: ''
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
         run: php artisan test

@@ -4,21 +4,11 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        foreach (['Administrator', 'Admission', 'Accounting', 'Supply Personnel', 'Faculty', 'Student'] as $role) {
-            Role::findOrCreate($role);
-        }
-    }
 
     public function test_login_screen_can_be_rendered(): void
     {
