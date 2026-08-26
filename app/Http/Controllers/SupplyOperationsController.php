@@ -10,6 +10,7 @@ use App\Services\PurchaseRequestService;
 use App\Services\SupplyRequestService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SupplyOperationsController extends Controller
@@ -17,34 +18,64 @@ class SupplyOperationsController extends Controller
     public function stockIndex(): View
     {
         return view('supply.stock', [
-            'items' => Inventory::orderBy('item_name')->get(),
+            'items' => Inventory::with('sizeStocks')->orderBy('item_name')->get(),
         ]);
     }
 
     public function stockIn(Request $request, InventoryService $inventoryService): RedirectResponse
     {
+        $sizes = config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']);
+
         $data = $request->validate([
             'inventory_id' => ['required', 'exists:inventory,id'],
             'quantity' => ['required', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'size' => ['nullable', 'string', Rule::in($sizes)],
         ]);
 
         $inventory = Inventory::findOrFail($data['inventory_id']);
-        $inventoryService->stockIn($inventory, $data['quantity'], auth()->user(), $data['notes'] ?? null);
+
+        try {
+            $inventoryService->stockIn(
+                $inventory,
+                $data['quantity'],
+                auth()->user(),
+                $data['notes'] ?? null,
+                null,
+                null,
+                $data['size'] ?? null,
+            );
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Stock-in recorded.');
     }
 
     public function adjust(Request $request, InventoryService $inventoryService): RedirectResponse
     {
+        $sizes = config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']);
+
         $data = $request->validate([
             'inventory_id' => ['required', 'exists:inventory,id'],
             'new_quantity' => ['required', 'integer', 'min:0'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'size' => ['nullable', 'string', Rule::in($sizes)],
         ]);
 
         $inventory = Inventory::findOrFail($data['inventory_id']);
-        $inventoryService->adjust($inventory, $data['new_quantity'], auth()->user(), $data['notes'] ?? null);
+
+        try {
+            $inventoryService->adjust(
+                $inventory,
+                $data['new_quantity'],
+                auth()->user(),
+                $data['notes'] ?? null,
+                $data['size'] ?? null,
+            );
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Inventory adjusted.');
     }

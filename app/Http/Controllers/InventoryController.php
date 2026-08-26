@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Inventory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -48,6 +49,7 @@ class InventoryController extends Controller
         return view('inventory.create', [
             'categories' => Category::orderBy('name')->get(),
             'departments' => Department::orderBy('name')->get(),
+            'sizes' => config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']),
         ]);
     }
 
@@ -56,7 +58,21 @@ class InventoryController extends Controller
         $this->authorize('create', Inventory::class);
 
         $data = $this->validatedItem($request);
+        $size = $data['size'] ?? null;
+        unset($data['size']);
+
         $item = Inventory::create($data + ['reserved_quantity' => 0]);
+
+        if ($item->requiresSize()) {
+            $qty = (int) ($data['quantity'] ?? 0);
+            $item->sizeStocks()->create([
+                'size' => $size,
+                'quantity' => $qty,
+                'reserved_quantity' => 0,
+            ]);
+            $item->syncAggregatesFromSizeStocks();
+        }
+
         $item->updateStatus();
 
         return redirect()->route('inventory.index')->with('success', 'Inventory item created.');
@@ -66,7 +82,7 @@ class InventoryController extends Controller
     {
         $this->authorize('view', $inventory);
 
-        $inventory->load(['category', 'department', 'transactions' => fn ($q) => $q->latest()->limit(10)]);
+        $inventory->load(['category', 'department', 'sizeStocks', 'transactions' => fn ($q) => $q->latest()->limit(10)]);
 
         $qrSvg = QrCode::size(120)->generate($inventory->item_code);
 
@@ -78,9 +94,10 @@ class InventoryController extends Controller
         $this->authorize('update', $inventory);
 
         return view('inventory.edit', [
-            'inventory' => $inventory,
+            'inventory' => $inventory->load('sizeStocks'),
             'categories' => Category::orderBy('name')->get(),
             'departments' => Department::orderBy('name')->get(),
+            'sizes' => config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']),
         ]);
     }
 
@@ -102,6 +119,10 @@ class InventoryController extends Controller
      */
     protected function validatedItem(Request $request, ?Inventory $inventory = null): array
     {
+        $sizes = config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']);
+        $needsSize = $request->boolean('student_shop')
+            && ! str_contains(strtolower(($request->input('item_name') ?? '').' '.($request->input('item_code') ?? '')), 'lanyard');
+
         $rules = [
             'item_code' => ['required', 'string', 'max:50', 'unique:inventory,item_code'.($inventory ? ','.$inventory->id : '')],
             'item_name' => ['required', 'string', 'max:255'],
@@ -117,6 +138,7 @@ class InventoryController extends Controller
 
         if (! $inventory) {
             $rules['quantity'] = ['required', 'integer', 'min:0'];
+            $rules['size'] = [$needsSize ? 'required' : 'nullable', 'string', Rule::in($sizes)];
         } else {
             $rules['status'] = ['nullable', 'in:available,low_stock,out_of_stock,discontinued'];
         }

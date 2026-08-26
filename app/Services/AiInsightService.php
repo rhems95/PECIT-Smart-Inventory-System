@@ -224,6 +224,12 @@ class AiInsightService
                 'Reorder',
                 'Pending requests',
             ],
+            $user->hasRole('Admission') => [
+                'For approval',
+                'Pending requests',
+                'Monthly summary',
+                'Low stock',
+            ],
             default => ['Low stock', 'Monthly summary', 'Help'],
         };
     }
@@ -358,6 +364,9 @@ class AiInsightService
         if ($user->hasRole('Administrator')) {
             return 'Try: "For approval", "Monthly summary", "Reorder", "Pending requests".';
         }
+        if ($user->hasRole('Admission')) {
+            return 'Try: "For approval", "Pending requests", "Monthly summary", "Low stock".';
+        }
 
         return 'Try: "low stock", "monthly summary", or "help".';
     }
@@ -370,7 +379,7 @@ class AiInsightService
 
         $dept = $user->department?->name ?? 'your department';
 
-        return "To buy uniforms: open Uniform Shop → add your department items (and shared P.E., NSTP, or ID lanyard) → View Cart → Checkout "
+        return "To buy uniforms: open Uniform Shop → choose a size for each uniform → add your department items (and shared P.E., NSTP, or ID lanyard) → View Cart → Checkout "
             .'→ pay over the counter → upload your receipt → Accounting verifies → Supply releases. '
             ."You only see exclusive uniforms for {$dept}, plus shared items. Ask \"What uniforms can I buy?\" to list them.";
     }
@@ -581,8 +590,8 @@ class AiInsightService
 
     protected function answerApprovals(User $user): string
     {
-        if (! $user->hasRole('Administrator')) {
-            return 'Admin approval queue is for Administrators.';
+        if (! $user->hasAnyRole(['Administrator', 'Admission'])) {
+            return 'Admin approval queue is for Admission and Administrators.';
         }
 
         $count = SupplyRequest::where('status', 'admin_review')->count();

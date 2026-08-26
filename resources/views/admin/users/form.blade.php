@@ -56,7 +56,7 @@
     <div>
         <label class="psis-label">Role</label>
         <select name="role" class="psis-input" required x-model="role">
-            @foreach (['Administrator', 'Accounting', 'Supply Personnel', 'Faculty', 'Student'] as $role)
+            @foreach (['Administrator', 'Admission', 'Accounting', 'Supply Personnel', 'Faculty', 'Student'] as $role)
                 <option value="{{ $role }}" @selected(old('role', $user->getRoleNames()->first()) == $role)>
                     {{ $role }}
                 </option>

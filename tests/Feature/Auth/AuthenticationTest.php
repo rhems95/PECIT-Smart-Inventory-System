@@ -15,7 +15,7 @@ class AuthenticationTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['Administrator', 'Accounting', 'Supply Personnel', 'Faculty', 'Student'] as $role) {
+        foreach (['Administrator', 'Admission', 'Accounting', 'Supply Personnel', 'Faculty', 'Student'] as $role) {
             Role::findOrCreate($role);
         }
     }

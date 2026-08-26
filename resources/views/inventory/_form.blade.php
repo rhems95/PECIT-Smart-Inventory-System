@@ -1,12 +1,25 @@
 @php($item = $inventory ?? null)
-<div class="grid md:grid-cols-2 gap-4">
+@php($sizes = $sizes ?? config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']))
+<div
+    class="grid md:grid-cols-2 gap-4"
+    x-data="{
+        studentShop: {{ old('student_shop', $item?->student_shop) ? 'true' : 'false' }},
+        itemName: @js(old('item_name', $item?->item_name ?? '')),
+        itemCode: @js(old('item_code', $item?->item_code ?? '')),
+        get needsSize() {
+            if (!this.studentShop) return false;
+            const hay = (this.itemName + ' ' + this.itemCode).toLowerCase();
+            return !hay.includes('lanyard');
+        }
+    }"
+>
     <div>
         <label class="psis-label">Item Code</label>
-        <input name="item_code" value="{{ old('item_code', $item?->item_code) }}" class="psis-input" required>
+        <input name="item_code" x-model="itemCode" value="{{ old('item_code', $item?->item_code) }}" class="psis-input" required>
     </div>
     <div>
         <label class="psis-label">Item Name</label>
-        <input name="item_name" value="{{ old('item_name', $item?->item_name) }}" class="psis-input" required>
+        <input name="item_name" x-model="itemName" value="{{ old('item_name', $item?->item_name) }}" class="psis-input" required>
     </div>
     <div class="md:col-span-2">
         <label class="psis-label">Description</label>
@@ -32,6 +45,16 @@
         <div>
             <label class="psis-label">Initial Quantity</label>
             <input type="number" name="quantity" value="{{ old('quantity', 0) }}" class="psis-input" required>
+            <p class="text-xs text-slate-500 mt-1" x-show="needsSize" x-cloak>Quantity applies to the selected size below.</p>
+        </div>
+        <div x-show="needsSize" x-cloak>
+            <label class="psis-label">Uniform Size <span class="text-red-500">*</span></label>
+            <select name="size" class="psis-input" :required="needsSize">
+                <option value="">Select size</option>
+                @foreach ($sizes as $size)
+                    <option value="{{ $size }}" @selected(old('size') === $size)>{{ $size }}</option>
+                @endforeach
+            </select>
         </div>
     @endif
     <div>
@@ -44,7 +67,7 @@
     </div>
     <div class="md:col-span-2">
         <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="student_shop" value="1" @checked(old('student_shop', $item?->student_shop))>
+            <input type="checkbox" name="student_shop" value="1" x-model="studentShop" @checked(old('student_shop', $item?->student_shop))>
             Available in Uniform Shop (students)
         </label>
         <p class="text-xs text-slate-500 mt-1">
@@ -61,4 +84,32 @@
             @endforeach
         </select>
     </div>
+    @if ($item?->requiresSize() && $item->sizeStocks->isNotEmpty())
+        <div class="md:col-span-2">
+            <p class="psis-label mb-2">Stock by size</p>
+            <div class="overflow-hidden rounded border border-[var(--psis-border)]">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 dark:bg-slate-900/50 text-left">
+                            <th class="px-4 py-3">Size</th>
+                            <th class="px-4 py-3">On Hand</th>
+                            <th class="px-4 py-3">Reserved</th>
+                            <th class="px-4 py-3">Available</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($item->sizeStocks->sortBy('size') as $stock)
+                            <tr class="border-t border-[var(--psis-border)]">
+                                <td class="px-4 py-3">{{ $stock->size }}</td>
+                                <td class="px-4 py-3">{{ $stock->quantity }}</td>
+                                <td class="px-4 py-3">{{ $stock->reserved_quantity }}</td>
+                                <td class="px-4 py-3">{{ $stock->availableQuantity() }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Use Stock Operations to add or adjust quantity for a specific size.</p>
+        </div>
+    @endif
 </div>

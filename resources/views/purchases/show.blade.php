@@ -20,10 +20,10 @@
     @if (auth()->user()->hasRole('Student') && in_array($purchase->status, ['payment_submitted', 'pending']))
     <div class="psis-card p-5">
         <h3 class="font-semibold mb-3">Upload Payment Receipt</h3>
-        <p class="text-sm text-slate-500 mb-3">After paying at the accounting office, upload your receipt (JPG, PNG, or PDF, max 5MB).</p>
+        <p class="text-sm text-slate-500 mb-3">After paying at the accounting office, upload your receipt (JPG, PNG, WEBP, or PDF, max 5MB).</p>
         <form method="POST" action="{{ route('purchases.receipt.upload', $purchase) }}" enctype="multipart/form-data" class="space-y-3">
             @csrf
-            <input type="file" name="receipt" accept=".jpg,.jpeg,.png,.pdf" required class="block w-full text-sm">
+            <input type="file" name="receipt" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" required class="block w-full text-sm">
             @error('receipt')<p class="text-red-500 text-sm">{{ $message }}</p>@enderror
             <button type="submit" class="psis-btn-primary">Upload Receipt</button>
         </form>
@@ -33,7 +33,7 @@
     <div class="psis-card overflow-hidden">
         <table class="min-w-full text-sm">
             @foreach ($purchase->items as $line)
-                <tr class="border-t border-[var(--psis-border)]"><td class="px-4 py-3">{{ $line->inventory?->item_name }}</td><td class="px-4 py-3">{{ $line->quantity }} × ₱{{ number_format($line->unit_price,2) }}</td><td class="px-4 py-3 text-right">₱{{ number_format($line->subtotal,2) }}</td></tr>
+                <tr class="border-t border-[var(--psis-border)]"><td class="px-4 py-3">{{ $line->inventory?->item_name }}@if($line->size) <span class="text-slate-500">(Size {{ $line->size }})</span>@endif</td><td class="px-4 py-3">{{ $line->quantity }} × ₱{{ number_format($line->unit_price,2) }}</td><td class="px-4 py-3 text-right">₱{{ number_format($line->subtotal,2) }}</td></tr>
             @endforeach
         </table>
     </div>

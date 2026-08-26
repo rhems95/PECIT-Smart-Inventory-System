@@ -27,12 +27,14 @@ flowchart TD
 
     I --> J{Role}
     J -->|Administrator| K[Users / Approvals / Master data / Reports / AI]
+    J -->|Admission| K2[Dashboard / Inventory view / Approve requests]
     J -->|Accounting| L[Review faculty requests / Verify payments / Reports]
-    J -->|Supply Personnel| M[Stock in-adjust / Release items / Reports]
-    J -->|Faculty| N[Submit & track supply requests]
-    J -->|Student| O[Shop / Cart / Pay / Track purchases]
+    J -->|Supply Personnel| M[Stock / Release / Students / Users / Master data / Audit]
+    J -->|Faculty| N[Submit and track supply requests]
+    J -->|Student| O[Shop / Cart / Size / Pay / Track purchases]
 
     K --> P[Notifications + AI assistant]
+    K2 --> P
     L --> P
     M --> P
     N --> P
@@ -55,8 +57,8 @@ flowchart TD
     H --> I{Accounting decision}
     I -->|Reject path via Admin| J[Status: admin_review then reject]
     I -->|Forward| K[Status: admin_review]
-    K --> L[Notify Administrator]
-    L --> M{Administrator decision}
+    K --> L[Notify Admission + Administrator]
+    L --> M{Admission or Admin decision}
     M -->|Reject| N[Status: rejected]
     N --> O[Notify Faculty]
     M -->|Approve| P[Reserve stock per line item]
@@ -76,10 +78,10 @@ flowchart TD
 | Status | Actor | Stock effect |
 |--------|--------|--------------|
 | `pending` | Faculty | None |
-| `accounting_review` / `admin_review` | Accounting → Admin | None |
-| `approved` | Administrator | Reserve |
+| `accounting_review` / `admin_review` | Accounting → Admission / Admin | None |
+| `approved` | Admission or Administrator | Reserve |
 | `released` | Supply Personnel | Deduct (from reserved) |
-| `rejected` / `cancelled` | Admin / Faculty | None |
+| `rejected` / `cancelled` | Admission / Admin / Faculty | None |
 
 ---
 
@@ -88,27 +90,28 @@ flowchart TD
 ```mermaid
 flowchart TD
     A([Student]) --> B[Browse shop]
-    B --> C[Add items to cart]
-    C --> D{Cart valid + stock available?}
-    D -->|No| C
-    D -->|Yes| E[Checkout]
-    E --> F[Create purchase + payment record]
-    F --> G[Status: payment_submitted]
-    G --> H[Notify Accounting]
-    H --> I[Student uploads receipt optional]
-    I --> J[Accounting verifies payment]
-    J --> K{Payment OK?}
-    K -->|No| L[Remains / follow-up]
-    K -->|Yes| M[Reserve stock]
-    M --> N[Status: payment_verified]
-    N --> O[Notify Student + Supply Personnel]
-    O --> P[Supply Personnel releases purchase]
-    P --> Q[Deduct reserved stock / log transaction]
-    Q --> R([Status: released])
-    R --> S[Notify Student]
+    B --> C[Choose size for uniforms]
+    C --> D[Add items to cart]
+    D --> E{Cart valid + size stock available?}
+    E -->|No| C
+    E -->|Yes| F[Checkout]
+    F --> G[Create purchase + payment record]
+    G --> H[Status: payment_submitted]
+    H --> I[Notify Accounting]
+    I --> J[Student uploads receipt optional]
+    J --> K[Accounting verifies payment]
+    K --> L{Payment OK?}
+    L -->|No| M[Remains / follow-up]
+    L -->|Yes| N[Reserve stock for size]
+    N --> O[Status: payment_verified]
+    O --> P[Notify Student + Supply Personnel]
+    P --> Q[Supply Personnel releases purchase]
+    Q --> R[Deduct reserved size stock / log transaction]
+    R --> S([Status: released])
+    S --> T[Notify Student]
 
-    style M fill:#fff3cd
-    style Q fill:#d1e7dd
+    style N fill:#fff3cd
+    style R fill:#d1e7dd
 ```
 
 | Status | Actor | Stock effect |
@@ -124,10 +127,10 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    A[Supply Personnel: Stock In] --> B[(On Hand quantity)]
-    C[Supply Personnel: Adjust] --> B
-    B --> D{Available = On Hand − Reserved}
-    D --> E[Faculty approve / Accounting verify payment]
+    A[Supply Personnel: Stock In by size] --> B[(On Hand quantity)]
+    C[Supply Personnel: Adjust by size] --> B
+    B --> D{Available = On Hand − Reserved per size or item}
+    D --> E[Admission/Admin approve / Accounting verify payment]
     E --> F[(Reserved quantity ↑)]
     F --> G[Supply release]
     G --> H[(On Hand ↓ and Reserved ↓)]
@@ -172,17 +175,27 @@ flowchart TD
 
 ---
 
-## 6. Administrator master-data & oversight
+## 6. Administrator, Admission, and Supply master data
 
 ```mermaid
 flowchart TD
     A([Administrator]) --> B[Manage users + roles]
-    A --> C[Departments / Categories / Suppliers]
+    A --> C[Departments / Categories]
     A --> D[Announcements]
     A --> E[Approve / reject faculty requests]
     A --> F[View audit logs]
     A --> G[Reports PDF / Excel]
     A --> H[AI restock insights]
+
+    AD([Admission]) --> E
+    AD --> IV[View inventory + dashboard]
+
+    SP([Supply Personnel]) --> B
+    SP --> C
+    SP --> D
+    SP --> F
+    SP --> ST[Students add / CSV]
+    SP --> SK[Stock in-adjust by size]
 
     B --> I[(users + Spatie roles)]
     C --> J[(master tables → inventory)]
@@ -190,6 +203,7 @@ flowchart TD
     E --> L[See Faculty workflow]
     F --> M[(audit_logs)]
     G --> N[Operational decisions]
+    SK --> SZ[(inventory_size_stocks)]
 ```
 
 ---
@@ -204,13 +218,18 @@ flowchart TB
     end
 
     subgraph Student
-        S1[Shop + cart] --> S2[Checkout + receipt]
+        S1[Shop + choose size + cart] --> S2[Checkout + receipt]
         S3[Receive items after release]
     end
 
     subgraph Accounting
-        A1[Review faculty request] --> A2[Forward to Admin]
+        A1[Review faculty request] --> A2[Forward to Admission / Admin]
         A3[Verify student payment] --> A4[Trigger reserve]
+    end
+
+    subgraph Admission
+        ADM1[Approve / reject request] --> ADM2[Trigger reserve on approve]
+        ADM3[Dashboard + view inventory]
     end
 
     subgraph Administrator
@@ -219,12 +238,15 @@ flowchart TB
     end
 
     subgraph Supply Personnel
-        SP1[Stock in / adjust] --> SP2[Release approved requests]
+        SP1[Stock in / adjust by size] --> SP2[Release approved requests]
         SP2 --> SP3[Release verified purchases]
+        SP4[Users / categories / departments / students / audit]
     end
 
     F1 --> A1
+    A2 --> ADM1
     A2 --> AD1
+    ADM2 --> SP2
     AD2 --> SP2
     SP2 --> F3
     S2 --> A3

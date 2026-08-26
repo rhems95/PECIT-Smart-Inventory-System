@@ -63,7 +63,7 @@ class DemoInventorySeeder extends Seeder
         ];
 
         foreach ($shared as [$name, $code, $price, $qty, $min, $description]) {
-            Inventory::updateOrCreate(
+            $item = Inventory::updateOrCreate(
                 ['item_code' => $code],
                 [
                     'item_name' => $name,
@@ -80,6 +80,8 @@ class DemoInventorySeeder extends Seeder
                     'status' => 'available',
                 ],
             );
+
+            $this->seedSizeStocks($item, $qty);
         }
 
         // Exclusive: ONLY students of that department can buy.
@@ -114,6 +116,45 @@ class DemoInventorySeeder extends Seeder
                     'status' => 'available',
                 ],
             );
+
+            $item = Inventory::where('item_code', $itemCode)->first();
+            if ($item) {
+                $this->seedSizeStocks($item, 40);
+            }
         }
+    }
+
+    /**
+     * Spread demo on-hand stock across uniform sizes (skip accessories like lanyard).
+     */
+    protected function seedSizeStocks(Inventory $item, int $totalQty): void
+    {
+        if (! $item->requiresSize()) {
+            $item->sizeStocks()->delete();
+
+            return;
+        }
+
+        $sizes = config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']);
+        $item->sizeStocks()->delete();
+
+        $base = intdiv($totalQty, count($sizes));
+        $remainder = $totalQty % count($sizes);
+
+        foreach ($sizes as $index => $size) {
+            $qty = $base + ($index < $remainder ? 1 : 0);
+            if ($qty <= 0) {
+                continue;
+            }
+
+            $item->sizeStocks()->create([
+                'size' => $size,
+                'quantity' => $qty,
+                'reserved_quantity' => 0,
+            ]);
+        }
+
+        $item->syncAggregatesFromSizeStocks();
+        $item->updateStatus();
     }
 }

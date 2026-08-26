@@ -7,11 +7,33 @@
 <p class="text-sm text-slate-500 mb-4">
     You can buy <strong>exclusive uniforms for {{ auth()->user()->department?->name ?? 'your department' }}</strong>
     and shared items (P.E., NSTP, ID lanyard). Uniforms locked to other departments are hidden.
+    Choose a size to see how many are available for that size.
 </p>
 <form method="GET" class="mb-4"><input name="search" value="{{ request('search') }}" class="psis-input max-w-sm" placeholder="Search uniforms..."><button class="psis-btn-primary ml-2">Search</button></form>
 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
     @forelse ($items as $item)
-        <div class="psis-card p-4 flex flex-col">
+        @php
+            $bySize = $item->requiresSize() ? $item->availableBySize() : [];
+            $hasAnyStock = $item->requiresSize()
+                ? collect($bySize)->contains(fn ($q) => $q > 0)
+                : $item->availableQuantity() > 0;
+        @endphp
+        <div
+            class="psis-card p-4 flex flex-col"
+            @if ($item->requiresSize())
+                x-data='{
+                    size: "",
+                    bySize: @json($bySize),
+                    get available() {
+                        if (!this.size) return null;
+                        return this.bySize[this.size] ?? 0;
+                    },
+                    get canAdd() {
+                        return this.size !== "" && (this.available ?? 0) > 0;
+                    }
+                }'
+            @endif
+        >
             <div class="flex items-start justify-between gap-2">
                 <h3 class="font-semibold">{{ $item->item_name }}</h3>
                 @if ($item->isDepartmentExclusive())
@@ -29,13 +51,44 @@
                 @endif
             </p>
             <p class="text-lg font-bold text-pecit-blue dark:text-pecit-gold mt-2">₱{{ number_format($item->unit_price, 2) }}</p>
-            <p class="text-xs text-slate-500">Available: {{ $item->availableQuantity() }} {{ $item->unit }}</p>
-            @if ($item->availableQuantity() > 0)
-                <form method="POST" action="{{ route('shop.cart.add') }}" class="mt-auto pt-3 flex gap-2">
+
+            @if ($item->requiresSize())
+                <p class="text-xs text-slate-500 mt-1" x-show="!size">Select a size to see availability</p>
+                <p class="text-xs text-slate-500 mt-1" x-show="size" x-cloak>
+                    Available (size <span x-text="size"></span>):
+                    <strong x-text="available"></strong> {{ $item->unit }}
+                </p>
+            @else
+                <p class="text-xs text-slate-500">Available: {{ $item->availableQuantity() }} {{ $item->unit }}</p>
+            @endif
+
+            @if ($hasAnyStock)
+                <form method="POST" action="{{ route('shop.cart.add') }}" class="mt-auto pt-3 space-y-2">
                     @csrf
                     <input type="hidden" name="inventory_id" value="{{ $item->id }}">
-                    <input type="number" name="quantity" value="1" min="1" max="{{ $item->availableQuantity() }}" class="psis-input w-20">
-                    <button class="psis-btn-primary flex-1">Add to Cart</button>
+                    @if ($item->requiresSize())
+                        <div>
+                            <label class="psis-label" for="size-{{ $item->id }}">Size <span class="text-red-500">*</span></label>
+                            <select name="size" id="size-{{ $item->id }}" class="psis-input" required x-model="size">
+                                <option value="">Select size</option>
+                                @foreach ($sizes as $size)
+                                    <option value="{{ $size }}" @disabled(($bySize[$size] ?? 0) <= 0)>
+                                        {{ $size }}@if(($bySize[$size] ?? 0) <= 0) (out of stock)@endif
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="flex gap-2" x-show="canAdd" x-cloak>
+                            <input type="number" name="quantity" value="1" min="1" :max="available" class="psis-input w-20" aria-label="Quantity">
+                            <button class="psis-btn-primary flex-1" :disabled="!canAdd">Add to Cart</button>
+                        </div>
+                        <p class="text-sm text-red-600" x-show="size && !canAdd" x-cloak>Selected size is out of stock.</p>
+                    @else
+                        <div class="flex gap-2">
+                            <input type="number" name="quantity" value="1" min="1" max="{{ $item->availableQuantity() }}" class="psis-input w-20" aria-label="Quantity">
+                            <button class="psis-btn-primary flex-1">Add to Cart</button>
+                        </div>
+                    @endif
                 </form>
             @else
                 <p class="mt-auto pt-3 text-sm text-red-600">Out of stock</p>

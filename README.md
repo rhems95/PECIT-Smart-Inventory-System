@@ -4,6 +4,8 @@ Centralized inventory and requisition management system for the **Philippine Ele
 
 PSIS manages school supplies and student uniforms with role-based workflows for requests, purchasing, approvals, stock release, reporting, notifications, and AI-assisted insights.
 
+Release history: [`CHANGELOG.md`](CHANGELOG.md).
+
 ---
 
 ## Tech Stack
@@ -80,6 +82,7 @@ Password for all staff demo users: `password`
 | Role | Email |
 |------|-------|
 | Administrator | admin@pecit.edu.ph |
+| Admission | admission@pecit.edu.ph |
 | Accounting | accounting@pecit.edu.ph |
 | Supply Personnel | supply@pecit.edu.ph |
 | Faculty | faculty@pecit.edu.ph |
@@ -107,7 +110,7 @@ On the login page, use the **Student** tab.
 - Track status, cancel pending requests
 - Receive in-app + email notifications
 
-**Flow:** Faculty Request → Accounting Review → Admin Approval → Supply Release → Inventory Deducted
+**Flow:** Faculty Request → Accounting Review → Admission/Admin Approval → Supply Release → Inventory Deducted
 
 ### 2. Student
 - Log in with **Student ID + last name**
@@ -142,14 +145,21 @@ Example: an Engineering student can buy **Engineering Uniform (Exclusive)** + P.
 - Stock in / inventory adjustment
 - Release faculty requests & student purchases
 - **Add / edit students** and **CSV bulk import**
+- Users, categories, departments, announcements, and audit logs (with Admin)
 - Restock recommendations (AI)
 - Low-stock monitoring
 
 ### 5. Administrator
-- Approve / reject faculty requests
-- Full user management (all roles)
+- Full user management (all roles, including Admission)
 - Categories, departments, announcements
 - Audit logs & full reports access
+- Can also approve / reject faculty requests
+
+### 6. Admission (school owner)
+- Dashboard (stock KPIs, recent requests)
+- View inventory (no add / edit / stock operations)
+- Approve / reject faculty requests after Accounting review
+- No users, categories, departments, announcements, supply, students, or reports menus
 
 ---
 
@@ -343,7 +353,7 @@ npm run dev
 
 GitHub renders the Mermaid ERD below on this README. Workflow notes and cardinality tables: [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md). Process charts: [`docs/FLOWCHART.md`](docs/FLOWCHART.md).
 
-There is no `suppliers` table. Available quantity is not stored: `available = quantity - reserved_quantity`. Uniform Shop exclusivity is `inventory.student_shop` plus `inventory.department_id` (null = shared; set = department-exclusive).
+There is no `suppliers` table. Available quantity is not stored: non-sized items use `available = quantity − reserved_quantity`; shop uniforms use **per-size** rows (`inventory_size_stocks`). Uniform Shop exclusivity is `inventory.student_shop` plus `inventory.department_id` (null = shared; set = department-exclusive). Student clothing purchases store `purchase_request_items.size`.
 
 ```mermaid
 erDiagram
@@ -369,6 +379,7 @@ erDiagram
     INVENTORY ||--o{ PURCHASE_REQUEST_ITEMS : "purchased as"
     PURCHASE_REQUESTS ||--o{ PAYMENTS : "paid via"
 
+    INVENTORY ||--o{ INVENTORY_SIZE_STOCKS : "stock by size"
     INVENTORY ||--o{ TRANSACTIONS : "stock movement"
     INVENTORY ||--o{ STOCK_LOGS : "delivery log"
 
@@ -427,6 +438,14 @@ erDiagram
         string barcode
     }
 
+    INVENTORY_SIZE_STOCKS {
+        bigint id PK
+        bigint inventory_id FK
+        string size
+        int quantity
+        int reserved_quantity
+    }
+
     REQUESTS {
         bigint id PK
         string request_number UK
@@ -466,6 +485,7 @@ erDiagram
         bigint id PK
         bigint purchase_request_id FK
         bigint inventory_id FK
+        string size
         int quantity
         decimal unit_price
         decimal subtotal
@@ -583,6 +603,7 @@ config/psis.php         # PSIS_MAIL_NOTIFICATIONS and related flags
 database/migrations/    # Schema
 database/seeders/       # Roles, master data, demo users & inventory/uniforms
 docs/                   # ER-DIAGRAM.md, FLOWCHART.md
+CHANGELOG.md            # Release history
 public/images/          # pecit-logo.png, chatbot.png
 resources/views/        # Blade UI (layouts, modules, emails, AI widget)
 routes/web.php          # Application routes
@@ -597,7 +618,7 @@ routes/auth.php         # Breeze auth routes
 |------|--------|
 | Core multi-role workflows | Complete |
 | Inventory reserve / release | Complete |
-| Student shop (department exclusives) | Complete |
+| Student shop (department exclusives + sizes) | Complete |
 | Student blocked from inventory module | Complete |
 | Student ID + last name login | Complete |
 | Supply student add / CSV import | Complete |

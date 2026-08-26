@@ -98,6 +98,21 @@ class Inventory extends Model
         return $this->student_shop && $this->department_id !== null;
     }
 
+    /**
+     * Clothing uniforms in the student shop require a size before purchase.
+     * Accessories such as ID lanyards do not.
+     */
+    public function requiresSize(): bool
+    {
+        if (! $this->student_shop) {
+            return false;
+        }
+
+        $haystack = strtolower(($this->item_name ?? '').' '.($this->item_code ?? ''));
+
+        return ! str_contains($haystack, 'lanyard');
+    }
+
     public function requestItems(): HasMany
     {
         return $this->hasMany(RequestItem::class);
@@ -118,9 +133,66 @@ class Inventory extends Model
         return $this->hasMany(StockLog::class);
     }
 
-    public function availableQuantity(): int
+    public function sizeStocks(): HasMany
     {
+        return $this->hasMany(InventorySizeStock::class);
+    }
+
+    /**
+     * Available qty overall, or for a specific size when this item tracks sizes.
+     */
+    public function availableQuantity(?string $size = null): int
+    {
+        if ($this->requiresSize()) {
+            if ($size !== null && $size !== '') {
+                $stock = $this->sizeStockFor($size);
+
+                return $stock ? $stock->availableQuantity() : 0;
+            }
+
+            return (int) $this->sizeStocks->sum(fn (InventorySizeStock $s) => $s->availableQuantity());
+        }
+
         return max(0, $this->quantity - $this->reserved_quantity);
+    }
+
+    public function sizeStockFor(string $size): ?InventorySizeStock
+    {
+        $size = strtoupper(trim($size));
+
+        if ($this->relationLoaded('sizeStocks')) {
+            return $this->sizeStocks->firstWhere('size', $size);
+        }
+
+        return $this->sizeStocks()->where('size', $size)->first();
+    }
+
+    /**
+     * @return array<string, int> size => available qty
+     */
+    public function availableBySize(): array
+    {
+        $map = [];
+        foreach ($this->sizeStocks as $stock) {
+            $map[$stock->size] = $stock->availableQuantity();
+        }
+
+        return $map;
+    }
+
+    /**
+     * Keep parent quantity/reserved_quantity as sums of size rows (for reports & status).
+     */
+    public function syncAggregatesFromSizeStocks(): void
+    {
+        if (! $this->requiresSize()) {
+            return;
+        }
+
+        $stocks = $this->sizeStocks()->get();
+        $this->quantity = (int) $stocks->sum('quantity');
+        $this->reserved_quantity = (int) $stocks->sum('reserved_quantity');
+        $this->save();
     }
 
     public function isLowStock(): bool

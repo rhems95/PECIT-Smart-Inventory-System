@@ -89,7 +89,7 @@ class AdminUserController extends Controller
                 'string',
                 'min:8',
             ],
-            'role' => ['required', Rule::in(['Administrator', 'Accounting', 'Supply Personnel', 'Faculty', 'Student'])],
+            'role' => ['required', Rule::in(['Administrator', 'Admission', 'Accounting', 'Supply Personnel', 'Faculty', 'Student'])],
         ]) + ['is_active' => $request->boolean('is_active', true)];
     }
 }

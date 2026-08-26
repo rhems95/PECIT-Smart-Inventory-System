@@ -40,6 +40,7 @@ class DashboardController extends Controller
                 'studentPurchases' => $studentPurchases,
                 'shopCount' => $shopCount,
                 'announcements' => $announcements,
+                'releasedRequests' => collect(),
             ]);
         }
 
@@ -68,6 +69,11 @@ class DashboardController extends Controller
         }
 
         $recentRequests = SupplyRequest::with('user')->latest()->limit(5)->get();
+        $releasedRequests = SupplyRequest::with(['user', 'items.inventory'])
+            ->where('status', 'released')
+            ->latest('released_at')
+            ->limit(10)
+            ->get();
         $forecasts = $ai->inventoryForecasts(5);
         $aiSummary = $ai->monthlySummary();
 
@@ -77,6 +83,7 @@ class DashboardController extends Controller
             'chartLabels' => $chartLabels,
             'chartData' => $chartData,
             'recentRequests' => $recentRequests,
+            'releasedRequests' => $releasedRequests,
             'forecasts' => $forecasts,
             'aiSummary' => $aiSummary,
             'studentPurchases' => collect(),

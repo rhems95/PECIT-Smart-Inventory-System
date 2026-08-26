@@ -34,9 +34,20 @@ class PurchaseRequestService
 
             $total = 0;
 
-            foreach ($cart as $inventoryId => $quantity) {
+            foreach ($cart as $line) {
+                if (! is_array($line) || ! isset($line['inventory_id'], $line['quantity'])) {
+                    throw new RuntimeException('Your cart is outdated. Please re-add items and choose a size.');
+                }
+
+                $inventoryId = (int) $line['inventory_id'];
+                $qty = (int) $line['quantity'];
+                $size = $line['size'] ?? null;
+
+                if ($inventoryId <= 0 || $qty <= 0) {
+                    throw new RuntimeException('Your cart contains an invalid item.');
+                }
+
                 $inventory = Inventory::findOrFail($inventoryId);
-                $qty = (int) $quantity;
 
                 if (! $inventory->isAvailableInStudentShop($user)) {
                     $label = $inventory->department
@@ -45,14 +56,25 @@ class PurchaseRequestService
                     throw new RuntimeException("{$inventory->item_name} is {$label}.");
                 }
 
-                if ($qty <= 0 || $inventory->availableQuantity() < $qty) {
-                    throw new RuntimeException("Insufficient stock for {$inventory->item_name}.");
+                if ($inventory->requiresSize()) {
+                    $allowed = config('psis.uniform_sizes', []);
+                    if (! is_string($size) || $size === '' || ! in_array($size, $allowed, true)) {
+                        throw new RuntimeException("Please choose a size for {$inventory->item_name} before checkout.");
+                    }
+                } else {
+                    $size = null;
+                }
+
+                if ($inventory->availableQuantity($size) < $qty) {
+                    $label = $size ? "{$inventory->item_name} (size {$size})" : $inventory->item_name;
+                    throw new RuntimeException("Insufficient stock for {$label}.");
                 }
 
                 $subtotal = $inventory->unit_price * $qty;
                 PurchaseRequestItem::create([
                     'purchase_request_id' => $purchase->id,
                     'inventory_id' => $inventory->id,
+                    'size' => $size,
                     'quantity' => $qty,
                     'unit_price' => $inventory->unit_price,
                     'subtotal' => $subtotal,
@@ -107,6 +129,7 @@ class PurchaseRequestService
                     "Reserved for {$purchase->purchase_number}",
                     PurchaseRequest::class,
                     $purchase->id,
+                    $item->size,
                 );
             }
 
@@ -167,9 +190,12 @@ class PurchaseRequestService
                     PurchaseRequest::class,
                     $purchase->id,
                     $purchase->user?->name,
+                    $item->size,
                 );
 
-                $deducted[] = "{$inventory->item_name} x{$item->quantity}";
+                $deducted[] = $item->size
+                    ? "{$inventory->item_name} ({$item->size}) x{$item->quantity}"
+                    : "{$inventory->item_name} x{$item->quantity}";
             }
 
             $purchase->update([

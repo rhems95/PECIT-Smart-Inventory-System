@@ -19,6 +19,7 @@ class DemoUsersSeeder extends Seeder
 
         $users = [
             ['Administrator', 'PECIT Admin', null, 'admin@pecit.edu.ph', 'ADM-001', $adminDept?->id],
+            ['Admission', 'PECIT Admission', null, 'admission@pecit.edu.ph', 'ADN-001', $adminDept?->id],
             ['Accounting', 'PECIT Accounting', null, 'accounting@pecit.edu.ph', 'ACC-001', $adminDept?->id],
             ['Supply Personnel', 'Supply Officer', null, 'supply@pecit.edu.ph', 'SUP-001', $supplyDept?->id],
             ['Faculty', 'Prof. Juan Dela Cruz', null, 'faculty@pecit.edu.ph', 'FAC-001', $engDept?->id],

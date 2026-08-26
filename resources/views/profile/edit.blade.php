@@ -19,6 +19,23 @@
                 @error('name')<p class="text-red-500 text-sm mt-1">{{ $message }}</p>@enderror
             </div>
 
+            @if ($user->hasRole('Student'))
+                <div>
+                    <label class="block text-sm font-medium mb-1">Student ID</label>
+                    <input type="text" class="psis-input w-full bg-slate-50 dark:bg-slate-800" value="{{ $user->employee_id ?: '—' }}" readonly>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Department</label>
+                    <input type="text" class="psis-input w-full bg-slate-50 dark:bg-slate-800" value="{{ $user->department?->name ? $user->department->name.($user->department->code ? ' ('.$user->department->code.')' : '') : 'No department assigned' }}" readonly>
+                    <p class="text-xs text-slate-500 mt-1">Your department controls which exclusive uniforms you can buy. Contact Supply if this is wrong.</p>
+                </div>
+            @elseif ($user->department)
+                <div>
+                    <label class="block text-sm font-medium mb-1">Department</label>
+                    <input type="text" class="psis-input w-full bg-slate-50 dark:bg-slate-800" value="{{ $user->department->name }}{{ $user->department->code ? ' ('.$user->department->code.')' : '' }}" readonly>
+                </div>
+            @endif
+
             <div>
                 <label for="email" class="block text-sm font-medium mb-1">Email</label>
                 <input id="email" name="email" type="email" class="psis-input w-full" value="{{ old('email', $user->email) }}" required>
@@ -32,6 +49,7 @@
         </form>
     </div>
 
+    @unless (auth()->user()->hasRole('Student'))
     <div class="psis-card p-6">
         <h3 class="font-semibold mb-1">Change Password</h3>
         <p class="text-sm text-slate-500 mb-4">Use a strong, unique password for your account.</p>
@@ -64,5 +82,6 @@
             @endif
         </form>
     </div>
+    @endunless
 </div>
 @endsection

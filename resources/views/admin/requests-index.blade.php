@@ -1,5 +1,5 @@
 @extends('layouts.psis')
-@section('page-title', 'Admin Approvals')
+@section('page-title', 'Approve Requests')
 @section('content')
 @include('partials.requests-table', [
     'requests' => $requests,

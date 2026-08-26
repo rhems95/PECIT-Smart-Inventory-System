@@ -14,10 +14,10 @@
 <p><strong>Payment Reference:</strong> {{ $payment->reference_number }}</p>
 @endif
 <table>
-    <thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr></thead>
+    <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr></thead>
     <tbody>
     @foreach ($purchase->items as $line)
-        <tr><td>{{ $line->inventory?->item_name }}</td><td>{{ $line->quantity }}</td><td>₱{{ number_format($line->unit_price,2) }}</td><td>₱{{ number_format($line->subtotal,2) }}</td></tr>
+        <tr><td>{{ $line->inventory?->item_name }}</td><td>{{ $line->size ?? '—' }}</td><td>{{ $line->quantity }}</td><td>₱{{ number_format($line->unit_price,2) }}</td><td>₱{{ number_format($line->subtotal,2) }}</td></tr>
     @endforeach
     </tbody>
 </table>

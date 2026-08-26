@@ -22,9 +22,10 @@ Human-facing docs: `README.md`.
 
 | Role | Purpose |
 |------|---------|
-| `Administrator` | Approvals, all users, master data, audit, reports |
+| `Administrator` | Users, master data, audit, reports; can also approve requests |
+| `Admission` | School owner: dashboard, **view inventory**, **approve/reject** faculty requests — no users, stock ops, or master data |
 | `Accounting` | Review faculty requests, verify student payments |
-| `Supply Personnel` | Stock ops, release orders, **student accounts** (add/import) |
+| `Supply Personnel` | Stock ops, release orders, **student accounts**, users, categories, departments, announcements, audit logs |
 | `Faculty` | Submit/cancel supply requests |
 | `Student` | Uniform shop (department), cart, checkout, receipts, purchases — **no inventory module** |
 
@@ -134,9 +135,9 @@ public/images/          # pecit-logo.png, chatbot.png
 
 ### Faculty supply request
 
-`pending` → Accounting review → `admin_review` → Admin approve (reserve) → `approved` → Supply release → `released`
+`pending` → Accounting review → `admin_review` → Admission/Admin approve (reserve) → `approved` → Supply release → `released`
 
-Routes under `requests.*` (Faculty only). Accounting: `accounting.requests*`. Admin: `admin.requests*`. Supply: `supply.releases*`.
+Routes under `requests.*` (Faculty only). Accounting: `accounting.requests*`. Admission/Admin: `admin.requests*`. Supply: `supply.releases*`.
 
 ### Student purchase
 
@@ -224,6 +225,7 @@ Keep AI answers grounded in DB data; do not invent stock numbers.
 **Staff** — password: `password`
 
 - admin@pecit.edu.ph
+- admission@pecit.edu.ph
 - accounting@pecit.edu.ph
 - supply@pecit.edu.ph
 - faculty@pecit.edu.ph
@@ -263,7 +265,7 @@ Do not add Sanctum/LLM unless the user asks.
 7. When adding sidebar links, update `PsisMenu` and ensure `isActive()` behaves correctly for sibling routes.
 8. Run `npm run build` after changing `resources/css` or `resources/js` if the user needs to see UI changes under `php artisan serve`.
 9. Keep student shop exclusivity on `Inventory` helpers; never bypass in checkout/cart.
-10. Supply student features stay under `supply.students.*` — do not open full admin user CRUD to Supply.
+10. Student CSV import stays under `supply.students.*`. Supply may also use admin users, categories, departments, announcements, and audit logs.
 11. Do not give Students inventory menu/routes; Uniform Shop is their only purchase UI.
 ---
 

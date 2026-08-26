@@ -8,7 +8,12 @@ This document is for project documentation. Render the Mermaid diagrams in GitHu
 
 There is **no `suppliers` table**. `supplier_id` was dropped from `inventory`. Uniform Shop exclusivity is modeled on `inventory.student_shop` + `inventory.department_id` (null = shared; set = department-exclusive).
 
-**Available quantity is not a column:** `available = quantity - reserved_quantity`.
+**Available quantity is not a stored column.**
+
+- Non-sized items: `available = inventory.quantity − inventory.reserved_quantity`
+- Clothing uniforms in the shop: per-size rows on `inventory_size_stocks`; parent `inventory.quantity` / `reserved_quantity` are **sums** of those rows. Students see availability for the **chosen size** only.
+
+Spatie roles include `Admission` (school owner: dashboard, inventory view, request approval).
 
 ---
 
@@ -38,6 +43,7 @@ erDiagram
     INVENTORY ||--o{ PURCHASE_REQUEST_ITEMS : "purchased as"
     PURCHASE_REQUESTS ||--o{ PAYMENTS : "paid via"
 
+    INVENTORY ||--o{ INVENTORY_SIZE_STOCKS : "stock by size"
     INVENTORY ||--o{ TRANSACTIONS : "stock movement"
     INVENTORY ||--o{ STOCK_LOGS : "delivery log"
 
@@ -96,6 +102,14 @@ erDiagram
         string barcode
     }
 
+    INVENTORY_SIZE_STOCKS {
+        bigint id PK
+        bigint inventory_id FK
+        string size UK "unique per item"
+        int quantity "on hand for size"
+        int reserved_quantity
+    }
+
     REQUESTS {
         bigint id PK
         string request_number UK
@@ -135,6 +149,7 @@ erDiagram
         bigint id PK
         bigint purchase_request_id FK
         bigint inventory_id FK
+        string size "nullable; required for clothing uniforms"
         int quantity
         decimal unit_price
         decimal subtotal
@@ -262,7 +277,7 @@ erDiagram
 ```
 
 **Status path:**  
-`pending` → `accounting_review` → `admin_review` → `approved` (stock **reserved**) → `released` (on-hand **deducted**, reserved cleared)
+`pending` → Accounting review → `admin_review` → Admission or Administrator approve (stock **reserved**) → `approved` → Supply release (on-hand **deducted**, reserved cleared)
 
 Cancel before release restores `reserved_quantity`. Submit does **not** deduct stock.
 
@@ -277,6 +292,7 @@ erDiagram
     DEPARTMENTS ||--o{ INVENTORY : exclusive
     PURCHASE_REQUESTS ||--|{ PURCHASE_REQUEST_ITEMS : lines
     PURCHASE_REQUEST_ITEMS }o--|| INVENTORY : item
+    INVENTORY ||--o{ INVENTORY_SIZE_STOCKS : "XS-3XL"
     PURCHASE_REQUESTS ||--o{ PAYMENTS : payment
     PAYMENTS }o--|| USERS : student
     USERS ||--o{ PURCHASE_REQUESTS : "verified released"
@@ -292,6 +308,7 @@ erDiagram
 2. `department_id` **null** → shared (P.E., NSTP, ID lanyard)
 3. `department_id` **set** → only students whose `users.department_id` matches
 4. Students never see another department’s exclusive uniform
+5. Clothing uniforms require `purchase_request_items.size`; stock is reserved/released on that size. Accessories (e.g. ID lanyard) skip size.
 
 Checkout and cart enforce the same checks. Students have **no** `/inventory` access.
 
@@ -304,18 +321,19 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 | `users` | Accounts (all roles). Students log in with `employee_id` + `last_name` |
 | `departments` | Organizational units; also Uniform Shop exclusivity |
 | `categories` | Inventory categories (includes Uniforms) |
-| `inventory` | Stock: on hand, reserved, shop flag, optional exclusive department |
+| `inventory` | Stock: on hand, reserved, shop flag, optional exclusive department. For sized uniforms, totals are sums of size rows |
+| `inventory_size_stocks` | Per-size on-hand and reserved qty (unique `inventory_id` + `size`). Clothing shop items only |
 | `requests` | Faculty (and restock) supply requests |
-| `request_items` | Lines on a faculty request |
+| `request_items` | Lines on a faculty request (no size; faculty items are not sold by size) |
 | `purchase_requests` | Student purchases |
-| `purchase_request_items` | Lines on a student purchase |
+| `purchase_request_items` | Lines on a student purchase; `size` required for clothing uniforms |
 | `payments` | Student payment records / receipt path |
 | `transactions` | Stock movement ledger (reserve / release / restore / adjust) |
 | `stock_logs` | Delivery / stock-in action log |
 | `psis_notifications` | In-app notifications (email via `NotificationService`) |
 | `audit_logs` | Audit trail (polymorphic target) |
 | `announcements` | Campus announcements |
-| `roles` / `permissions` / pivots | Spatie RBAC (`Administrator`, `Accounting`, `Supply Personnel`, `Faculty`, `Student`) |
+| `roles` / `permissions` / pivots | Spatie RBAC (`Administrator`, `Admission`, `Accounting`, `Supply Personnel`, `Faculty`, `Student`) |
 
 ### Removed (do not document as current)
 
@@ -342,9 +360,10 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 | Category → Inventory | 1:N | Required; `CASCADE` |
 | User → Requests | 1:N | Faculty requester |
 | Request → Request Items | 1:N | Identifying |
-| Inventory → Request Items | 1:N | |
+| Inventory → Request Items | 1:N | Faculty lines (no size column) |
+| Inventory → Size stocks | 1:N | Unique per size; clothing uniforms |
 | User → Purchase Requests | 1:N | Student buyer |
-| Purchase Request → Items | 1:N | Identifying |
+| Purchase Request → Items | 1:N | Identifying; optional `size` |
 | Purchase Request → Payments | 1:N | |
 | Inventory → Transactions | 1:N | Ledger |
 | Inventory → Stock Logs | 1:N | |
@@ -362,4 +381,4 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 
 ---
 
-*Keep this file updated when migrations change. Last aligned with student-shop / last-name migrations and the suppliers drop.*
+*Keep this file updated when migrations change. Last aligned with uniform size stocks (`inventory_size_stocks`), `purchase_request_items.size`, Admission role, and the suppliers drop.*
