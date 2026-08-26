@@ -1,3 +1,8 @@
+@import '@fontsource/figtree/400.css';
+@import '@fontsource/figtree/500.css';
+@import '@fontsource/figtree/600.css';
+@import '@fontsource/figtree/700.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -365,6 +370,22 @@
 
     .psis-sidebar-link-inactive {
         @apply text-white/80 hover:bg-white/10 hover:text-white;
+    }
+
+    .psis-sidebar-icon {
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 0.45rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: color-mix(in srgb, currentColor 22%, transparent);
+    }
+
+    .psis-sidebar-icon .psis-icon {
+        width: 1rem;
+        height: 1rem;
     }
 }
 

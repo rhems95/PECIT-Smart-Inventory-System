@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name'))</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     {{-- Fallback so AI FAB shows even before Vite rebuild --}}
     <style>
         #psis-ai-widget.psis-ai-widget{position:fixed!important;right:20px!important;bottom:20px!important;z-index:9999!important;display:flex!important;flex-direction:column;align-items:flex-end;gap:12px}
@@ -37,6 +34,9 @@
                 @foreach ($menuItems as $item)
                     @if ($item['route'])
                         <a href="{{ route($item['route']) }}" class="psis-sidebar-link {{ \App\Support\PsisMenu::isActive($item) ? 'psis-sidebar-link-active' : 'psis-sidebar-link-inactive' }}">
+                            <span class="psis-sidebar-icon" style="color: {{ $item['color'] ?? '#F4B400' }}">
+                                <x-icon :name="$item['icon']" class="w-4 h-4" />
+                            </span>
                             <span>{{ $item['label'] }}</span>
                         </a>
                     @endif
@@ -50,22 +50,25 @@
         <div class="flex-1 flex flex-col min-w-0">
             <header class="sticky top-0 z-30 bg-[var(--psis-surface)] border-b border-[var(--psis-border)] shadow-sm">
                 <div class="flex items-center justify-between px-4 lg:px-8 h-16">
-                    <button type="button" class="lg:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" @click="sidebarOpen = !sidebarOpen">
+                    <button type="button" class="lg:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-pecit-blue" @click="sidebarOpen = !sidebarOpen">
                         <span class="sr-only">Menu</span>
-                        ☰
+                        <x-icon name="bars" class="w-6 h-6" />
                     </button>
                     <div class="hidden lg:block">
                         <h1 class="text-lg font-semibold">@yield('page-title', 'Dashboard')</h1>
                     </div>
                     <div class="flex items-center gap-2 sm:gap-4">
                         @php($unread = auth()->user()->psisNotifications()->where('is_read', false)->count())
-                        <a href="{{ route('notifications.index') }}" class="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" title="Notifications">
-                            🔔
+                        <a href="{{ route('notifications.index') }}" class="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-pecit-blue dark:text-pecit-gold" title="Notifications">
+                            <x-icon name="bell" class="w-5 h-5" />
                             @if ($unread > 0)
                                 <span class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 text-[10px] font-bold bg-pecit-gold text-pecit-blue-900 rounded-full flex items-center justify-center">{{ $unread }}</span>
                             @endif
                         </a>
-                        <button type="button" @click="dark = !dark" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" title="Toggle dark mode">🌓</button>
+                        <button type="button" @click="dark = !dark" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-pecit-blue dark:text-pecit-gold" title="Toggle dark mode">
+                            <x-icon name="moon" class="w-5 h-5 dark:hidden" />
+                            <x-icon name="sun" class="w-5 h-5 hidden dark:block" />
+                        </button>
                         <div x-data="{ open: false }" class="relative">
                             <button @click="open = !open" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
                                 <span class="text-sm font-medium hidden sm:inline">{{ auth()->user()->name }}</span>
