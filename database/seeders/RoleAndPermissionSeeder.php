@@ -34,8 +34,17 @@ class RoleAndPermissionSeeder extends Seeder
 
         $map = [
             'Administrator' => $permissions,
+            'Admission' => ['inventory.view', 'requests.approve'],
             'Accounting' => ['inventory.view', 'requests.review', 'purchases.verify', 'reports.view'],
-            'Supply Personnel' => ['inventory.view', 'inventory.manage', 'requests.release', 'reports.view'],
+            'Supply Personnel' => [
+                'inventory.view',
+                'inventory.manage',
+                'requests.release',
+                'reports.view',
+                'users.manage',
+                'audit.view',
+                'announcements.manage',
+            ],
             'Faculty' => ['inventory.view', 'requests.submit'],
             'Student' => ['inventory.view', 'purchases.checkout'],
         ];

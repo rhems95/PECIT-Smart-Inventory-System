@@ -21,6 +21,37 @@
         <p><span class="text-slate-500">Description:</span> {{ $inventory->description ?: '—' }}</p>
         <p><span class="text-slate-500">On hand:</span> {{ $inventory->quantity }} {{ $inventory->unit }} (reserved: {{ $inventory->reserved_quantity }})</p>
         <p><span class="text-slate-500">Available:</span> {{ $inventory->availableQuantity() }}</p>
+        @if ($inventory->requiresSize())
+            <div class="pt-2">
+                <p class="text-slate-500 mb-2">Stock by size</p>
+                <div class="overflow-hidden rounded border border-[var(--psis-border)]">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-slate-900/50 text-left">
+                                <th class="px-4 py-3">Size</th>
+                                <th class="px-4 py-3">On Hand</th>
+                                <th class="px-4 py-3">Reserved</th>
+                                <th class="px-4 py-3">Available</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($inventory->sizeStocks->sortBy('size') as $stock)
+                                <tr class="border-t border-[var(--psis-border)]">
+                                    <td class="px-4 py-3">{{ $stock->size }}</td>
+                                    <td class="px-4 py-3">{{ $stock->quantity }}</td>
+                                    <td class="px-4 py-3">{{ $stock->reserved_quantity }}</td>
+                                    <td class="px-4 py-3">{{ $stock->availableQuantity() }}</td>
+                                </tr>
+                            @empty
+                                <tr class="border-t border-[var(--psis-border)]">
+                                    <td colspan="4" class="px-4 py-3 text-slate-500">No size stock yet. Use Stock Operations to add by size.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
         <p><span class="text-slate-500">Unit price:</span> ₱{{ number_format($inventory->unit_price, 2) }}</p>
         <p><span class="text-slate-500">Location:</span> {{ $inventory->location ?: '—' }}</p>
         @if (auth()->user()->hasAnyRole(['Administrator', 'Supply Personnel']))

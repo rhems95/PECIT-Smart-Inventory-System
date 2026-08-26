@@ -25,6 +25,7 @@
             <thead>
                 <tr class="bg-slate-50 dark:bg-slate-900/50 text-left text-slate-500 dark:text-slate-400">
                     <th class="px-4 py-3 font-medium">Item</th>
+                    <th class="px-4 py-3 font-medium">Size</th>
                     <th class="px-4 py-3 font-medium">Qty</th>
                     <th class="px-4 py-3 font-medium">Unit Price</th>
                     <th class="px-4 py-3 font-medium text-right">Subtotal</th>
@@ -34,6 +35,7 @@
                 @foreach ($purchase->items as $line)
                     <tr class="border-t border-[var(--psis-border)]">
                         <td class="px-4 py-3">{{ $line->inventory?->item_name ?? '—' }}</td>
+                        <td class="px-4 py-3">{{ $line->size ?? '—' }}</td>
                         <td class="px-4 py-3">{{ $line->quantity }}</td>
                         <td class="px-4 py-3">₱{{ number_format($line->unit_price, 2) }}</td>
                         <td class="px-4 py-3 text-right">₱{{ number_format($line->subtotal, 2) }}</td>

@@ -61,12 +61,36 @@ class PurchaseController extends Controller
         $this->authorize('uploadReceipt', $purchase);
 
         $data = $request->validate([
-            'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'receipt' => [
+                'required',
+                'file',
+                'max:5120',
+                'mimetypes:image/jpeg,image/png,image/jpg,image/webp,application/pdf',
+            ],
+        ], [
+            'receipt.required' => 'Please choose a receipt file to upload.',
+            'receipt.mimetypes' => 'Receipt must be a JPG, PNG, WEBP, or PDF file.',
+            'receipt.max' => 'Receipt must be 5MB or smaller.',
         ]);
 
-        $path = $data['receipt']->store('receipts', 'public');
+        $payment = $purchase->payments()->latest()->first();
+        if (! $payment) {
+            return back()->with('error', 'No payment record found for this purchase. Please contact Accounting.');
+        }
 
-        $purchase->payments()->latest()->first()?->update(['receipt_path' => $path]);
+        try {
+            $path = $data['receipt']->store('receipts', 'public');
+
+            if (! $path) {
+                return back()->with('error', 'Could not save the receipt file. Please try again.');
+            }
+
+            $payment->update(['receipt_path' => $path]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('error', 'Receipt upload failed. Please try again or use a JPG/PNG/PDF under 5MB.');
+        }
 
         return back()->with('success', 'Payment receipt uploaded successfully.');
     }

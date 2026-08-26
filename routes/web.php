@@ -25,8 +25,12 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::resource('inventory', InventoryController::class)
-        ->only(['index', 'create', 'store', 'show', 'edit', 'update'])
-        ->middleware('role:Administrator|Accounting|Supply Personnel|Faculty');
+        ->only(['index', 'show'])
+        ->middleware('role:Administrator|Admission|Accounting|Supply Personnel|Faculty');
+
+    Route::resource('inventory', InventoryController::class)
+        ->only(['create', 'store', 'edit', 'update'])
+        ->middleware('role:Administrator|Supply Personnel');
 
     Route::prefix('requests')->name('requests.')->middleware('role:Faculty')->group(function () {
         Route::get('/', [FacultyRequestController::class, 'index'])->name('index');
@@ -40,7 +44,9 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
         Route::get('/', [ShopController::class, 'index'])->name('index');
         Route::post('/cart', [ShopController::class, 'addToCart'])->name('cart.add');
         Route::get('/cart', [ShopController::class, 'cart'])->name('cart');
-        Route::delete('/cart/{inventoryId}', [ShopController::class, 'removeFromCart'])->name('cart.remove');
+        Route::delete('/cart/{lineKey}', [ShopController::class, 'removeFromCart'])
+            ->where('lineKey', '[0-9]+_[A-Za-z0-9]+')
+            ->name('cart.remove');
     });
 
     Route::prefix('purchases')->name('purchases.')->group(function () {
@@ -60,26 +66,30 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
         Route::post('/payments/{purchase}/verify', [AccountingController::class, 'verifyPayment'])->name('payments.verify');
     });
 
-    Route::prefix('admin')->name('admin.')->middleware('role:Administrator')->group(function () {
-        Route::get('/requests', [AdminRequestController::class, 'index'])->name('requests');
-        Route::get('/requests/{request}', [AdminRequestController::class, 'show'])->name('requests.show');
-        Route::post('/requests/{request}/approve', [AdminRequestController::class, 'approve'])->name('requests.approve');
-        Route::post('/requests/{request}/reject', [AdminRequestController::class, 'reject'])->name('requests.reject');
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::middleware('role:Administrator|Admission')->group(function () {
+            Route::get('/requests', [AdminRequestController::class, 'index'])->name('requests');
+            Route::get('/requests/{request}', [AdminRequestController::class, 'show'])->name('requests.show');
+            Route::post('/requests/{request}/approve', [AdminRequestController::class, 'approve'])->name('requests.approve');
+            Route::post('/requests/{request}/reject', [AdminRequestController::class, 'reject'])->name('requests.reject');
+        });
 
-        Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
-        Route::get('/audit-logs', [AdminUserController::class, 'auditLogs'])->name('audit-logs');
+        Route::middleware('role:Administrator|Supply Personnel')->group(function () {
+            Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
+            Route::get('/audit-logs', [AdminUserController::class, 'auditLogs'])->name('audit-logs');
 
-        Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
-        Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
-        Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+            Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+            Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+            Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
 
-        Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
-        Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
-        Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
-        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
+            Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
+            Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
+            Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
+            Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
 
-        Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
-        Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+            Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+            Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+        });
     });
 
     Route::prefix('supply')->name('supply.')->middleware('role:Supply Personnel|Administrator')->group(function () {
@@ -134,10 +144,10 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
 
     Route::prefix('api')->name('api.')->group(function () {
         Route::get('/inventory', [\App\Http\Controllers\Api\InventoryApiController::class, 'index'])
-            ->middleware('role:Administrator|Accounting|Supply Personnel|Faculty')
+            ->middleware('role:Administrator|Admission|Accounting|Supply Personnel|Faculty')
             ->name('inventory.index');
         Route::get('/inventory/{inventory}', [\App\Http\Controllers\Api\InventoryApiController::class, 'show'])
-            ->middleware('role:Administrator|Accounting|Supply Personnel|Faculty')
+            ->middleware('role:Administrator|Admission|Accounting|Supply Personnel|Faculty')
             ->name('inventory.show');
         Route::get('/requests', [\App\Http\Controllers\Api\SupplyRequestApiController::class, 'index'])->name('requests.index');
         Route::post('/requests', [\App\Http\Controllers\Api\SupplyRequestApiController::class, 'store'])->name('requests.store');

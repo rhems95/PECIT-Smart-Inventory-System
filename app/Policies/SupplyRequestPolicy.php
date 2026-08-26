@@ -15,7 +15,7 @@ class SupplyRequestPolicy
     public function view(User $user, SupplyRequest $supplyRequest): bool
     {
         return $supplyRequest->user_id === $user->id
-            || $user->hasAnyRole(['Administrator', 'Accounting', 'Supply Personnel']);
+            || $user->hasAnyRole(['Administrator', 'Admission', 'Accounting', 'Supply Personnel']);
     }
 
     public function create(User $user): bool

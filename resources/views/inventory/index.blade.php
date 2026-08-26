@@ -14,6 +14,12 @@
                     <option value="{{ $cat->id }}" @selected(request('category_id') == $cat->id)>{{ $cat->name }}</option>
                 @endforeach
             </select>
+            <select name="status" class="psis-input max-w-xs">
+                <option value="">All statuses</option>
+                <option value="available" @selected(request('status') === 'available')>Available</option>
+                <option value="low_stock" @selected(request('status') === 'low_stock')>Low stock</option>
+                <option value="out_of_stock" @selected(request('status') === 'out_of_stock')>Out of stock</option>
+            </select>
             <button class="psis-btn-primary">Filter</button>
         </form>
         @if (auth()->user()->hasAnyRole(['Administrator', 'Supply Personnel']))

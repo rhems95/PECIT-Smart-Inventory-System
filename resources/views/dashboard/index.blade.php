@@ -75,26 +75,50 @@
         </div>
         @endif
     @else
+        @php
+            $canInventory = auth()->user()->can('viewAny', \App\Models\Inventory::class);
+            $pendingHref = match (true) {
+                auth()->user()->hasAnyRole(['Administrator', 'Admission']) => route('admin.requests'),
+                auth()->user()->hasRole('Accounting') => route('accounting.requests'),
+                auth()->user()->hasRole('Faculty') => route('requests.index'),
+                default => '#recent-requests',
+            };
+            $approvedHref = auth()->user()->hasAnyRole(['Administrator', 'Supply Personnel'])
+                ? route('supply.releases')
+                : '#recent-requests';
+            $reportsHref = auth()->user()->hasAnyRole(['Administrator', 'Accounting', 'Supply Personnel'])
+                ? route('reports.index')
+                : '#monthly-transactions';
+
+            $statCards = [
+                ['Total Items', $stats['total_items'], $canInventory ? route('inventory.index') : null],
+                ['Available Stock', number_format($stats['available_stock']), $canInventory ? route('inventory.index') : null],
+                ['Low Stock', $stats['low_stock'], $canInventory ? route('inventory.index', ['status' => 'low_stock']) : null],
+                ['Out of Stock', $stats['out_of_stock'], $canInventory ? route('inventory.index', ['status' => 'out_of_stock']) : null],
+                ['Pending Requests', $stats['pending_requests'], $pendingHref],
+                ['Approved', $stats['approved_requests'], $approvedHref],
+                ['Released', $stats['released_requests'], '#released-items'],
+                ['Monthly Txns', $stats['monthly_transactions'], $reportsHref],
+            ];
+        @endphp
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            @foreach ([
-                ['Total Items', $stats['total_items']],
-                ['Available Stock', number_format($stats['available_stock'])],
-                ['Low Stock', $stats['low_stock']],
-                ['Out of Stock', $stats['out_of_stock']],
-                ['Pending Requests', $stats['pending_requests']],
-                ['Approved', $stats['approved_requests']],
-                ['Released', $stats['released_requests']],
-                ['Monthly Txns', $stats['monthly_transactions']],
-            ] as [$label, $value])
-                <div class="psis-card p-4">
-                    <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $label }}</p>
-                    <p class="text-2xl font-bold mt-1 text-pecit-blue dark:text-pecit-gold">{{ $value }}</p>
-                </div>
+            @foreach ($statCards as [$label, $value, $href])
+                @if ($href)
+                    <a href="{{ $href }}" class="psis-card p-4 block hover:border-pecit-blue hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-pecit-blue/40">
+                        <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $label }}</p>
+                        <p class="text-2xl font-bold mt-1 text-pecit-blue dark:text-pecit-gold">{{ $value }}</p>
+                    </a>
+                @else
+                    <div class="psis-card p-4">
+                        <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $label }}</p>
+                        <p class="text-2xl font-bold mt-1 text-pecit-blue dark:text-pecit-gold">{{ $value }}</p>
+                    </div>
+                @endif
             @endforeach
         </div>
 
         <div class="grid lg:grid-cols-2 gap-6">
-            <div class="psis-card p-5">
+            <div id="monthly-transactions" class="psis-card p-5 scroll-mt-24">
                 <h3 class="font-semibold mb-4">Monthly Transactions</h3>
                 <canvas id="txnChart" height="120"></canvas>
             </div>
@@ -113,20 +137,68 @@
             </div>
         </div>
 
-        <div class="psis-card p-5">
-            <h3 class="font-semibold mb-4">Recent Faculty Requests</h3>
+        <div id="recent-requests" class="psis-card p-5 scroll-mt-24">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <h3 class="font-semibold">Recent Faculty Requests</h3>
+                @if (auth()->user()->hasAnyRole(['Administrator', 'Admission']))
+                    <a href="{{ route('admin.requests') }}" class="psis-btn-outline text-sm">Approve Requests</a>
+                @endif
+            </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
-                    <thead><tr class="text-left text-slate-500"><th class="py-2">Number</th><th>Requester</th><th>Status</th><th>Date</th></tr></thead>
-                    <tbody>
-                    @foreach ($recentRequests as $req)
-                        <tr class="border-t border-[var(--psis-border)]">
-                            <td class="py-2">{{ $req->request_number }}</td>
-                            <td>{{ $req->user?->name }}</td>
-                            <td><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{{ $req->status }}</span></td>
-                            <td>{{ $req->created_at?->format('M d, Y') }}</td>
+                    <thead>
+                        <tr class="text-left text-slate-500">
+                            <th class="px-4 py-3">Number</th>
+                            <th class="px-4 py-3">Requester</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Date</th>
                         </tr>
-                    @endforeach
+                    </thead>
+                    <tbody>
+                    @forelse ($recentRequests as $req)
+                        <tr class="border-t border-[var(--psis-border)]">
+                            <td class="px-4 py-3">{{ $req->request_number }}</td>
+                            <td class="px-4 py-3">{{ $req->user?->name }}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{{ str_replace('_', ' ', $req->status) }}</span></td>
+                            <td class="px-4 py-3">{{ $req->created_at?->format('M d, Y') }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="px-4 py-6 text-center text-slate-500">No recent requests.</td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="released-items" class="psis-card p-5 scroll-mt-24">
+            <h3 class="font-semibold mb-4">Released Items</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-slate-500">
+                            <th class="px-4 py-3">Request #</th>
+                            <th class="px-4 py-3">Requester</th>
+                            <th class="px-4 py-3">Items</th>
+                            <th class="px-4 py-3">Released</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @forelse ($releasedRequests as $req)
+                        <tr class="border-t border-[var(--psis-border)]">
+                            <td class="px-4 py-3 font-medium">{{ $req->request_number }}</td>
+                            <td class="px-4 py-3">{{ $req->user?->name ?? '—' }}</td>
+                            <td class="px-4 py-3">
+                                {{ $req->items->map(fn ($line) => ($line->inventory?->item_name ?? 'Item').' ×'.($line->quantity_released ?: $line->quantity_approved ?: $line->quantity_requested))->implode(', ') ?: '—' }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">{{ $req->released_at?->format('M d, Y') ?? $req->updated_at?->format('M d, Y') }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="px-4 py-6 text-center text-slate-500">No released items yet.</td>
+                        </tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>

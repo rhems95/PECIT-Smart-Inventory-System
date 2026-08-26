@@ -113,6 +113,13 @@ class SupplyRequestService
                 "Request {$request->request_number} was reviewed by accounting.",
                 route('admin.requests.show', $request),
             );
+            $this->notifications->notifyRole(
+                'Admission',
+                'request_reviewed',
+                'Request ready for approval',
+                "Request {$request->request_number} was reviewed by accounting.",
+                route('admin.requests.show', $request),
+            );
 
             $this->auditLog->log($reviewer, 'supply_request.accounting_review', $request);
 
