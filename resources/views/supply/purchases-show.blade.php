@@ -5,6 +5,10 @@
 
 @section('content')
 <div class="space-y-4 max-w-3xl">
+    <div class="psis-card p-5">
+        <x-status-tracker :tracker="\App\Support\OrderStatusTracker::forPurchase($purchase)" />
+    </div>
+
     <div class="psis-card p-5 grid sm:grid-cols-2 gap-3 text-sm">
         <p><span class="text-slate-500">Purchase #:</span> <strong>{{ $purchase->purchase_number }}</strong></p>
         <p><span class="text-slate-500">Student:</span> {{ $purchase->user?->name ?? '—' }}</p>

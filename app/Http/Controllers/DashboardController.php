@@ -25,7 +25,7 @@ class DashboardController extends Controller
             ->get();
 
         if ($isStudent) {
-            $studentPurchases = PurchaseRequest::where('user_id', $user->id)->latest()->limit(5)->get();
+            $studentPurchases = PurchaseRequest::with('payments')->where('user_id', $user->id)->latest()->limit(5)->get();
             $shopCount = Inventory::forStudentShop($user)->count();
             $aiSummary = 'Buy uniforms for your department in the Uniform Shop. Shared items (P.E., NSTP, and ID lanyard) are available to all students.';
 

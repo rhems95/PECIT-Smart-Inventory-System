@@ -1,7 +1,11 @@
 @extends('layouts.psis')
 @section('page-title', 'Payment '.$purchase->purchase_number)
 @section('content')
-<div class="psis-card p-5 max-w-xl space-y-3 text-sm">
+<div class="space-y-4 max-w-xl">
+    <div class="psis-card p-5">
+        <x-status-tracker :tracker="\App\Support\OrderStatusTracker::forPurchase($purchase)" />
+    </div>
+<div class="psis-card p-5 space-y-3 text-sm">
 <p>Student: {{ $purchase->user?->name }}</p>
 <p>Total: ₱{{ number_format($purchase->total_amount, 2) }}</p>
 @if ($payment = $purchase->payments->first())
@@ -13,5 +17,6 @@
     @endif
 @endif
 <form method="POST" action="{{ route('accounting.payments.verify', $purchase) }}">@csrf<button class="psis-btn-primary">Verify Payment & Reserve Stock</button></form>
+    </div>
 </div>
 @endsection

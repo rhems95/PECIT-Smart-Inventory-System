@@ -141,17 +141,6 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    Route::prefix('api')->name('api.')->group(function () {
-        Route::get('/inventory', [\App\Http\Controllers\Api\InventoryApiController::class, 'index'])
-            ->middleware('role:Administrator|Admission|Accounting|Supply Personnel|Faculty')
-            ->name('inventory.index');
-        Route::get('/inventory/{inventory}', [\App\Http\Controllers\Api\InventoryApiController::class, 'show'])
-            ->middleware('role:Administrator|Admission|Accounting|Supply Personnel|Faculty')
-            ->name('inventory.show');
-        Route::get('/requests', [\App\Http\Controllers\Api\SupplyRequestApiController::class, 'index'])->name('requests.index');
-        Route::post('/requests', [\App\Http\Controllers\Api\SupplyRequestApiController::class, 'store'])->name('requests.store');
-    });
 });
 
 require __DIR__.'/auth.php';

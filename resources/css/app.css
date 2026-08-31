@@ -387,6 +387,94 @@
         width: 1rem;
         height: 1rem;
     }
+
+    .psis-tracker-steps {
+        @apply flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-0;
+    }
+
+    .psis-tracker-step {
+        @apply relative flex sm:flex-1 items-start sm:flex-col sm:items-center gap-3 sm:gap-2 min-w-0;
+    }
+
+    .psis-tracker-line {
+        @apply absolute left-[0.85rem] top-[-0.7rem] h-3 w-0.5 sm:left-[-50%] sm:right-1/2 sm:top-[0.85rem] sm:h-0.5 sm:w-auto sm:ml-4;
+        background: #cbd5e1;
+    }
+
+    .dark .psis-tracker-line {
+        background: #475569;
+    }
+
+    .psis-tracker-step-done .psis-tracker-line,
+    .psis-tracker-step-current .psis-tracker-line {
+        background: #F4B400;
+    }
+
+    .psis-tracker-step-failed .psis-tracker-line {
+        background: #f87171;
+    }
+
+    .psis-tracker-dot {
+        @apply relative z-[1] w-7 h-7 rounded-full inline-flex items-center justify-center shrink-0 border-2;
+        border-color: #cbd5e1;
+        color: #94a3b8;
+        background: var(--psis-surface, #fff);
+    }
+
+    .psis-tracker-step-done .psis-tracker-dot {
+        background: #0B3C91;
+        border-color: #0B3C91;
+        color: #F4B400;
+    }
+
+    .psis-tracker-step-current .psis-tracker-dot {
+        background: #F4B400;
+        border-color: #F4B400;
+        color: #0B3C91;
+        box-shadow: 0 0 0 4px rgba(244, 180, 0, 0.22);
+    }
+
+    .psis-tracker-step-failed .psis-tracker-dot {
+        background: #dc2626;
+        border-color: #dc2626;
+        color: #fff;
+    }
+
+    .psis-tracker-copy {
+        @apply min-w-0 sm:text-center;
+    }
+
+    .psis-tracker-label {
+        @apply block text-sm font-medium text-slate-700 dark:text-slate-200 leading-tight;
+    }
+
+    .psis-tracker-step-upcoming .psis-tracker-label {
+        @apply text-slate-400 dark:text-slate-500;
+    }
+
+    .psis-tracker-meta {
+        @apply block text-xs text-slate-500 mt-0.5;
+    }
+
+    .psis-tracker-compact .psis-tracker-steps {
+        @apply flex-row items-center gap-0;
+    }
+
+    .psis-tracker-compact .psis-tracker-step {
+        @apply flex-row items-center flex-1 gap-0;
+    }
+
+    .psis-tracker-compact .psis-tracker-line {
+        @apply static h-0.5 flex-1 mx-1 w-auto left-auto top-auto ml-0;
+    }
+
+    .psis-tracker-compact .psis-tracker-dot {
+        @apply w-6 h-6;
+    }
+
+    .psis-tracker-compact .psis-tracker-copy {
+        @apply hidden;
+    }
 }
 
 @layer utilities {

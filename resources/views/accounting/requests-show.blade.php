@@ -3,7 +3,11 @@
 @section('page-title', 'Review '.$supplyRequest->request_number)
 
 @section('content')
-<form method="POST" action="{{ route('accounting.requests.review', $supplyRequest) }}" class="space-y-4 max-w-5xl">
+<div class="space-y-4 max-w-5xl">
+    <div class="psis-card p-5">
+        <x-status-tracker :tracker="\App\Support\OrderStatusTracker::forSupplyRequest($supplyRequest)" />
+    </div>
+<form method="POST" action="{{ route('accounting.requests.review', $supplyRequest) }}" class="space-y-4">
     @csrf
 
     <div class="psis-card p-5 grid sm:grid-cols-2 gap-3 text-sm">
@@ -64,4 +68,5 @@
         <a href="{{ route('accounting.requests') }}" class="psis-btn-outline">Back</a>
     </div>
 </form>
+</div>
 @endsection

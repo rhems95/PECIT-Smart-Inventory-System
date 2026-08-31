@@ -22,8 +22,11 @@
         <p><span class="text-slate-500">On hand:</span> {{ $inventory->quantity }} {{ $inventory->unit }} (reserved: {{ $inventory->reserved_quantity }})</p>
         <p><span class="text-slate-500">Available:</span> {{ $inventory->availableQuantity() }}</p>
         @if ($inventory->requiresSize())
+            @php($stockBySize = $inventory->sizeStocks->keyBy('size'))
+            @php($sizes = config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']))
             <div class="pt-2">
                 <p class="text-slate-500 mb-2">Stock by size</p>
+                <p class="text-xs text-slate-500 mb-2">Available = on-hand − reserved. Edit on-hand per size on the Edit page.</p>
                 <div class="overflow-hidden rounded border border-[var(--psis-border)]">
                     <table class="min-w-full text-sm">
                         <thead>
@@ -35,18 +38,15 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($inventory->sizeStocks->sortBy('size') as $stock)
+                            @foreach ($sizes as $size)
+                                @php($stock = $stockBySize->get($size))
                                 <tr class="border-t border-[var(--psis-border)]">
-                                    <td class="px-4 py-3">{{ $stock->size }}</td>
-                                    <td class="px-4 py-3">{{ $stock->quantity }}</td>
-                                    <td class="px-4 py-3">{{ $stock->reserved_quantity }}</td>
-                                    <td class="px-4 py-3">{{ $stock->availableQuantity() }}</td>
+                                    <td class="px-4 py-3">{{ $size }}</td>
+                                    <td class="px-4 py-3">{{ $stock?->quantity ?? 0 }}</td>
+                                    <td class="px-4 py-3">{{ $stock?->reserved_quantity ?? 0 }}</td>
+                                    <td class="px-4 py-3">{{ $stock?->availableQuantity() ?? 0 }}</td>
                                 </tr>
-                            @empty
-                                <tr class="border-t border-[var(--psis-border)]">
-                                    <td colspan="4" class="px-4 py-3 text-slate-500">No size stock yet. Use Stock Operations to add by size.</td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
@@ -55,7 +55,10 @@
         <p><span class="text-slate-500">Unit price:</span> ₱{{ number_format($inventory->unit_price, 2) }}</p>
         <p><span class="text-slate-500">Location:</span> {{ $inventory->location ?: '—' }}</p>
         @if (auth()->user()->hasAnyRole(['Administrator', 'Supply Personnel']))
-            <a href="{{ route('inventory.edit', $inventory) }}" class="psis-btn-outline inline-flex mt-2">Edit</a>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <a href="{{ route('inventory.edit', $inventory) }}" class="psis-btn-outline inline-flex">Edit item &amp; size stock</a>
+                <a href="{{ route('supply.stock.index') }}" class="psis-btn-outline inline-flex">Stock Operations</a>
+            </div>
         @endif
     </div>
     <div class="psis-card p-6 text-center">

@@ -1,4 +1,8 @@
 <div class="space-y-4">
+    <div class="psis-card p-5">
+        <x-status-tracker :tracker="\App\Support\OrderStatusTracker::forSupplyRequest($supplyRequest)" />
+    </div>
+
     <div class="psis-card p-5 grid sm:grid-cols-2 gap-3 text-sm">
         <p><span class="text-slate-500">Status:</span> <strong>{{ str_replace('_', ' ', $supplyRequest->status) }}</strong></p>
         <p><span class="text-slate-500">Requester:</span> {{ $supplyRequest->user?->name ?? '—' }}</p>

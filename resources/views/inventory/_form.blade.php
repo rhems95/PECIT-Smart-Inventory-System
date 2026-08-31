@@ -84,9 +84,13 @@
             @endforeach
         </select>
     </div>
-    @if ($item?->requiresSize() && $item->sizeStocks->isNotEmpty())
-        <div class="md:col-span-2">
-            <p class="psis-label mb-2">Stock by size</p>
+    @if ($item)
+        @php($stockBySize = $item->relationLoaded('sizeStocks') ? $item->sizeStocks->keyBy('size') : collect())
+        <div class="md:col-span-2" x-show="needsSize" x-cloak>
+            <p class="psis-label mb-2">On-hand by size</p>
+            <p class="text-xs text-slate-500 mb-2">
+                Change <strong>on-hand</strong> for each size, then save. <strong>Available</strong> is always on-hand minus reserved (orders waiting to be claimed) and cannot be typed in.
+            </p>
             <div class="overflow-hidden rounded border border-[var(--psis-border)]">
                 <table class="min-w-full text-sm">
                     <thead>
@@ -98,18 +102,31 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($item->sizeStocks->sortBy('size') as $stock)
+                        @foreach ($sizes as $size)
+                            @php($stock = $stockBySize->get($size))
                             <tr class="border-t border-[var(--psis-border)]">
-                                <td class="px-4 py-3">{{ $stock->size }}</td>
-                                <td class="px-4 py-3">{{ $stock->quantity }}</td>
-                                <td class="px-4 py-3">{{ $stock->reserved_quantity }}</td>
-                                <td class="px-4 py-3">{{ $stock->availableQuantity() }}</td>
+                                <td class="px-4 py-3 font-medium">{{ $size }}</td>
+                                <td class="px-4 py-3">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="size_quantities[{{ $size }}]"
+                                        value="{{ old('size_quantities.'.$size, $stock?->quantity ?? 0) }}"
+                                        class="psis-input w-24"
+                                        x-bind:disabled="!needsSize"
+                                    >
+                                </td>
+                                <td class="px-4 py-3 text-slate-500">{{ $stock?->reserved_quantity ?? 0 }}</td>
+                                <td class="px-4 py-3">{{ $stock?->availableQuantity() ?? 0 }}</td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
-            <p class="text-xs text-slate-500 mt-1">Use Stock Operations to add or adjust quantity for a specific size.</p>
+            <p class="text-xs text-slate-500 mt-1">
+                Receiving a shipment? You can also add to one size under
+                <a href="{{ route('supply.stock.index') }}" class="text-pecit-blue hover:underline">Stock Operations</a>.
+            </p>
         </div>
     @endif
 </div>
