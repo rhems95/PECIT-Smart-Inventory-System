@@ -21,7 +21,9 @@
     x-data='{
         items: @json($itemMeta),
         stockInId: "",
+        stockInSize: "",
         adjustId: "",
+        adjustSize: "",
         get stockInNeedsSize() {
             return this.items[this.stockInId]?.requires_size ?? false;
         },
@@ -29,9 +31,10 @@
             return this.items[this.adjustId]?.requires_size ?? false;
         },
         sizeHint(id, size) {
+            if (!id || !size) return "";
             const row = this.items[id]?.sizes?.[size];
-            if (!row) return "no stock yet";
-            return row.on_hand + " on hand / " + row.available + " avail";
+            if (!row) return "No stock yet for this size — this will create it.";
+            return row.on_hand + " on hand / " + row.available + " available";
         }
     }'
 >
@@ -46,15 +49,15 @@
         </select>
         <div x-show="stockInNeedsSize" x-cloak>
             <label class="psis-label">Size <span class="text-red-500">*</span></label>
-            <select name="size" class="psis-input" :required="stockInNeedsSize">
+            <select name="size" class="psis-input" x-model="stockInSize" :required="stockInNeedsSize">
                 <option value="">Select size</option>
                 @foreach ($sizes as $size)
                     <option value="{{ $size }}">{{ $size }}</option>
                 @endforeach
             </select>
-            <p class="text-xs text-slate-500 mt-1">Stock-in quantity is added to the selected size only.</p>
+            <p class="text-xs text-slate-500 mt-1" x-text="sizeHint(stockInId, stockInSize) || 'Quantity is added to the selected size only.'"></p>
         </div>
-        <input type="number" name="quantity" min="1" class="psis-input" placeholder="Quantity" required>
+        <input type="number" name="quantity" min="1" class="psis-input" placeholder="Quantity to add" required>
         <input name="notes" class="psis-input" placeholder="Notes">
         <button class="psis-btn-primary">Record Stock In</button>
     </form>
@@ -70,15 +73,15 @@
         </select>
         <div x-show="adjustNeedsSize" x-cloak>
             <label class="psis-label">Size <span class="text-red-500">*</span></label>
-            <select name="size" class="psis-input" :required="adjustNeedsSize" x-ref="adjustSize">
+            <select name="size" class="psis-input" x-model="adjustSize" :required="adjustNeedsSize">
                 <option value="">Select size</option>
                 @foreach ($sizes as $size)
                     <option value="{{ $size }}">{{ $size }}</option>
                 @endforeach
             </select>
-            <p class="text-xs text-slate-500 mt-1">New quantity replaces on-hand for that size only.</p>
+            <p class="text-xs text-slate-500 mt-1" x-text="sizeHint(adjustId, adjustSize) || 'Sets on-hand for that size. Available is on-hand minus reserved.'"></p>
         </div>
-        <input type="number" name="new_quantity" min="0" class="psis-input" placeholder="New quantity" required>
+        <input type="number" name="new_quantity" min="0" class="psis-input" placeholder="New on-hand quantity" required>
         <input name="notes" class="psis-input" placeholder="Reason">
         <button class="psis-btn-secondary">Adjust</button>
     </form>

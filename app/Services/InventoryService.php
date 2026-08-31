@@ -378,12 +378,14 @@ class InventoryService
 
             if ($size !== null) {
                 $stock = $this->lockOrCreateSizeStock($locked, $size);
+                if ($newQuantity < $stock->reserved_quantity) {
+                    throw new RuntimeException(
+                        "Cannot set size {$size} on-hand ({$newQuantity}) below reserved ({$stock->reserved_quantity}). Available is on-hand minus reserved."
+                    );
+                }
                 $before = $stock->quantity;
                 $difference = abs($newQuantity - $before);
                 $stock->quantity = $newQuantity;
-                if ($stock->reserved_quantity > $stock->quantity) {
-                    $stock->reserved_quantity = $stock->quantity;
-                }
                 $stock->save();
                 $locked->syncAggregatesFromSizeStocks();
                 $locked->refresh();

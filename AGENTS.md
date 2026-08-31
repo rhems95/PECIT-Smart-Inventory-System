@@ -60,7 +60,7 @@ Inventory UI should show **On Hand**, **Reserved**, and **Available**.
 
 ### Student shop / department exclusivity (do not break)
 
-Students **cannot** access `/inventory` (menu, routes, policy, API). They buy only via **Uniform Shop** (`shop.*`).
+Students **cannot** access `/inventory` (menu, routes, policy). They buy only via **Uniform Shop** (`shop.*`).
 
 **Rules:**
 
@@ -92,8 +92,7 @@ There is **no suppliers** module — do not reintroduce supplier CRUD or `suppli
 
 ```text
 routes/web.php          # Main app routes (role middleware)
-routes/auth.php         # Breeze auth
-routes/api.php          # Mostly unused; session JSON APIs live under web /api
+routes/auth.php         # Breeze auth (login, password reset; no public register)
 
 app/Http/Controllers/   # Thin controllers (incl. SupplyStudentController)
 app/Services/           # Business logic
@@ -245,7 +244,7 @@ Seeders: `RoleAndPermissionSeeder`, `MasterDataSeeder` (includes Uniforms catego
 
 ## What is intentionally incomplete
 
-- Laravel Sanctum token API (session `/api/*` under web auth exists only)
+- Laravel Sanctum / JSON API (the app is web-session only)
 - Broad domain PHPUnit coverage (mostly Breeze auth tests)
 - External LLM integration
 - Public self-registration (Admin / Supply create student accounts)

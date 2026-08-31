@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\Inventory;
+use App\Models\User;
+use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use RuntimeException;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class InventoryController extends Controller
@@ -17,7 +20,7 @@ class InventoryController extends Controller
     {
         $this->authorize('viewAny', Inventory::class);
 
-        $query = Inventory::with(['category', 'department']);
+        $query = Inventory::with(['category', 'department', 'sizeStocks']);
 
         if ($search = $request->string('search')->trim()->toString()) {
             $query->where(function ($q) use ($search) {
@@ -101,12 +104,25 @@ class InventoryController extends Controller
         ]);
     }
 
-    public function update(Request $request, Inventory $inventory): RedirectResponse
+    public function update(Request $request, Inventory $inventory, InventoryService $inventoryService): RedirectResponse
     {
         $this->authorize('update', $inventory);
 
         $data = $this->validatedItem($request, $inventory);
+        $sizeQuantities = $data['size_quantities'] ?? [];
+        unset($data['size_quantities']);
+
         $inventory->update($data);
+        $inventory->refresh();
+
+        if ($inventory->requiresSize()) {
+            try {
+                $this->syncSizeQuantities($inventory, $sizeQuantities, $request->user(), $inventoryService);
+            } catch (RuntimeException $e) {
+                return back()->withInput()->with('error', $e->getMessage());
+            }
+        }
+
         if (! isset($data['status']) || $data['status'] !== 'discontinued') {
             $inventory->updateStatus();
         }
@@ -141,11 +157,47 @@ class InventoryController extends Controller
             $rules['size'] = [$needsSize ? 'required' : 'nullable', 'string', Rule::in($sizes)];
         } else {
             $rules['status'] = ['nullable', 'in:available,low_stock,out_of_stock,discontinued'];
+            $rules['size_quantities'] = ['nullable', 'array'];
+            $rules['size_quantities.*'] = ['integer', 'min:0'];
         }
 
         $data = $request->validate($rules);
         $data['student_shop'] = $request->boolean('student_shop');
 
         return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $sizeQuantities
+     */
+    protected function syncSizeQuantities(Inventory $inventory, array $sizeQuantities, User $user, InventoryService $inventoryService): void
+    {
+        $allowed = config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']);
+
+        foreach ($allowed as $size) {
+            if (! array_key_exists($size, $sizeQuantities)) {
+                continue;
+            }
+
+            $qty = (int) $sizeQuantities[$size];
+            $current = $inventory->sizeStockFor($size);
+
+            if ($current && (int) $current->quantity === $qty) {
+                continue;
+            }
+
+            if (! $current && $qty === 0) {
+                continue;
+            }
+
+            $inventoryService->adjust(
+                $inventory,
+                $qty,
+                $user,
+                'Updated on-hand by size from inventory edit.',
+                $size,
+            );
+            $inventory->unsetRelation('sizeStocks');
+        }
     }
 }

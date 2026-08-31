@@ -268,17 +268,7 @@ Cart add and checkout re-check exclusivity so students cannot purchase another d
 - PECIT logo on sidebar & login
 - Floating AI button (bottom-right)
 
-### Session API (browser session auth)
-Under authenticated `/api`:
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/inventory` | List inventory |
-| GET | `/api/inventory/{id}` | Item detail |
-| GET | `/api/requests` | User supply requests |
-| POST | `/api/requests` | Submit supply request |
-
-Token API (Laravel Sanctum) is **not** required for web-only use and is not installed yet.
+The app is **web-session only**. There is no JSON or Sanctum token API.
 
 ---
 
@@ -593,7 +583,7 @@ erDiagram
 ```text
 app/
   Console/Commands/     # psis:low-stock-alert
-  Http/Controllers/     # Web, Admin, Auth, Supply, API
+  Http/Controllers/     # Web, Admin, Auth, Supply
   Mail/                 # Email notification mailable
   Models/               # Eloquent models
   Policies/             # Authorization policies
@@ -625,8 +615,7 @@ routes/auth.php         # Breeze auth routes
 | Reports | Complete |
 | Notifications + email | Complete |
 | AI assistant + floating chat | Complete |
-| Session JSON API | Basic |
-| Sanctum token API | Not included |
+| JSON / Sanctum token API | Not included (web-session only) |
 | Domain automated tests | Minimal (Breeze auth tests) |
 
 Suitable for institutional demo and day-to-day PECIT inventory operations.

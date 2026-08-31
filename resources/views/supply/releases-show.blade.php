@@ -5,6 +5,10 @@
 
 @section('content')
 <div class="space-y-4 max-w-4xl">
+    <div class="psis-card p-5">
+        <x-status-tracker :tracker="\App\Support\OrderStatusTracker::forSupplyRequest($supplyRequest)" />
+    </div>
+
     <div class="psis-card p-5 grid sm:grid-cols-2 gap-3 text-sm">
         <p><span class="text-slate-500">Request #:</span> <strong>{{ $supplyRequest->request_number }}</strong></p>
         <p><span class="text-slate-500">Requester:</span> {{ $supplyRequest->user?->name ?? '—' }}</p>

@@ -43,7 +43,7 @@
                 @endforeach
             </nav>
             <div class="p-4 border-t border-white/10 text-xs text-white/60">
-                Philippine Electronic and Communication Institute of Technology
+                Philippine Electronic and Communication Institute of Technology Inc.
             </div>
         </aside>
 

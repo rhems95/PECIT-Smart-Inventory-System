@@ -15,7 +15,10 @@
         @foreach ($requests as $req)
             <tr class="border-t border-[var(--psis-border)]">
                 <td class="px-4 py-3">{{ $req->request_number }}</td>
-                <td class="px-4 py-3">{{ str_replace('_', ' ', $req->status) }}</td>
+                <td class="px-4 py-3 min-w-[11rem]">
+                    <x-status-tracker compact :tracker="\App\Support\OrderStatusTracker::forSupplyRequest($req)" />
+                    <span class="sr-only">{{ str_replace('_', ' ', $req->status) }}</span>
+                </td>
                 <td class="px-4 py-3">₱{{ number_format($req->total_amount, 2) }}</td>
                 <td class="px-4 py-3">{{ $req->created_at?->format('M d, Y') }}</td>
                 <td class="px-4 py-3"><a href="{{ route('requests.show', $req) }}" class="text-pecit-blue">Details</a></td>

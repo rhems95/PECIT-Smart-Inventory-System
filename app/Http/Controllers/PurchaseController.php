@@ -15,7 +15,7 @@ class PurchaseController extends Controller
     {
         $this->authorize('viewAny', PurchaseRequest::class);
 
-        $purchases = PurchaseRequest::with('items')
+        $purchases = PurchaseRequest::with(['items', 'payments'])
             ->where('user_id', auth()->id())
             ->latest()
             ->paginate(10);

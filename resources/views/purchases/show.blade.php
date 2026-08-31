@@ -5,6 +5,10 @@
 
 @section('content')
 <div class="space-y-4 max-w-3xl">
+    <div class="psis-card p-5">
+        <x-status-tracker :tracker="\App\Support\OrderStatusTracker::forPurchase($purchase)" />
+    </div>
+
     <div class="psis-card p-5 text-sm space-y-1">
         <p>Status: <strong>{{ str_replace('_', ' ', $purchase->status) }}</strong></p>
         <p>Total: ₱{{ number_format($purchase->total_amount, 2) }}</p>

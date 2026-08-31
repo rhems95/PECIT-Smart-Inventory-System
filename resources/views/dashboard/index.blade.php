@@ -65,7 +65,9 @@
                         <tr class="border-t border-[var(--psis-border)]">
                             <td class="px-4 py-3"><a href="{{ route('purchases.show', $purchase) }}" class="text-pecit-blue dark:text-pecit-gold hover:underline">{{ $purchase->purchase_number }}</a></td>
                             <td class="px-4 py-3">₱{{ number_format($purchase->total_amount, 2) }}</td>
-                            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{{ str_replace('_', ' ', $purchase->status) }}</span></td>
+                            <td class="px-4 py-3 min-w-[11rem]">
+                                <x-status-tracker compact :tracker="\App\Support\OrderStatusTracker::forPurchase($purchase)" />
+                            </td>
                             <td class="px-4 py-3">{{ $purchase->created_at?->format('M d, Y') }}</td>
                         </tr>
                     @endforeach
@@ -159,7 +161,9 @@
                         <tr class="border-t border-[var(--psis-border)]">
                             <td class="px-4 py-3">{{ $req->request_number }}</td>
                             <td class="px-4 py-3">{{ $req->user?->name }}</td>
-                            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">{{ str_replace('_', ' ', $req->status) }}</span></td>
+                            <td class="px-4 py-3 min-w-[11rem]">
+                                <x-status-tracker compact :tracker="\App\Support\OrderStatusTracker::forSupplyRequest($req)" />
+                            </td>
                             <td class="px-4 py-3">{{ $req->created_at?->format('M d, Y') }}</td>
                         </tr>
                     @empty

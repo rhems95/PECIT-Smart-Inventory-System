@@ -7,10 +7,17 @@ Dates are in **Asia/Manila**.
 
 ---
 
-## [Unreleased] — 2026-08-26
+## [Unreleased] — 2026-08-28
 
 ### Added
 
+- **Order status tracker** for student purchases and faculty supply requests.
+  - Students: Order placed → Pay at Accounting → Payment verified → Claim at Supply.
+  - Faculty: Submitted → Accounting review → Admin approval → Claim at Supply.
+  - Full stepper on detail pages; compact tracker on My Purchases, My Requests, and dashboards.
+  - Cancelled / rejected orders show as stopped (with rejection reason when present).
+  - Same tracker on Accounting and Supply review/release screens.
+- Local **colored sidebar icons** (`x-icon`) with per-item colors. Header menu, bell, and dark-mode controls use the same local SVGs (no icon CDN).
 - **Admission** role for the school owner (`admission@pecit.edu.ph` / `password`).
   - Dashboard, inventory **view**, and faculty request **approve / reject**.
   - Sidebar is limited: no users, categories, departments, announcements, stock ops, students, reports, or audit logs.
@@ -25,16 +32,21 @@ Dates are in **Asia/Manila**.
 
 ### Changed
 
+- Figtree font and Chart.js are bundled with Vite instead of Bunny Fonts / jsDelivr CDNs.
 - Faculty request flow after Accounting review notifies both **Admission** and **Administrator**.
 - Receipt upload accepts JPG, PNG, WEBP, and PDF (max 5MB) with clearer error messages.
 
 ### Fixed
 
+- GitHub Actions **Execute tests** (PHP 8.2+): pages no longer 500 without `public/build` (`withoutVite()`), Spatie roles are seeded in tests, and PHPUnit/CI force SQLite in-memory.
 - Student **receipt upload** / view: `public/storage` was an empty folder instead of a link to `storage/app/public`. Recreated as a junction so receipts save and open correctly.
+- Uniform **on-hand by size** can be saved from Edit Inventory (Available stays on-hand minus reserved and is not a typed field).
 
 ### Removed
 
 - **Suppliers** module (admin CRUD, inventory supplier field, and related seed data). There is no suppliers feature in PSIS.
+- Unused Laravel leftovers: default welcome page, Breeze `app` layout/navigation, unused register scaffolding, unused profile partials, and `setup-psis.php` (one-time generator — do not re-run).
+- Unused session JSON endpoints (`/api/inventory`, `/api/requests`) and `routes/api.php`. The app is web-session only.
 
 ---
 
