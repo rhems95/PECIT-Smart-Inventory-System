@@ -25,12 +25,13 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::resource('inventory', InventoryController::class)
-        ->only(['index', 'show'])
-        ->middleware('role:Administrator|Admission|Accounting|Supply Personnel|Faculty');
+        ->only(['create', 'store', 'edit', 'update', 'destroy'])
+        ->middleware('role:Administrator|Supply Personnel');
 
     Route::resource('inventory', InventoryController::class)
-        ->only(['create', 'store', 'edit', 'update'])
-        ->middleware('role:Administrator|Supply Personnel');
+        ->only(['index', 'show'])
+        ->whereNumber('inventory')
+        ->middleware('role:Administrator|Admission|Accounting|Supply Personnel|Faculty');
 
     Route::prefix('requests')->name('requests.')->middleware('role:Faculty')->group(function () {
         Route::get('/', [FacultyRequestController::class, 'index'])->name('index');
@@ -55,6 +56,7 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
         Route::get('/{purchase}', [PurchaseController::class, 'show'])->name('show');
         Route::get('/{purchase}/payment-slip', [PurchaseController::class, 'paymentSlip'])->name('payment-slip');
         Route::post('/{purchase}/receipt', [PurchaseController::class, 'uploadReceipt'])->middleware('role:Student')->name('receipt.upload');
+        Route::post('/{purchase}/cancel', [PurchaseController::class, 'cancel'])->middleware('role:Student')->name('cancel');
     });
 
     Route::prefix('accounting')->name('accounting.')->middleware('role:Accounting|Administrator')->group(function () {

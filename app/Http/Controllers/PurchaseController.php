@@ -94,4 +94,17 @@ class PurchaseController extends Controller
 
         return back()->with('success', 'Payment receipt uploaded successfully.');
     }
+
+    public function cancel(PurchaseRequest $purchase, PurchaseRequestService $service): RedirectResponse
+    {
+        $this->authorize('cancel', $purchase);
+
+        try {
+            $service->cancel($purchase, auth()->user());
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('purchases.index')->with('success', 'Purchase cancelled.');
+    }
 }

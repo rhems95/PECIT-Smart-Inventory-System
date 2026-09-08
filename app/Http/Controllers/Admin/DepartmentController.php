@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Services\AuditLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,7 +18,7 @@ class DepartmentController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AuditLogService $auditLog): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -25,12 +26,16 @@ class DepartmentController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
-        Department::create($data);
+        $department = Department::create($data);
+        $auditLog->log($request->user(), 'department.created', $department, null, [
+            'name' => $department->name,
+            'code' => $department->code,
+        ]);
 
         return back()->with('success', 'Department created.');
     }
 
-    public function update(Request $request, Department $department): RedirectResponse
+    public function update(Request $request, Department $department, AuditLogService $auditLog): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -38,16 +43,26 @@ class DepartmentController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
+        $before = $department->only(['name', 'code']);
         $department->update($data);
+        $auditLog->log($request->user(), 'department.updated', $department, $before, [
+            'name' => $department->name,
+            'code' => $department->code,
+        ]);
 
         return back()->with('success', 'Department updated.');
     }
 
-    public function destroy(Department $department): RedirectResponse
+    public function destroy(Department $department, AuditLogService $auditLog): RedirectResponse
     {
         if ($department->users()->exists() || $department->supplyRequests()->exists()) {
             return back()->with('error', 'Cannot delete: department is assigned to users or requests. Reassign them first.');
         }
+
+        $auditLog->log(auth()->user(), 'department.deleted', null, [
+            'name' => $department->name,
+            'code' => $department->code,
+        ]);
 
         $department->delete();
 

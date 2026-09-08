@@ -214,8 +214,7 @@ Cart add and checkout re-check exclusivity so students cannot purchase another d
 - CRUD for Admin / Supply (Faculty may view; Students cannot)
 - Search & filters (category, status)
 - Fields: code, name, description, category, unit, price, qty, min stock, location, status, student shop, exclusive department
-- QR code on item detail
-- Barcode-ready field
+- Fields: code, name, description, category, unit, price, qty, min stock, location, status, student shop, exclusive department
 
 ### Uniform Shop (students)
 - Department-exclusive uniforms + shared P.E. / NSTP / ID lanyard
@@ -425,7 +424,6 @@ erDiagram
         string location
         enum status
         boolean student_shop
-        string barcode
     }
 
     INVENTORY_SIZE_STOCKS {

@@ -18,7 +18,6 @@ return new class extends Migration {
             $table->integer('minimum_stock')->default(10);
             $table->string('location')->nullable();
             $table->enum('status', ['available','low_stock','out_of_stock','discontinued'])->default('available');
-            $table->string('barcode')->nullable();
             $table->timestamps();
         });
     }

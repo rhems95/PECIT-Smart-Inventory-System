@@ -4,31 +4,63 @@
 @section('page-title', $inventory->item_name)
 
 @section('content')
-<div class="grid lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 psis-card p-6 space-y-3">
-        <p><span class="text-slate-500">Code:</span> {{ $inventory->item_code }}</p>
-        <p><span class="text-slate-500">Category:</span> {{ $inventory->category?->name }}</p>
-        <p><span class="text-slate-500">Student shop:</span> {{ $inventory->student_shop ? 'Yes' : 'No' }}</p>
-        <p><span class="text-slate-500">Shop access:</span>
-            @if (! $inventory->student_shop)
-                —
-            @elseif ($inventory->department)
-                Exclusive to {{ $inventory->department->name }} only
-            @else
-                Shared (all students — e.g. P.E. / NSTP / lanyard)
-            @endif
-        </p>
-        <p><span class="text-slate-500">Description:</span> {{ $inventory->description ?: '—' }}</p>
-        <p><span class="text-slate-500">On hand:</span> {{ $inventory->quantity }} {{ $inventory->unit }} (reserved: {{ $inventory->reserved_quantity }})</p>
-        <p><span class="text-slate-500">Available:</span> {{ $inventory->availableQuantity() }}</p>
+<div class="space-y-4">
+    <div class="psis-card p-6 space-y-6">
+        <dl class="grid sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-4">
+            <div>
+                <dt class="text-slate-500 text-sm">Code</dt>
+                <dd class="mt-0.5 font-mono">{{ $inventory->item_code }}</dd>
+            </div>
+            <div>
+                <dt class="text-slate-500 text-sm">Category</dt>
+                <dd class="mt-0.5">{{ $inventory->category?->name ?: '—' }}</dd>
+            </div>
+            <div>
+                <dt class="text-slate-500 text-sm">Student shop</dt>
+                <dd class="mt-0.5">{{ $inventory->student_shop ? 'Yes' : 'No' }}</dd>
+            </div>
+            <div>
+                <dt class="text-slate-500 text-sm">Shop access</dt>
+                <dd class="mt-0.5">
+                    @if (! $inventory->student_shop)
+                        —
+                    @elseif ($inventory->department)
+                        Exclusive to {{ $inventory->department->name }} only
+                    @else
+                        Shared (all students — e.g. P.E. / NSTP / lanyard)
+                    @endif
+                </dd>
+            </div>
+            <div>
+                <dt class="text-slate-500 text-sm">On hand</dt>
+                <dd class="mt-0.5">{{ $inventory->quantity }} {{ $inventory->unit }} (reserved: {{ $inventory->reserved_quantity }})</dd>
+            </div>
+            <div>
+                <dt class="text-slate-500 text-sm">Available</dt>
+                <dd class="mt-0.5">{{ $inventory->availableQuantity() }}</dd>
+            </div>
+            <div>
+                <dt class="text-slate-500 text-sm">Unit price</dt>
+                <dd class="mt-0.5">₱{{ number_format($inventory->unit_price, 2) }}</dd>
+            </div>
+            <div>
+                <dt class="text-slate-500 text-sm">Location</dt>
+                <dd class="mt-0.5">{{ $inventory->location ?: '—' }}</dd>
+            </div>
+            <div class="sm:col-span-2 xl:col-span-3">
+                <dt class="text-slate-500 text-sm">Description</dt>
+                <dd class="mt-0.5">{{ $inventory->description ?: '—' }}</dd>
+            </div>
+        </dl>
+
         @if ($inventory->requiresSize())
             @php($stockBySize = $inventory->sizeStocks->keyBy('size'))
             @php($sizes = config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']))
-            <div class="pt-2">
-                <p class="text-slate-500 mb-2">Stock by size</p>
-                <p class="text-xs text-slate-500 mb-2">Available = on-hand − reserved. Edit on-hand per size on the Edit page.</p>
-                <div class="overflow-hidden rounded border border-[var(--psis-border)]">
-                    <table class="min-w-full text-sm">
+            <div>
+                <p class="text-slate-500 mb-1">Stock by size</p>
+                <p class="text-xs text-slate-500 mb-3">Available = on-hand − reserved. Edit on-hand per size on the Edit page.</p>
+                <div class="overflow-x-auto rounded border border-[var(--psis-border)]">
+                    <table class="w-full table-fixed text-sm">
                         <thead>
                             <tr class="bg-slate-50 dark:bg-slate-900/50 text-left">
                                 <th class="px-4 py-3">Size</th>
@@ -52,18 +84,20 @@
                 </div>
             </div>
         @endif
-        <p><span class="text-slate-500">Unit price:</span> ₱{{ number_format($inventory->unit_price, 2) }}</p>
-        <p><span class="text-slate-500">Location:</span> {{ $inventory->location ?: '—' }}</p>
-        @if (auth()->user()->hasAnyRole(['Administrator', 'Supply Personnel']))
-            <div class="flex flex-wrap gap-2 mt-2">
+
+        @can('update', $inventory)
+            <div class="flex flex-wrap gap-2">
                 <a href="{{ route('inventory.edit', $inventory) }}" class="psis-btn-outline inline-flex">Edit item &amp; size stock</a>
                 <a href="{{ route('supply.stock.index') }}" class="psis-btn-outline inline-flex">Stock Operations</a>
+                @can('delete', $inventory)
+                    <form method="POST" action="{{ route('inventory.destroy', $inventory) }}" onsubmit="return confirm('Delete this item? This cannot be undone.')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="psis-btn-outline inline-flex text-red-600">Delete item</button>
+                    </form>
+                @endcan
             </div>
-        @endif
-    </div>
-    <div class="psis-card p-6 text-center">
-        <p class="text-sm text-slate-500 mb-3">Barcode / QR</p>
-        <div class="inline-block">{!! $qrSvg !!}</div>
+        @endcan
     </div>
 </div>
 @endsection

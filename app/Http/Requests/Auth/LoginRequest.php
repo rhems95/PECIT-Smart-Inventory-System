@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -73,6 +74,7 @@ class LoginRequest extends FormRequest
     {
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+            $this->logFailedLogin();
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -82,6 +84,7 @@ class LoginRequest extends FormRequest
         if (Auth::user()?->hasRole('Student')) {
             Auth::logout();
             RateLimiter::hit($this->throttleKey());
+            $this->logFailedLogin();
 
             throw ValidationException::withMessages([
                 'email' => 'Students must sign in with Student ID and last name.',
@@ -109,6 +112,7 @@ class LoginRequest extends FormRequest
 
         if (! $matches) {
             RateLimiter::hit($this->throttleKey());
+            $this->logFailedLogin();
 
             throw ValidationException::withMessages([
                 'student_id' => 'These credentials do not match our records.',
@@ -148,5 +152,14 @@ class LoginRequest extends FormRequest
             : (string) $this->string('email');
 
         return Str::transliterate(Str::lower($identity).'|'.$this->ip());
+    }
+
+    protected function logFailedLogin(): void
+    {
+        app(AuditLogService::class)->log(null, 'auth.login_failed', null, null, [
+            'login_as' => $this->input('login_as', 'staff'),
+            'email' => $this->isStudentLogin() ? null : $this->input('email'),
+            'student_id' => $this->isStudentLogin() ? $this->input('student_id') : null,
+        ]);
     }
 }

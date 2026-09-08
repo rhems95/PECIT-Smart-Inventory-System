@@ -25,7 +25,6 @@ class Inventory extends Model
         'status',
         'student_shop',
         'department_id',
-        'barcode',
     ];
 
     protected function casts(): array
@@ -136,6 +135,28 @@ class Inventory extends Model
     public function sizeStocks(): HasMany
     {
         return $this->hasMany(InventorySizeStock::class);
+    }
+
+    public function deletionBlockReason(): ?string
+    {
+        if ((int) $this->reserved_quantity > 0) {
+            return 'Cannot delete: stock is reserved. Release or cancel related requests first.';
+        }
+
+        if ($this->requestItems()->exists()) {
+            return 'Cannot delete: this item is used on a faculty request.';
+        }
+
+        if ($this->purchaseRequestItems()->exists()) {
+            return 'Cannot delete: this item is used on a student purchase.';
+        }
+
+        return null;
+    }
+
+    public function canBeDeleted(): bool
+    {
+        return $this->deletionBlockReason() === null;
     }
 
     /**

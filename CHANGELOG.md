@@ -7,7 +7,36 @@ Dates are in **Asia/Manila**.
 
 ---
 
-## [Unreleased] — 2026-08-28
+## [Unreleased] — 2026-09-08
+
+### Added
+
+- Supply / Admin dashboard **Recent Student Purchases** (order date, student name, department, purchase #, status).
+- Accounting dashboard and **Verify Payments** show **Recent verified payments** (verified date, student, department, purchase #, amount, status). Waiting payments stay in the top queue; after verify they appear in this list.
+- Students can **Cancel Purchase** until Supply releases (before or after Accounting verifies).
+- Audit Logs now record logins, inventory/stock, users, master data, and profile changes, with who / action / record / details.
+
+### Changed
+
+- Student login: **Last name** first (visible); **Student ID** below, hidden while typing, with a Show Student ID checkbox. Staff/Student tabs work with HTML + CSS (no Alpine), so the form still works when JS assets fail to load.
+- App URLs follow the incoming request (`SetRootUrlFromRequest`, trusted proxies, relative Vite paths) so login and CSS/JS work when the site is opened from another PC or a port-forward / tunnel, not only `APP_URL` localhost.
+- Inventory **Add Item**: uniform size shows when Uniform Shop is checked even if Alpine does not start. Faculty **New Request** always has a first item line (Add line works without Alpine). Shop **Add to Cart** stays visible without Alpine.
+
+### Removed
+
+- Unused inventory **`barcode`** column and the item-detail **QR** graphic. Run `php artisan migrate` if the column is still on an existing database.
+
+### Fixed
+
+- **Add Item** opened `/inventory/create` as a 404 because `create` was treated as an inventory id. Create/edit routes are registered first; show only accepts numeric ids.
+- Saving a Uniform Shop clothing item without a size no longer 500s; staff get a validation error until they pick a size.
+- Faculty can cancel through **admin review** and **approved** (before release). Cancelling an approved request **restores reserved** stock. The Cancel button matches the policy (no 403 on admin review).
+- Cancelling a student purchase after payment verify **restores reserved** stock, including per-size stock.
+- Accounting payment detail no longer shows **Verify** after the payment is already verified.
+
+---
+
+## [1.2.0] — 2026-08-28
 
 ### Added
 
@@ -35,12 +64,6 @@ Dates are in **Asia/Manila**.
 - Figtree font and Chart.js are bundled with Vite instead of Bunny Fonts / jsDelivr CDNs.
 - Faculty request flow after Accounting review notifies both **Admission** and **Administrator**.
 - Receipt upload accepts JPG, PNG, WEBP, and PDF (max 5MB) with clearer error messages.
-
-### Fixed
-
-- GitHub Actions **Execute tests** (PHP 8.2+): pages no longer 500 without `public/build` (`withoutVite()`), Spatie roles are seeded in tests, and PHPUnit/CI force SQLite in-memory.
-- Student **receipt upload** / view: `public/storage` was an empty folder instead of a link to `storage/app/public`. Recreated as a junction so receipts save and open correctly.
-- Uniform **on-hand by size** can be saved from Edit Inventory (Available stays on-hand minus reserved and is not a typed field).
 
 ### Removed
 

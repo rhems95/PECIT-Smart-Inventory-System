@@ -33,4 +33,10 @@ class PurchaseRequestPolicy
     {
         return $purchaseRequest->user_id === $user->id;
     }
+
+    public function cancel(User $user, PurchaseRequest $purchaseRequest): bool
+    {
+        return $purchaseRequest->user_id === $user->id
+            && $purchaseRequest->isCancellable();
+    }
 }

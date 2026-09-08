@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 01, 2026 at 08:02 AM
+-- Generation Time: Sep 08, 2026 at 11:57 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -153,7 +153,6 @@ CREATE TABLE `inventory` (
   `status` enum('available','low_stock','out_of_stock','discontinued') NOT NULL DEFAULT 'available',
   `student_shop` tinyint(1) NOT NULL DEFAULT 0,
   `department_id` bigint(20) UNSIGNED DEFAULT NULL,
-  `barcode` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

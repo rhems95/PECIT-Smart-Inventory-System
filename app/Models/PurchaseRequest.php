@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -52,5 +53,23 @@ class PurchaseRequest extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function isCancellable(): bool
+    {
+        return in_array($this->status, ['pending', 'payment_submitted', 'payment_verified'], true);
+    }
+
+    /**
+     * @param  Builder<PurchaseRequest>  $query
+     * @return Builder<PurchaseRequest>
+     */
+    public function scopeRecentlyVerified(Builder $query, int $limit = 10): Builder
+    {
+        return $query
+            ->with(['user.department'])
+            ->whereNotNull('verified_at')
+            ->latest('verified_at')
+            ->limit($limit);
     }
 }
