@@ -1,5 +1,11 @@
-@php($item = $inventory ?? null)
-@php($sizes = $sizes ?? config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']))
+@php
+    $item = $inventory ?? null;
+    $sizes = $sizes ?? config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']);
+@endphp
+<style>
+    .psis-inventory-form .psis-uniform-size{display:none}
+    .psis-inventory-form:has(#student-shop:checked) .psis-uniform-size{display:block}
+</style>
 <div
     class="grid md:grid-cols-2 gap-4"
     x-data="{
@@ -45,16 +51,19 @@
         <div>
             <label class="psis-label">Initial Quantity</label>
             <input type="number" name="quantity" value="{{ old('quantity', 0) }}" class="psis-input" required>
-            <p class="text-xs text-slate-500 mt-1" x-show="needsSize" x-cloak>Quantity applies to the selected size below.</p>
+            <p class="text-xs text-slate-500 mt-1 psis-uniform-size">Quantity applies to the selected size below.</p>
         </div>
-        <div x-show="needsSize" x-cloak>
+        <div class="psis-uniform-size">
             <label class="psis-label">Uniform Size <span class="text-red-500">*</span></label>
-            <select name="size" class="psis-input" :required="needsSize">
+            <select name="size" class="psis-input" x-bind:required="needsSize">
                 <option value="">Select size</option>
                 @foreach ($sizes as $size)
                     <option value="{{ $size }}" @selected(old('size') === $size)>{{ $size }}</option>
                 @endforeach
             </select>
+            @error('size')
+                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+            @enderror
         </div>
     @endif
     <div>
@@ -67,7 +76,7 @@
     </div>
     <div class="md:col-span-2">
         <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="student_shop" value="1" x-model="studentShop" @checked(old('student_shop', $item?->student_shop))>
+            <input type="checkbox" name="student_shop" id="student-shop" value="1" x-model="studentShop" @checked(old('student_shop', $item?->student_shop))>
             Available in Uniform Shop (students)
         </label>
         <p class="text-xs text-slate-500 mt-1">
@@ -86,7 +95,7 @@
     </div>
     @if ($item)
         @php($stockBySize = $item->relationLoaded('sizeStocks') ? $item->sizeStocks->keyBy('size') : collect())
-        <div class="md:col-span-2" x-show="needsSize" x-cloak>
+        <div class="md:col-span-2 psis-uniform-size">
             <p class="psis-label mb-2">On-hand by size</p>
             <p class="text-xs text-slate-500 mb-2">
                 Change <strong>on-hand</strong> for each size, then save. <strong>Available</strong> is always on-hand minus reserved (orders waiting to be claimed) and cannot be typed in.
@@ -130,3 +139,30 @@
         </div>
     @endif
 </div>
+@once
+@push('scripts')
+<script>
+(function () {
+    var form = document.querySelector('.psis-inventory-form');
+    if (!form) return;
+    function syncUniformSize() {
+        var shop = form.querySelector('#student-shop');
+        var name = ((form.querySelector('[name="item_name"]') || {}).value || '') + ' ' + ((form.querySelector('[name="item_code"]') || {}).value || '');
+        var shopOn = !!(shop && shop.checked);
+        var needsSize = shopOn && name.toLowerCase().indexOf('lanyard') === -1;
+        form.querySelectorAll('.psis-uniform-size').forEach(function (el) {
+            el.style.display = shopOn ? 'block' : 'none';
+        });
+        var sel = form.querySelector('select[name="size"]');
+        if (sel) sel.required = needsSize;
+        form.querySelectorAll('input[name^="size_quantities"]').forEach(function (el) {
+            el.disabled = !needsSize;
+        });
+    }
+    form.addEventListener('change', syncUniformSize);
+    form.addEventListener('input', syncUniformSize);
+    syncUniformSize();
+})();
+</script>
+@endpush
+@endonce

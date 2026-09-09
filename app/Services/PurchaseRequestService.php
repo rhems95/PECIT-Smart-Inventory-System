@@ -168,6 +168,60 @@ class PurchaseRequestService
         });
     }
 
+    public function cancel(PurchaseRequest $purchase, User $user): PurchaseRequest
+    {
+        if (! $purchase->isCancellable()) {
+            throw new RuntimeException('This purchase can no longer be cancelled.');
+        }
+
+        if ($purchase->user_id !== $user->id && ! $user->hasAnyRole(['Administrator', 'Accounting'])) {
+            throw new RuntimeException('Unauthorized.');
+        }
+
+        return DB::transaction(function () use ($purchase, $user) {
+            $wasVerified = $purchase->status === 'payment_verified';
+
+            if ($wasVerified) {
+                $purchase->loadMissing('items.inventory');
+
+                foreach ($purchase->items as $item) {
+                    $qty = (int) $item->quantity;
+                    if ($qty <= 0) {
+                        continue;
+                    }
+
+                    $inventory = Inventory::query()->findOrFail($item->inventory_id);
+
+                    $this->inventoryService->restore(
+                        $inventory,
+                        $qty,
+                        $user,
+                        "Restored from cancelled {$purchase->purchase_number}",
+                        PurchaseRequest::class,
+                        $purchase->id,
+                        $item->size,
+                    );
+                }
+            }
+
+            $purchase->update(['status' => 'cancelled']);
+
+            $this->auditLog->log($user, 'purchase.cancelled', $purchase);
+
+            if ($wasVerified) {
+                $this->notifications->notifyRole(
+                    'Supply Personnel',
+                    'purchase_cancelled',
+                    'Verified purchase cancelled',
+                    "Purchase {$purchase->purchase_number} was cancelled. Reserved stock was restored.",
+                    route('supply.purchases'),
+                );
+            }
+
+            return $purchase->fresh(['items.inventory']);
+        });
+    }
+
     public function release(PurchaseRequest $purchase, User $releaser): PurchaseRequest
     {
         if ($purchase->status !== 'payment_verified') {

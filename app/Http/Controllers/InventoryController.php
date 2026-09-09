@@ -7,12 +7,13 @@ use App\Models\Department;
 use App\Models\Inventory;
 use App\Models\User;
 use App\Services\InventoryService;
+use App\Services\AuditLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class InventoryController extends Controller
 {
@@ -50,13 +51,14 @@ class InventoryController extends Controller
         $this->authorize('create', Inventory::class);
 
         return view('inventory.create', [
+            'inventory' => null,
             'categories' => Category::orderBy('name')->get(),
             'departments' => Department::orderBy('name')->get(),
             'sizes' => config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AuditLogService $auditLog): RedirectResponse
     {
         $this->authorize('create', Inventory::class);
 
@@ -64,19 +66,36 @@ class InventoryController extends Controller
         $size = $data['size'] ?? null;
         unset($data['size']);
 
-        $item = Inventory::create($data + ['reserved_quantity' => 0]);
-
-        if ($item->requiresSize()) {
-            $qty = (int) ($data['quantity'] ?? 0);
-            $item->sizeStocks()->create([
-                'size' => $size,
-                'quantity' => $qty,
-                'reserved_quantity' => 0,
+        $probe = new Inventory($data + ['reserved_quantity' => 0]);
+        if ($probe->requiresSize() && ($size === null || $size === '')) {
+            return back()->withInput()->withErrors([
+                'size' => 'Select a uniform size for this shop item.',
             ]);
-            $item->syncAggregatesFromSizeStocks();
         }
 
-        $item->updateStatus();
+        $item = DB::transaction(function () use ($data, $size, $request, $auditLog) {
+            $item = Inventory::create($data + ['reserved_quantity' => 0]);
+
+            if ($item->requiresSize()) {
+                $item->sizeStocks()->create([
+                    'size' => $size,
+                    'quantity' => (int) ($data['quantity'] ?? 0),
+                    'reserved_quantity' => 0,
+                ]);
+                $item->syncAggregatesFromSizeStocks();
+            }
+
+            $item->updateStatus();
+
+            $auditLog->log($request->user(), 'inventory.created', $item, null, [
+                'item_code' => $item->item_code,
+                'item_name' => $item->item_name,
+                'quantity' => $item->quantity,
+                'size' => $size,
+            ]);
+
+            return $item;
+        });
 
         return redirect()->route('inventory.index')->with('success', 'Inventory item created.');
     }
@@ -87,9 +106,7 @@ class InventoryController extends Controller
 
         $inventory->load(['category', 'department', 'sizeStocks', 'transactions' => fn ($q) => $q->latest()->limit(10)]);
 
-        $qrSvg = QrCode::size(120)->generate($inventory->item_code);
-
-        return view('inventory.show', compact('inventory', 'qrSvg'));
+        return view('inventory.show', compact('inventory'));
     }
 
     public function edit(Inventory $inventory): View
@@ -104,7 +121,7 @@ class InventoryController extends Controller
         ]);
     }
 
-    public function update(Request $request, Inventory $inventory, InventoryService $inventoryService): RedirectResponse
+    public function update(Request $request, Inventory $inventory, InventoryService $inventoryService, AuditLogService $auditLog): RedirectResponse
     {
         $this->authorize('update', $inventory);
 
@@ -112,6 +129,7 @@ class InventoryController extends Controller
         $sizeQuantities = $data['size_quantities'] ?? [];
         unset($data['size_quantities']);
 
+        $before = $inventory->only(['item_code', 'item_name', 'unit_price', 'minimum_stock', 'student_shop', 'department_id', 'status']);
         $inventory->update($data);
         $inventory->refresh();
 
@@ -127,7 +145,32 @@ class InventoryController extends Controller
             $inventory->updateStatus();
         }
 
+        $auditLog->log($request->user(), 'inventory.updated', $inventory, $before, [
+            'item_code' => $inventory->item_code,
+            'item_name' => $inventory->item_name,
+        ]);
+
         return redirect()->route('inventory.show', $inventory)->with('success', 'Inventory item updated.');
+    }
+
+    public function destroy(Request $request, Inventory $inventory, AuditLogService $auditLog): RedirectResponse
+    {
+        $this->authorize('delete', $inventory);
+
+        $reason = $inventory->deletionBlockReason();
+        if ($reason !== null) {
+            return back()->with('error', $reason);
+        }
+
+        $auditLog->log($request->user(), 'inventory.deleted', $inventory, [
+            'item_code' => $inventory->item_code,
+            'item_name' => $inventory->item_name,
+            'quantity' => $inventory->quantity,
+        ]);
+
+        $inventory->delete();
+
+        return redirect()->route('inventory.index')->with('success', 'Inventory item deleted.');
     }
 
     /**
@@ -149,7 +192,7 @@ class InventoryController extends Controller
             'minimum_stock' => ['required', 'integer', 'min:0'],
             'location' => ['nullable', 'string', 'max:255'],
             'student_shop' => ['sometimes', 'boolean'],
-            'department_id' => ['nullable', 'exists:departments,id'],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
         ];
 
         if (! $inventory) {

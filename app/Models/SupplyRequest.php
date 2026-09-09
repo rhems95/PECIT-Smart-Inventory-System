@@ -67,4 +67,9 @@ class SupplyRequest extends Model
     {
         return $this->hasMany(RequestItem::class, 'request_id');
     }
+
+    public function isCancellable(): bool
+    {
+        return in_array($this->status, ['pending', 'accounting_review', 'admin_review', 'approved'], true);
+    }
 }

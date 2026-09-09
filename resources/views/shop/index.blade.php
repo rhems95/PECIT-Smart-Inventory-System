@@ -78,11 +78,11 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="flex gap-2" x-show="canAdd" x-cloak>
-                            <input type="number" name="quantity" value="1" min="1" :max="available" class="psis-input w-20" aria-label="Quantity">
-                            <button class="psis-btn-primary flex-1" :disabled="!canAdd">Add to Cart</button>
+                        <div class="flex gap-2">
+                            <input type="number" name="quantity" value="1" min="1" class="psis-input w-20" aria-label="Quantity" x-bind:max="available">
+                            <button class="psis-btn-primary flex-1" x-bind:disabled="size !== '' && !canAdd">Add to Cart</button>
                         </div>
-                        <p class="text-sm text-red-600" x-show="size && !canAdd" x-cloak>Selected size is out of stock.</p>
+                        <p class="text-sm text-red-600" x-show="size && !canAdd">Selected size is out of stock.</p>
                     @else
                         <div class="flex gap-2">
                             <input type="number" name="quantity" value="1" min="1" max="{{ $item->availableQuantity() }}" class="psis-input w-20" aria-label="Quantity">

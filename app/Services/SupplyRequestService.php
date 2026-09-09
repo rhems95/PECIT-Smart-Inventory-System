@@ -60,7 +60,7 @@ class SupplyRequestService
 
     public function cancel(SupplyRequest $request, User $user): SupplyRequest
     {
-        if (! in_array($request->status, ['pending', 'accounting_review', 'admin_review'], true)) {
+        if (! $request->isCancellable()) {
             throw new RuntimeException('This request can no longer be cancelled.');
         }
 
@@ -68,11 +68,47 @@ class SupplyRequestService
             throw new RuntimeException('Unauthorized.');
         }
 
-        $request->update(['status' => 'cancelled']);
+        return DB::transaction(function () use ($request, $user) {
+            $wasApproved = $request->status === 'approved';
 
-        $this->auditLog->log($user, 'supply_request.cancelled', $request);
+            if ($wasApproved) {
+                $request->loadMissing('items.inventory');
 
-        return $request;
+                foreach ($request->items as $item) {
+                    $qty = (int) ($item->quantity_approved ?: $item->quantity_requested);
+                    if ($qty <= 0) {
+                        continue;
+                    }
+
+                    $inventory = Inventory::query()->findOrFail($item->inventory_id);
+
+                    $this->inventoryService->restore(
+                        $inventory,
+                        $qty,
+                        $user,
+                        "Restored from cancelled {$request->request_number}",
+                        SupplyRequest::class,
+                        $request->id,
+                    );
+                }
+            }
+
+            $request->update(['status' => 'cancelled']);
+
+            $this->auditLog->log($user, 'supply_request.cancelled', $request);
+
+            if ($wasApproved) {
+                $this->notifications->notifyRole(
+                    'Supply Personnel',
+                    'request_cancelled',
+                    'Approved request cancelled',
+                    "Request {$request->request_number} was cancelled. Reserved stock was restored.",
+                    route('supply.releases'),
+                );
+            }
+
+            return $request->fresh(['items.inventory']);
+        });
     }
 
     public function accountingReview(SupplyRequest $request, User $reviewer, array $pricedItems): SupplyRequest

@@ -11,6 +11,14 @@
     display: none !important;
 }
 
+.psis-inventory-form .psis-uniform-size {
+    display: none;
+}
+
+.psis-inventory-form:has(#student-shop:checked) .psis-uniform-size {
+    display: block;
+}
+
 /* Floating AI assistant — always available at bottom-right */
 .psis-ai-widget {
     position: fixed !important;

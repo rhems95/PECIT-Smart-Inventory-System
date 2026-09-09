@@ -1,0 +1,118 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "PSIS student purchase workflow",
+    "locale": "en",
+    "output": "psis-student-purchase.workflow.html",
+    "quality_profile": "showcase",
+    "viewBox": [1190, 652],
+    "views": [
+      {
+        "id": "happy-path",
+        "label": "Checkout to release",
+        "focus": ["student-checkout", "student-wait", "accounting-verify", "supply-release"],
+        "note": "Checkout does not deduct stock. Verify payment reserves. Supply release deducts on-hand."
+      },
+      {
+        "id": "cancel-path",
+        "label": "Cancel restores reserved",
+        "focus": ["accounting-verify", "cancel"],
+        "note": "Cancel after payment_verified restores reserved_quantity."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "student", "label": "Student" },
+    { "id": "accounting", "label": "Accounting" },
+    { "id": "supply", "label": "Supply Personnel" },
+    { "id": "exceptions", "label": "Stop paths", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "submit", "label": "Checkout", "fromCol": 0, "toCol": 1 },
+    { "id": "reserve", "label": "Reserve", "fromCol": 2, "toCol": 2, "variant": "emphasis" },
+    { "id": "release", "label": "Release", "fromCol": 3, "toCol": 3 },
+    { "id": "stop", "label": "Stop", "fromCol": 4, "toCol": 4, "variant": "dashed" }
+  ],
+  "mainPath": ["student-checkout", "student-wait", "accounting-verify", "supply-release"],
+  "nodes": [
+    {
+      "id": "student-checkout",
+      "lane": "student",
+      "col": 0,
+      "type": "frontend",
+      "label": "Shop checkout",
+      "sublabel": "payment_submitted",
+      "width": 148
+    },
+    {
+      "id": "student-wait",
+      "lane": "student",
+      "col": 1,
+      "type": "frontend",
+      "label": "Receipt / wait",
+      "sublabel": "optional upload",
+      "width": 148
+    },
+    {
+      "id": "accounting-verify",
+      "lane": "accounting",
+      "col": 2,
+      "type": "security",
+      "label": "Verify payment",
+      "sublabel": "payment_verified · reserve",
+      "width": 148
+    },
+    {
+      "id": "supply-release",
+      "lane": "supply",
+      "col": 3,
+      "type": "backend",
+      "label": "Release",
+      "sublabel": "released · deduct",
+      "width": 148
+    },
+    {
+      "id": "cancel",
+      "lane": "exceptions",
+      "col": 4,
+      "type": "messagebus",
+      "label": "Cancel",
+      "sublabel": "restore reserved",
+      "width": 148
+    }
+  ],
+  "edges": [
+    {
+      "id": "checkout-to-wait",
+      "from": "student-checkout",
+      "to": "student-wait",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "wait-to-verify",
+      "from": "student-wait",
+      "to": "accounting-verify",
+      "label": "payment_submitted",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "verify-to-release",
+      "from": "accounting-verify",
+      "to": "supply-release",
+      "label": "reserve then release",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "verify-to-cancel",
+      "from": "accounting-verify",
+      "to": "cancel",
+      "label": "restore reserved",
+      "variant": "dashed",
+      "role": "error"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -24,7 +25,7 @@ class AdminUserController extends Controller
         return view('admin.users.form', ['user' => new User]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AuditLogService $auditLog): RedirectResponse
     {
         $data = $this->validated($request);
 
@@ -36,6 +37,12 @@ class AdminUserController extends Controller
         $user->forceFill(['email_verified_at' => now()])->save();
         $user->syncRoles([$data['role']]);
 
+        $auditLog->log($request->user(), 'user.created', $user, null, [
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $data['role'],
+        ]);
+
         return redirect()->route('admin.users.index')->with('success', 'User created.');
     }
 
@@ -44,7 +51,7 @@ class AdminUserController extends Controller
         return view('admin.users.form', compact('user'));
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(Request $request, User $user, AuditLogService $auditLog): RedirectResponse
     {
         $data = $this->validated($request, $user);
         $payload = collect($data)->except(['password', 'role'])->toArray();
@@ -53,15 +60,22 @@ class AdminUserController extends Controller
             $payload['password'] = $data['password'];
         }
 
+        $before = $user->only(['name', 'email', 'employee_id', 'department_id', 'is_active']);
         $user->update($payload);
         $user->syncRoles([$data['role']]);
+
+        $auditLog->log($request->user(), 'user.updated', $user, $before, [
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $data['role'],
+        ]);
 
         return redirect()->route('admin.users.index')->with('success', 'User updated.');
     }
 
     public function auditLogs(): View
     {
-        $logs = AuditLog::with('user')->latest()->paginate(20);
+        $logs = AuditLog::with(['user', 'auditable'])->latest()->paginate(20);
 
         return view('admin.audit-logs', compact('logs'));
     }

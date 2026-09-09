@@ -99,7 +99,6 @@ erDiagram
         string location
         enum status
         boolean student_shop
-        string barcode
     }
 
     INVENTORY_SIZE_STOCKS {

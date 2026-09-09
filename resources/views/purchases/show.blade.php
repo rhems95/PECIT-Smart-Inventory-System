@@ -19,6 +19,12 @@
             @endif
         @endif
         <a href="{{ route('purchases.payment-slip', $purchase) }}" class="psis-btn-secondary inline-flex mt-2">Download Payment Slip (PDF)</a>
+        @can('cancel', $purchase)
+            <form method="POST" action="{{ route('purchases.cancel', $purchase) }}" class="mt-3" onsubmit="return confirm('Cancel this purchase?')">
+                @csrf
+                <button class="psis-btn-outline text-red-600">Cancel Purchase</button>
+            </form>
+        @endcan
     </div>
 
     @if (auth()->user()->hasRole('Student') && in_array($purchase->status, ['payment_submitted', 'pending']))

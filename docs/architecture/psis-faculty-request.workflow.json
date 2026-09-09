@@ -1,0 +1,137 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "PSIS faculty request workflow",
+    "locale": "en",
+    "output": "psis-faculty-request.workflow.html",
+    "quality_profile": "showcase",
+    "viewBox": [1190, 652],
+    "views": [
+      {
+        "id": "happy-path",
+        "label": "Submit to release",
+        "focus": ["faculty-submit", "accounting-review", "admission-approve", "supply-release"],
+        "note": "Submit does not deduct stock. Approve reserves. Supply release deducts on-hand."
+      },
+      {
+        "id": "stop-paths",
+        "label": "Reject and cancel",
+        "focus": ["admission-approve", "reject", "cancel"],
+        "note": "Reject never reserved. Cancel after approved restores reserved_quantity."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "faculty", "label": "Faculty" },
+    { "id": "review", "label": "Accounting then Admission / Admin" },
+    { "id": "supply", "label": "Supply Personnel" },
+    { "id": "exceptions", "label": "Stop paths", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "submit", "label": "Submit", "fromCol": 0, "toCol": 0 },
+    { "id": "review-phase", "label": "Review", "fromCol": 1, "toCol": 1 },
+    { "id": "reserve", "label": "Reserve", "fromCol": 2, "toCol": 2, "variant": "emphasis" },
+    { "id": "release", "label": "Release", "fromCol": 3, "toCol": 3 },
+    { "id": "stop", "label": "Stop", "fromCol": 4, "toCol": 4, "variant": "dashed" }
+  ],
+  "mainPath": ["faculty-submit", "accounting-review", "admission-approve", "supply-release"],
+  "nodes": [
+    {
+      "id": "faculty-submit",
+      "lane": "faculty",
+      "col": 0,
+      "type": "frontend",
+      "label": "Submit request",
+      "sublabel": "pending",
+      "width": 148
+    },
+    {
+      "id": "accounting-review",
+      "lane": "review",
+      "col": 1,
+      "type": "backend",
+      "label": "Review request",
+      "sublabel": "admin_review",
+      "width": 148
+    },
+    {
+      "id": "admission-approve",
+      "lane": "review",
+      "col": 2,
+      "type": "security",
+      "label": "Approve",
+      "sublabel": "approved · reserve",
+      "width": 148
+    },
+    {
+      "id": "supply-release",
+      "lane": "supply",
+      "col": 3,
+      "type": "backend",
+      "label": "Release",
+      "sublabel": "released · deduct",
+      "width": 148
+    },
+    {
+      "id": "reject",
+      "lane": "exceptions",
+      "col": 3,
+      "type": "security",
+      "label": "Reject",
+      "sublabel": "no reserve",
+      "width": 148
+    },
+    {
+      "id": "cancel",
+      "lane": "exceptions",
+      "col": 4,
+      "type": "messagebus",
+      "label": "Cancel",
+      "sublabel": "restore reserved",
+      "width": 148
+    }
+  ],
+  "edges": [
+    {
+      "id": "submit-to-review",
+      "from": "faculty-submit",
+      "to": "accounting-review",
+      "label": "new_request",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "review-to-approve",
+      "from": "accounting-review",
+      "to": "admission-approve",
+      "label": "admin_review",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "approve-to-release",
+      "from": "admission-approve",
+      "to": "supply-release",
+      "label": "reserve then release",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "approve-to-reject",
+      "from": "admission-approve",
+      "to": "reject",
+      "label": "rejected",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "approve-to-cancel",
+      "from": "admission-approve",
+      "to": "cancel",
+      "label": "restore reserved",
+      "variant": "dashed",
+      "role": "error"
+    }
+  ]
+}

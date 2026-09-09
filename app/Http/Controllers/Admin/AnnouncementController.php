@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
+use App\Services\AuditLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,7 +18,7 @@ class AnnouncementController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AuditLogService $auditLog): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -25,11 +26,16 @@ class AnnouncementController extends Controller
             'priority' => ['nullable', 'in:low,normal,high'],
         ]);
 
-        Announcement::create($data + [
+        $announcement = Announcement::create($data + [
             'created_by' => auth()->id(),
             'is_active' => true,
             'published_at' => now(),
             'priority' => $data['priority'] ?? 'normal',
+        ]);
+
+        $auditLog->log($request->user(), 'announcement.created', $announcement, null, [
+            'title' => $announcement->title,
+            'priority' => $announcement->priority,
         ]);
 
         return back()->with('success', 'Announcement published.');

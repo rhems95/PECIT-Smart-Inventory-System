@@ -4,7 +4,7 @@
 @section('page-title', 'Edit Inventory Item')
 
 @section('content')
-<form method="POST" action="{{ route('inventory.update', $inventory) }}" class="psis-card p-6 max-w-3xl space-y-4">
+<form method="POST" action="{{ route('inventory.update', $inventory) }}" class="psis-card p-6 max-w-3xl space-y-4 psis-inventory-form">
     @csrf
     @method('PUT')
     @include('inventory._form', ['inventory' => $inventory])

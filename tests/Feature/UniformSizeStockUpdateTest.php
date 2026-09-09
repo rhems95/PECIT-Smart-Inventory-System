@@ -45,6 +45,94 @@ class UniformSizeStockUpdateTest extends TestCase
         $this->assertSame(13, $item->quantity);
     }
 
+    public function test_add_item_form_loads(): void
+    {
+        $this->actingAs($this->supplyUser())
+            ->get(route('inventory.create'))
+            ->assertOk()
+            ->assertSee('Add Inventory Item')
+            ->assertSee('Save Item')
+            ->assertSee('name="size"', false);
+    }
+
+    public function test_can_create_non_shop_inventory_item(): void
+    {
+        $user = $this->supplyUser();
+        $category = $this->category();
+
+        $this->actingAs($user)
+            ->post(route('inventory.store'), [
+                'item_code' => 'OFF-PAPER',
+                'item_name' => 'Bond Paper',
+                'category_id' => $category->id,
+                'unit' => 'ream',
+                'unit_price' => 100,
+                'quantity' => 12,
+                'minimum_stock' => 5,
+                'location' => 'Supply Room',
+                'department_id' => '',
+            ])
+            ->assertRedirect(route('inventory.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('inventory', [
+            'item_code' => 'OFF-PAPER',
+            'item_name' => 'Bond Paper',
+            'quantity' => 12,
+            'student_shop' => 0,
+        ]);
+    }
+
+    public function test_can_create_shop_uniform_with_size(): void
+    {
+        $user = $this->supplyUser();
+        $category = $this->category();
+
+        $this->actingAs($user)
+            ->post(route('inventory.store'), [
+                'item_code' => 'UNI-NEW',
+                'item_name' => 'New Exclusive Uniform',
+                'category_id' => $category->id,
+                'unit' => 'piece',
+                'unit_price' => 900,
+                'quantity' => 8,
+                'minimum_stock' => 3,
+                'student_shop' => 1,
+                'size' => 'L',
+            ])
+            ->assertRedirect(route('inventory.index'));
+
+        $item = Inventory::where('item_code', 'UNI-NEW')->first();
+        $this->assertNotNull($item);
+        $this->assertTrue($item->student_shop);
+        $this->assertSame(8, $item->sizeStockFor('L')?->quantity);
+        $this->assertSame(8, $item->quantity);
+    }
+
+    public function test_shop_uniform_without_size_does_not_error(): void
+    {
+        $user = $this->supplyUser();
+        $category = $this->category();
+
+        $this->actingAs($user)
+            ->from(route('inventory.create'))
+            ->post(route('inventory.store'), [
+                'item_code' => 'UNI-NOSIZE',
+                'item_name' => 'Uniform Missing Size',
+                'category_id' => $category->id,
+                'unit' => 'piece',
+                'unit_price' => 900,
+                'quantity' => 8,
+                'minimum_stock' => 3,
+                'student_shop' => 1,
+                'size' => '',
+            ])
+            ->assertRedirect(route('inventory.create'))
+            ->assertSessionHasErrors('size');
+
+        $this->assertDatabaseMissing('inventory', ['item_code' => 'UNI-NOSIZE']);
+    }
+
     public function test_cannot_set_on_hand_below_reserved_for_a_size(): void
     {
         $user = $this->supplyUser();
@@ -70,12 +158,17 @@ class UniformSizeStockUpdateTest extends TestCase
         return $user;
     }
 
+    protected function category(): Category
+    {
+        return Category::create([
+            'name' => 'Uniforms',
+            'slug' => 'uniforms-'.uniqid(),
+        ]);
+    }
+
     protected function uniformWithSizeStock(int $onHand, int $reserved): Inventory
     {
-        $category = Category::create([
-            'name' => 'Uniforms',
-            'slug' => 'uniforms',
-        ]);
+        $category = $this->category();
 
         $item = Inventory::create([
             'item_code' => 'UNI-SIZE-TEST',

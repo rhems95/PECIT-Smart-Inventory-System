@@ -207,7 +207,7 @@ Keep AI answers grounded in DB data; do not invent stock numbers.
 - New users (admin or supply-created students) should get `email_verified_at` set so `verified` middleware allows login
 - User model casts `password` as `hashed` — pass plain password on create/update (do not double `Hash::make`)
 - Student create: password optional / auto-generated; **require** `employee_id`, `last_name`, `department_id`, `email`
-- Login form uses Alpine tabs (`login_as`); keep staff and student validation paths in `LoginRequest` in sync with the Blade form
+- Student login: last name (visible) then Student ID (masked, with Show); keep staff and student validation paths in `LoginRequest` in sync with the Blade form
 
 ---
 

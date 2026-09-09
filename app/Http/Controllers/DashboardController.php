@@ -41,10 +41,16 @@ class DashboardController extends Controller
                 'shopCount' => $shopCount,
                 'announcements' => $announcements,
                 'releasedRequests' => collect(),
+                'recentStudentPurchases' => collect(),
+                'recentVerifiedPayments' => collect(),
+                'availableStockItems' => collect(),
             ]);
         }
 
-        $inventory = Inventory::all();
+        $inventory = Inventory::query()
+            ->with('sizeStocks')
+            ->orderBy('item_name')
+            ->get();
 
         $stats = [
             'total_items' => $inventory->count(),
@@ -74,6 +80,24 @@ class DashboardController extends Controller
             ->latest('released_at')
             ->limit(10)
             ->get();
+        $recentStudentPurchases = collect();
+        if ($user->hasAnyRole(['Supply Personnel', 'Administrator'])) {
+            $recentStudentPurchases = PurchaseRequest::with(['user.department'])
+                ->latest()
+                ->limit(10)
+                ->get();
+        }
+
+        $recentVerifiedPayments = collect();
+        if ($user->hasRole('Accounting')) {
+            $recentVerifiedPayments = PurchaseRequest::query()->recentlyVerified(10)->get();
+        }
+
+        $availableStockItems = $inventory->map(fn (Inventory $item) => [
+            'name' => $item->item_name,
+            'available' => $item->availableQuantity(),
+        ])->values();
+
         $forecasts = $ai->inventoryForecasts(5);
         $aiSummary = $ai->monthlySummary();
 
@@ -89,6 +113,9 @@ class DashboardController extends Controller
             'studentPurchases' => collect(),
             'shopCount' => 0,
             'announcements' => $announcements,
+            'recentStudentPurchases' => $recentStudentPurchases,
+            'recentVerifiedPayments' => $recentVerifiedPayments,
+            'availableStockItems' => $availableStockItems,
         ]);
     }
 }

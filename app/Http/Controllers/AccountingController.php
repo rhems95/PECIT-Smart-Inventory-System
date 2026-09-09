@@ -54,7 +54,9 @@ class AccountingController extends Controller
             ->latest()
             ->paginate(15);
 
-        return view('accounting.payments-index', compact('purchases'));
+        $recentVerifiedPayments = PurchaseRequest::query()->recentlyVerified(10)->get();
+
+        return view('accounting.payments-index', compact('purchases', 'recentVerifiedPayments'));
     }
 
     public function showPayment(PurchaseRequest $purchase): View

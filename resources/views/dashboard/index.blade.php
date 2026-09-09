@@ -4,7 +4,7 @@
 @section('page-title', 'Dashboard')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-6" x-data="{ showAvailableStock: false }">
     <div class="psis-card p-5 bg-gradient-to-r from-pecit-blue to-pecit-blue-800 text-white">
         <p class="text-sm text-white/80">Welcome back</p>
         <h2 class="text-2xl font-bold">{{ auth()->user()->name }}</h2>
@@ -94,7 +94,7 @@
 
             $statCards = [
                 ['Total Items', $stats['total_items'], $canInventory ? route('inventory.index') : null],
-                ['Available Stock', number_format($stats['available_stock']), $canInventory ? route('inventory.index') : null],
+                ['Available Stock', number_format($stats['available_stock']), 'available-stock'],
                 ['Low Stock', $stats['low_stock'], $canInventory ? route('inventory.index', ['status' => 'low_stock']) : null],
                 ['Out of Stock', $stats['out_of_stock'], $canInventory ? route('inventory.index', ['status' => 'out_of_stock']) : null],
                 ['Pending Requests', $stats['pending_requests'], $pendingHref],
@@ -105,7 +105,19 @@
         @endphp
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             @foreach ($statCards as [$label, $value, $href])
-                @if ($href)
+                @if ($href === 'available-stock')
+                    <button
+                        type="button"
+                        class="psis-card p-4 w-full text-left hover:border-pecit-blue hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-pecit-blue/40"
+                        :class="showAvailableStock ? 'border-pecit-blue shadow-md' : ''"
+                        @click="showAvailableStock = !showAvailableStock; if (showAvailableStock) { $nextTick(() => document.getElementById('available-stock')?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }"
+                        :aria-expanded="showAvailableStock.toString()"
+                        aria-controls="available-stock"
+                    >
+                        <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $label }}</p>
+                        <p class="text-2xl font-bold mt-1 text-pecit-blue dark:text-pecit-gold">{{ $value }}</p>
+                    </button>
+                @elseif ($href)
                     <a href="{{ $href }}" class="psis-card p-4 block hover:border-pecit-blue hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-pecit-blue/40">
                         <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $label }}</p>
                         <p class="text-2xl font-bold mt-1 text-pecit-blue dark:text-pecit-gold">{{ $value }}</p>
@@ -117,6 +129,38 @@
                     </div>
                 @endif
             @endforeach
+        </div>
+
+        <div
+            id="available-stock"
+            x-cloak
+            x-show="showAvailableStock"
+            x-transition
+            class="psis-card p-5 scroll-mt-24"
+        >
+            <h3 class="font-semibold mb-4">Available Stock</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-slate-500">
+                            <th class="px-4 py-3">Name</th>
+                            <th class="px-4 py-3">Available</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @forelse ($availableStockItems as $item)
+                        <tr class="border-t border-[var(--psis-border)]">
+                            <td class="px-4 py-3">{{ $item['name'] }}</td>
+                            <td class="px-4 py-3">{{ number_format($item['available']) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="2" class="px-4 py-6 text-center text-slate-500">No stock items.</td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="grid lg:grid-cols-2 gap-6">
@@ -175,6 +219,55 @@
                 </table>
             </div>
         </div>
+
+        @if (auth()->user()->hasAnyRole(['Supply Personnel', 'Administrator']))
+        <div id="recent-student-purchases" class="psis-card p-5 scroll-mt-24">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <h3 class="font-semibold">Recent Student Purchases</h3>
+                <a href="{{ route('supply.purchases') }}" class="psis-btn-outline text-sm">Student Purchases</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-slate-500">
+                            <th class="px-4 py-3">Number</th>
+                            <th class="px-4 py-3">Student</th>
+                            <th class="px-4 py-3">Department</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @forelse ($recentStudentPurchases as $purchase)
+                        <tr class="border-t border-[var(--psis-border)]">
+                            <td class="px-4 py-3">
+                                <a href="{{ route('supply.purchases.show', $purchase) }}" class="text-pecit-blue dark:text-pecit-gold hover:underline">{{ $purchase->purchase_number }}</a>
+                            </td>
+                            <td class="px-4 py-3">{{ $purchase->user?->name ?? '—' }}</td>
+                            <td class="px-4 py-3">{{ $purchase->user?->department?->name ?? '—' }}</td>
+                            <td class="px-4 py-3 min-w-[11rem]">
+                                <x-status-tracker compact :tracker="\App\Support\OrderStatusTracker::forPurchase($purchase)" />
+                            </td>
+                            <td class="px-4 py-3">{{ $purchase->created_at?->format('M d, Y') }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-4 py-6 text-center text-slate-500">No student purchases yet.</td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+
+        @if (auth()->user()->hasRole('Accounting'))
+            @include('accounting._recent-verified-payments', [
+                'purchases' => $recentVerifiedPayments,
+                'actionHref' => route('accounting.payments'),
+                'actionLabel' => 'Verify Payments',
+            ])
+        @endif
 
         <div id="released-items" class="psis-card p-5 scroll-mt-24">
             <h3 class="font-semibold mb-4">Released Items</h3>

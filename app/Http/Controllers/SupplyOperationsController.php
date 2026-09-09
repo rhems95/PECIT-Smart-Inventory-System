@@ -111,7 +111,7 @@ class SupplyOperationsController extends Controller
 
     public function purchases(): View
     {
-        $purchases = PurchaseRequest::with('user')
+        $purchases = PurchaseRequest::with(['user.department'])
             ->where('status', 'payment_verified')
             ->latest()
             ->paginate(15);

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class AuditLogService
 {
     public function log(
-        User $user,
+        ?User $user,
         string $action,
         ?Model $auditable = null,
         ?array $oldValues = null,
@@ -17,7 +17,7 @@ class AuditLogService
         ?string $ipAddress = null,
     ): AuditLog {
         return AuditLog::create([
-            'user_id' => $user->id,
+            'user_id' => $user?->id,
             'action' => $action,
             'model_type' => $auditable ? $auditable->getMorphClass() : null,
             'model_id' => $auditable?->getKey(),

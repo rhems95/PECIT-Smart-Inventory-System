@@ -26,4 +26,9 @@ class InventoryPolicy
     {
         return $user->hasAnyRole(['Administrator', 'Supply Personnel']);
     }
+
+    public function delete(User $user, Inventory $inventory): bool
+    {
+        return $user->hasAnyRole(['Administrator', 'Supply Personnel']);
+    }
 }

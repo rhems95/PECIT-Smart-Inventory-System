@@ -16,7 +16,9 @@
         <p class="text-slate-500">No receipt uploaded yet.</p>
     @endif
 @endif
+@if ($purchase->status === 'payment_submitted')
 <form method="POST" action="{{ route('accounting.payments.verify', $purchase) }}">@csrf<button class="psis-btn-primary">Verify Payment & Reserve Stock</button></form>
+@endif
     </div>
 </div>
 @endsection

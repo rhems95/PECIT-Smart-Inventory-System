@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PSIS runtime architecture",
+    "locale": "en",
+    "output": "psis-runtime.architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "request-path",
+        "label": "Primary request path",
+        "focus": ["users", "blade", "laravel", "services", "mysql"],
+        "note": "Staff and students hit Blade, then Laravel routes, then domain services, then MySQL pecit_sis."
+      },
+      {
+        "id": "identity-and-stock",
+        "label": "Identity and stock math",
+        "focus": ["auth", "laravel", "services", "mysql"],
+        "note": "Breeze plus Spatie gates the app; InventoryService owns reserve, release, and restore."
+      },
+      {
+        "id": "shop-and-notify",
+        "label": "Shop receipts and mail",
+        "focus": ["blade", "services", "storage", "mail"],
+        "note": "Student checkout stores receipts locally and NotificationService may send SMTP mail."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "users",
+      "type": "external",
+      "label": "Staff & students",
+      "sublabel": "Browser",
+      "pos": [40, 300],
+      "size": [140, 64]
+    },
+    {
+      "id": "blade",
+      "type": "frontend",
+      "label": "Blade UI",
+      "sublabel": "Tailwind + Alpine.js",
+      "pos": [250, 300],
+      "size": [150, 64],
+      "tag": "layouts.psis"
+    },
+    {
+      "id": "laravel",
+      "type": "backend",
+      "label": "Laravel 12",
+      "sublabel": "routes + middleware",
+      "pos": [480, 300],
+      "size": [150, 64],
+      "tag": "XAMPP / PHP"
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Breeze + Spatie",
+      "sublabel": "staff email / student ID",
+      "pos": [480, 110],
+      "size": [150, 64],
+      "tag": "role middleware"
+    },
+    {
+      "id": "services",
+      "type": "backend",
+      "label": "Domain services",
+      "sublabel": "inventory · requests · shop",
+      "pos": [720, 300],
+      "size": [170, 64]
+    },
+    {
+      "id": "mysql",
+      "type": "database",
+      "label": "MySQL pecit_sis",
+      "sublabel": "on-hand + reserved",
+      "pos": [970, 300],
+      "size": [150, 64],
+      "brand": "mysql"
+    },
+    {
+      "id": "ai",
+      "type": "backend",
+      "label": "AiInsightService",
+      "sublabel": "rule-based, not an LLM",
+      "pos": [250, 470],
+      "size": [150, 64],
+      "tag": "POST /ai/ask"
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "Local file storage",
+      "sublabel": "receipt_path",
+      "pos": [720, 470],
+      "size": [170, 64]
+    },
+    {
+      "id": "mail",
+      "type": "external",
+      "label": "SMTP mail",
+      "sublabel": "PsisNotificationMail",
+      "pos": [970, 470],
+      "size": [150, 64]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "XAMPP host · pecit-sis",
+      "wraps": ["blade", "laravel", "auth", "services", "mysql", "ai", "storage"]
+    },
+    {
+      "kind": "security-group",
+      "label": "auth · verified · active · session.timeout · role",
+      "wraps": ["laravel", "auth"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "users-to-blade",
+      "from": "users",
+      "to": "blade",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "blade-to-laravel",
+      "from": "blade",
+      "to": "laravel",
+      "label": "session cookie"
+    },
+    {
+      "id": "laravel-to-auth",
+      "from": "laravel",
+      "to": "auth",
+      "label": "Spatie roles",
+      "variant": "security",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "laravel-to-services",
+      "from": "laravel",
+      "to": "services",
+      "label": "thin controllers"
+    },
+    {
+      "id": "services-to-mysql",
+      "from": "services",
+      "to": "mysql",
+      "label": "SQL"
+    },
+    {
+      "id": "laravel-to-ai",
+      "from": "laravel",
+      "to": "ai",
+      "label": "POST /ai/ask",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "services-to-storage",
+      "from": "services",
+      "to": "storage",
+      "label": "receipts",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24,
+      "labelDx": -40
+    },
+    {
+      "id": "services-to-mail",
+      "from": "services",
+      "to": "mail",
+      "label": "SMTP if enabled",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Stock math",
+      "items": [
+        "Submit request or purchase does not deduct stock",
+        "Approve / verify payment reserves reserved_quantity",
+        "Supply release deducts on-hand quantity; cancel before release restores reserved"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Identity",
+      "items": [
+        "Staff login: email + password; student login: employee_id + last_name",
+        "Roles: Administrator, Admission, Accounting, Supply Personnel, Faculty, Student"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Uniform Shop",
+      "items": [
+        "Students cannot use /inventory; shop items need student_shop = true",
+        "department_id null is shared; set department_id is exclusive to that department"
+      ]
+    }
+  ]
+}

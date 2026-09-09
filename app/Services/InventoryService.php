@@ -13,6 +13,9 @@ use RuntimeException;
 
 class InventoryService
 {
+    public function __construct(
+        protected AuditLogService $auditLog,
+    ) {}
     public function stockIn(
         Inventory $inventory,
         int $quantity,
@@ -68,6 +71,13 @@ class InventoryService
                 'balance_after' => $locked->quantity,
                 'notes' => $notes,
                 'performed_by' => $performedBy->id,
+            ]);
+
+            $this->auditLog->log($performedBy, 'inventory.stock_in', $locked, null, [
+                'item' => $locked->item_name,
+                'quantity' => $quantity,
+                'size' => $size,
+                'notes' => $notes,
             ]);
 
             $inventory->setRawAttributes($locked->getAttributes());
@@ -421,6 +431,15 @@ class InventoryService
                 'balance_after' => $locked->quantity,
                 'notes' => $notes,
                 'performed_by' => $performedBy->id,
+            ]);
+
+            $this->auditLog->log($performedBy, 'inventory.adjusted', $locked, [
+                'quantity' => $before,
+            ], [
+                'item' => $locked->item_name,
+                'quantity' => $newQuantity,
+                'size' => $size,
+                'notes' => $notes,
             ]);
 
             $inventory->setRawAttributes($locked->getAttributes());
