@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Inventory;
+use App\Models\UnitOfMeasurement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -65,7 +66,7 @@ class UniformSizeStockUpdateTest extends TestCase
                 'item_code' => 'OFF-PAPER',
                 'item_name' => 'Bond Paper',
                 'category_id' => $category->id,
-                'unit' => 'ream',
+                'unit_of_measurement_id' => $this->pieceUnitId(),
                 'unit_price' => 100,
                 'quantity' => 12,
                 'minimum_stock' => 5,
@@ -93,7 +94,7 @@ class UniformSizeStockUpdateTest extends TestCase
                 'item_code' => 'UNI-NEW',
                 'item_name' => 'New Exclusive Uniform',
                 'category_id' => $category->id,
-                'unit' => 'piece',
+                'unit_of_measurement_id' => $this->pieceUnitId(),
                 'unit_price' => 900,
                 'quantity' => 8,
                 'minimum_stock' => 3,
@@ -120,7 +121,7 @@ class UniformSizeStockUpdateTest extends TestCase
                 'item_code' => 'UNI-NOSIZE',
                 'item_name' => 'Uniform Missing Size',
                 'category_id' => $category->id,
-                'unit' => 'piece',
+                'unit_of_measurement_id' => $this->pieceUnitId(),
                 'unit_price' => 900,
                 'quantity' => 8,
                 'minimum_stock' => 3,
@@ -172,7 +173,7 @@ class UniformSizeStockUpdateTest extends TestCase
 
         $item = Inventory::create([
             'item_code' => 'UNI-SIZE-TEST',
-            'item_name' => 'CIT Exclusive Uniform',
+            'item_name' => 'CCS Exclusive Uniform',
             'category_id' => $category->id,
             'unit' => 'piece',
             'unit_price' => 500,
@@ -218,12 +219,17 @@ class UniformSizeStockUpdateTest extends TestCase
             'item_name' => $item->item_name,
             'description' => $item->description,
             'category_id' => $item->category_id,
-            'unit' => $item->unit,
+            'unit_of_measurement_id' => $this->pieceUnitId(),
             'unit_price' => $item->unit_price,
             'minimum_stock' => $item->minimum_stock,
             'location' => $item->location,
             'student_shop' => 1,
             'size_quantities' => $quantities,
         ];
+    }
+
+    protected function pieceUnitId(): int
+    {
+        return (int) UnitOfMeasurement::query()->where('symbol', 'pcs')->value('id');
     }
 }

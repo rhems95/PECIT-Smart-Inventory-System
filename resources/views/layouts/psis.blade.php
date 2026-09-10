@@ -12,6 +12,9 @@
         #psis-ai-widget .psis-ai-fab{width:64px;height:64px;padding:0;border:2px solid #F4B400;border-radius:9999px;background:#fff;box-shadow:0 10px 25px rgba(11,60,145,.35);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
         #psis-ai-widget .psis-ai-fab-img{width:100%;height:100%;object-fit:cover;display:block}
         [x-cloak]{display:none!important}
+        .psis-ai-questions{padding:.5rem .75rem .75rem;border-top:1px solid #E2E8F0;max-height:11.5rem;overflow-y:auto}
+        .psis-ai-question-list{display:flex;flex-direction:column;gap:.35rem}
+        .psis-ai-question{width:100%;text-align:left;font-size:.8rem;padding:.45rem .65rem;border-radius:.5rem;border:1px solid #E2E8F0;background:#fff;cursor:pointer}
     </style>
     @stack('head')
 </head>

@@ -197,32 +197,41 @@ class AiInsightService
             $user->hasRole('Faculty') => [
                 'Status of my request',
                 'My pending requests',
-                'What items are low in stock?',
                 'How do I request supplies?',
+                'What items are low in stock?',
+                'Out of stock',
+                'Monthly summary',
             ],
             $user->hasRole('Student') => [
+                'What uniforms can I buy?',
+                'How do I buy uniforms?',
                 'My purchases',
                 'Purchase status',
-                'How do I buy uniforms?',
-                'What uniforms can I buy?',
             ],
             $user->hasRole('Accounting') => [
                 'Pending payments',
                 'Pending requests',
                 'Monthly summary',
                 'Low stock',
+                'Out of stock',
             ],
             $user->hasRole('Supply Personnel') => [
                 'Reorder recommendations',
                 'Ready for release',
                 'Low stock',
+                'Out of stock',
                 'Computer supplies',
+                'Office supplies',
+                'Laboratory supplies',
+                'Monthly summary',
             ],
             $user->hasRole('Administrator') => [
                 'For approval',
-                'Monthly summary',
-                'Reorder',
                 'Pending requests',
+                'Ready for release',
+                'Reorder',
+                'Low stock',
+                'Monthly summary',
             ],
             $user->hasRole('Admission') => [
                 'For approval',
@@ -230,8 +239,21 @@ class AiInsightService
                 'Monthly summary',
                 'Low stock',
             ],
-            default => ['Low stock', 'Monthly summary', 'Help'],
+            default => ['Low stock', 'Monthly summary'],
         };
+    }
+
+    public function isAllowedChatQuestion(User $user, string $question): bool
+    {
+        $needle = mb_strtolower(trim($question));
+
+        foreach ($this->chatSuggestions($user) as $allowed) {
+            if (mb_strtolower($allowed) === $needle) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -243,7 +265,7 @@ class AiInsightService
 
         $usageByInventory = Transaction::query()
             ->where('created_at', '>=', $since)
-            ->whereIn('type', ['release', 'stock_out'])
+            ->whereIn('type', ['release', 'stock_out', 'damage', 'bad_order', 'return_to_supplier', 'adjustment_out'])
             ->selectRaw('inventory_id, SUM(quantity) as total_used')
             ->groupBy('inventory_id')
             ->pluck('total_used', 'inventory_id');
@@ -349,26 +371,11 @@ class AiInsightService
 
     protected function helpForRole(User $user): string
     {
-        if ($user->hasRole('Faculty')) {
-            return 'Try: "Status of my request", "My pending requests", "What items are low in stock?", "How do I request supplies?"';
-        }
-        if ($user->hasRole('Student')) {
-            return 'Try: "My purchases", "Purchase status", "How do I buy uniforms?", "What uniforms can I buy?"';
-        }
-        if ($user->hasRole('Accounting')) {
-            return 'Try: "Pending payments", "Pending requests", "Monthly summary", "Low stock".';
-        }
-        if ($user->hasRole('Supply Personnel')) {
-            return 'Try: "Reorder recommendations", "Ready for release", "Low stock", "Computer supplies".';
-        }
-        if ($user->hasRole('Administrator')) {
-            return 'Try: "For approval", "Monthly summary", "Reorder", "Pending requests".';
-        }
-        if ($user->hasRole('Admission')) {
-            return 'Try: "For approval", "Pending requests", "Monthly summary", "Low stock".';
-        }
+        $options = collect($this->chatSuggestions($user))->map(fn (string $q) => '"'.$q.'"')->implode(', ');
 
-        return 'Try: "low stock", "monthly summary", or "help".';
+        return $options !== ''
+            ? 'Choose one of these questions: '.$options.'.'
+            : 'No questions are available for your role.';
     }
 
     protected function answerHowToBuy(User $user): string

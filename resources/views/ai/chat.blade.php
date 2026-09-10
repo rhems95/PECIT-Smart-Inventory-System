@@ -82,7 +82,7 @@
                 <div class="flex items-end gap-2">
                     <img src="{{ asset('images/chatbot.png') }}" alt="" class="w-8 h-8 rounded-full object-cover border border-pecit-gold shrink-0">
                     <div class="rounded-2xl rounded-bl-md bg-white dark:bg-slate-800 px-3 py-2 text-sm shadow-sm">
-                        Ask a question below, or tap a suggestion.
+                        Choose a question below. Answers use live stock and request data for your role.
                     </div>
                 </div>
             </template>
@@ -107,16 +107,12 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap gap-2 mb-3">
+        <div class="flex flex-col gap-2">
+            <p class="text-xs uppercase tracking-wide text-slate-500">Choose a question</p>
             @foreach ($suggestions as $tip)
-                <button type="button" class="psis-btn-outline text-xs py-1 px-2" @click="send(@js($tip))" :disabled="loading">{{ $tip }}</button>
+                <button type="button" class="psis-btn-outline text-left text-sm py-2 px-3" @click="send(@js($tip))" :disabled="loading">{{ $tip }}</button>
             @endforeach
         </div>
-
-        <form class="flex gap-2" @submit.prevent="send()">
-            <input x-model="message" class="psis-input" placeholder="Type your question..." :disabled="loading">
-            <button type="submit" class="psis-btn-primary shrink-0" :disabled="loading || !message.trim()" x-text="loading ? '...' : 'Ask'"></button>
-        </form>
     </div>
 </div>
 @endsection

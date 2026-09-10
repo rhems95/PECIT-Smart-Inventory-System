@@ -123,7 +123,7 @@ class StudentAccountService
             }
         }
 
-        $departments = Department::query()->get()->keyBy(fn (Department $d) => Str::upper($d->code));
+        $departments = Department::query()->active()->get()->keyBy(fn (Department $d) => Str::upper($d->code));
         $created = 0;
         $skipped = 0;
         $errors = [];
@@ -205,8 +205,8 @@ class StudentAccountService
     {
         $lines = [
             'student_id,last_name,name,email,department_code,phone',
-            '2024-00001,Santos,Maria Santos,maria.santos@pecit.edu.ph,CIT,09171234567',
-            '2024-00002,Reyes,Juan Reyes,juan.reyes@pecit.edu.ph,COE,',
+            '2024-00001,Santos,Maria Santos,maria.santos@pecit.edu.ph,CCS,09171234567',
+            '2024-00002,Reyes,Juan Reyes,juan.reyes@pecit.edu.ph,CC,',
         ];
 
         return implode("\n", $lines)."\n";

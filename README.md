@@ -93,12 +93,31 @@ Students do **not** log in with email/password. Email is kept for notifications 
 
 | Student ID | Last name | Email (notifications) | Department | Sees in shop |
 |------------|-----------|----------------------|------------|--------------|
-| `STU-001` | `Santos` | student@pecit.edu.ph | CIT | IT Exclusive + P.E. / NSTP / lanyard |
-| `STU-COE-001` | `Mendoza` | engineering.student@pecit.edu.ph | COE (Engineering) | Engineering Exclusive + P.E. / NSTP / lanyard |
+| `STU-001` | `Santos` | student@pecit.edu.ph | CCS | CCS Exclusive + P.E. / NSTP / lanyard |
+| `STU-CC-001` | `Mendoza` | engineering.student@pecit.edu.ph | CC (Criminology) | CC Exclusive + P.E. / NSTP / lanyard |
 
 On the login page, use the **Student** tab.
 
-**Exclusivity rule:** a department uniform (e.g. Engineering) can be bought **only** by students of that department. Students cannot buy another department’s exclusive uniform. P.E., NSTP, and ID lanyard stay shared for everyone.
+**Exclusivity rule:** a department uniform (e.g. College of Computer Studies) can be bought **only** by students of that department. Students cannot buy another department’s exclusive uniform. P.E., NSTP, and ID lanyard stay shared for everyone.
+
+---
+
+## Departments
+
+Canonical codes (`MasterDataSeeder` / `departments.code`):
+
+| Code | Name |
+|------|------|
+| CCS | College of Computer Studies |
+| CC | College of Criminology |
+| CTHM | College of Tourism and Hospitality Management |
+| CTE | College of Teacher Education |
+| CBA | College of Business Administration |
+| SHS | Senior High School |
+| ADMIN | Administration |
+| SUPPLY | Supply Office |
+
+CSV student import `department_code` uses the academic/SHS codes (CCS, CC, CTHM, CTE, CBA, SHS). Old codes CIT, COE, and COB were remapped to CCS, CC, and CBA.
 
 ---
 
@@ -124,14 +143,17 @@ On the login page, use the **Student** tab.
 
 | Item | Who can buy |
 |------|-------------|
-| Engineering Uniform (Exclusive) | College of Engineering (`COE`) students **only** |
-| IT Uniform (Exclusive) | CIT students **only** |
-| Other `* Uniform (Exclusive)` | That department’s students **only** |
+| Computer Studies Uniform (Exclusive) | CCS students **only** |
+| Criminology Uniform (Exclusive) | CC students **only** |
+| Tourism and Hospitality Uniform (Exclusive) | CTHM students **only** |
+| Teacher Education Uniform (Exclusive) | CTE students **only** |
+| Business Administration Uniform (Exclusive) | CBA students **only** |
+| SHS Uniform (Exclusive) | SHS students **only** |
 | Uniform P.E. | All students |
 | Uniform NSTP | All students |
 | Lanyard for ID | All students |
 
-Example: an Engineering student can buy **Engineering Uniform (Exclusive)** + P.E. / NSTP / lanyard, and **cannot** buy the IT exclusive uniform (and the reverse).
+Example: a Computer Studies student can buy **Computer Studies Uniform (Exclusive)** + P.E. / NSTP / lanyard, and **cannot** buy the Criminology exclusive uniform (and the reverse).
 
 **Flow:** Purchase → OTC Payment → Receipt Upload → Accounting Verification → Supply Release → Inventory Deducted
 
@@ -188,7 +210,7 @@ Inventory list shows **On Hand**, **Reserved**, and **Available**.
 How Supply / Admin configures an exclusive uniform:
 
 1. Enable **Available in Uniform Shop**
-2. Set **Exclusive to department** (e.g. College of Engineering)
+2. Set **Exclusive to department** (e.g. College of Computer Studies)
 3. Leave department empty only for shared items (P.E., NSTP, ID lanyard)
 
 Cart add and checkout re-check exclusivity so students cannot purchase another department’s uniform via crafted requests.
@@ -230,6 +252,7 @@ Cart add and checkout re-check exclusivity so students cannot purchase another d
 - List, add, and edit student accounts (`/supply/students`)
 - CSV bulk import with downloadable template
 - CSV columns: `student_id,last_name,name,email,department_code,phone`
+- `department_code` examples: `CCS`, `CC`, `CTHM`, `CTE`, `CBA`, `SHS`
 - Students sign in with Student ID + last name; email used for notifications
 
 ### Notifications
@@ -340,9 +363,9 @@ npm run dev
 
 ## Database / Diagrams
 
-GitHub renders the Mermaid ERD below on this README. Workflow notes and cardinality tables: [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md). Process charts: [`docs/FLOWCHART.md`](docs/FLOWCHART.md).
+GitHub renders the Mermaid ERD below on this README. Workflow notes and cardinality tables: [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md). Process charts: [`docs/FLOWCHART.md`](docs/FLOWCHART.md). Stock Card / ledger (Phase 1 & 2) and why FIFO, moving-average costing, and purchase orders are not in this app: [`docs/STOCK-LEDGER.md`](docs/STOCK-LEDGER.md).
 
-There is no `suppliers` table. Available quantity is not stored: non-sized items use `available = quantity − reserved_quantity`; shop uniforms use **per-size** rows (`inventory_size_stocks`). Uniform Shop exclusivity is `inventory.student_shop` plus `inventory.department_id` (null = shared; set = department-exclusive). Student clothing purchases store `purchase_request_items.size`.
+Suppliers are stored on **stock movements** (`transactions.supplier_id`), not as a single supplier on the item. Available quantity is not stored: non-sized items use `available = quantity − reserved_quantity`; shop uniforms use **per-size** rows (`inventory_size_stocks`). Uniform Shop exclusivity is `inventory.student_shop` plus `inventory.department_id` (null = shared; set = exclusive to CCS, CC, CTHM, CTE, CBA, or SHS). Student clothing purchases store `purchase_request_items.size`. Each item has a **Stock Card** generated from `transactions` (physical movements only).
 
 ```mermaid
 erDiagram
@@ -382,7 +405,7 @@ erDiagram
     DEPARTMENTS {
         bigint id PK
         string name
-        string code UK
+        string code UK "CCS CC CTHM CTE CBA SHS ADMIN SUPPLY"
         text description
         boolean is_active
     }
@@ -590,7 +613,7 @@ app/
 config/psis.php         # PSIS_MAIL_NOTIFICATIONS and related flags
 database/migrations/    # Schema
 database/seeders/       # Roles, master data, demo users & inventory/uniforms
-docs/                   # ER-DIAGRAM.md, FLOWCHART.md
+docs/                   # ER-DIAGRAM.md, FLOWCHART.md, STOCK-LEDGER.md
 CHANGELOG.md            # Release history
 public/images/          # pecit-logo.png, chatbot.png
 resources/views/        # Blade UI (layouts, modules, emails, AI widget)

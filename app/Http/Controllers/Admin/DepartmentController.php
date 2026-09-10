@@ -55,8 +55,8 @@ class DepartmentController extends Controller
 
     public function destroy(Department $department, AuditLogService $auditLog): RedirectResponse
     {
-        if ($department->users()->exists() || $department->supplyRequests()->exists()) {
-            return back()->with('error', 'Cannot delete: department is assigned to users or requests. Reassign them first.');
+        if ($department->users()->exists() || $department->supplyRequests()->exists() || $department->inventoryItems()->exists()) {
+            return back()->with('error', 'Cannot delete: department is assigned to users, requests, or inventory. Reassign them first.');
         }
 
         $auditLog->log(auth()->user(), 'department.deleted', null, [

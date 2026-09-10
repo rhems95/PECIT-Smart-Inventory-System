@@ -5,7 +5,7 @@
 
 Render Mermaid diagrams in GitHub, Cursor/VS Code Markdown preview, or [mermaid.live](https://mermaid.live) (export PNG/SVG for reports).
 
-Related: [`ER-DIAGRAM.md`](ER-DIAGRAM.md)
+Related: [`ER-DIAGRAM.md`](ER-DIAGRAM.md) · [`STOCK-LEDGER.md`](STOCK-LEDGER.md)
 
 ---
 
@@ -89,10 +89,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A([Student]) --> B[Browse shop]
+    A([Student]) --> B[Browse shop: own department exclusives + shared]
     B --> C[Choose size for uniforms]
     C --> D[Add items to cart]
-    D --> E{Cart valid + size stock available?}
+    D --> E{Cart valid + size stock + department allowed?}
     E -->|No| C
     E -->|Yes| F[Checkout]
     F --> G[Create purchase + payment record]
@@ -120,6 +120,25 @@ flowchart TD
 | `payment_verified` | Accounting | Reserve |
 | `released` | Supply Personnel | Deduct |
 | `cancelled` | Allowed actors | Release reservation if any |
+
+**Shop listing:** students only see items with `student_shop = true` that are either **shared** (`department_id` null: P.E., NSTP, lanyard) or **exclusive to their department** (CCS, CC, CTHM, CTE, CBA, or SHS). Other departments’ exclusives are hidden; cart and checkout reject them.
+
+```mermaid
+flowchart TD
+    A[Student opens Uniform Shop] --> B{student_shop = true?}
+    B -->|No| H([Hidden])
+    B -->|Yes| C{department_id null?}
+    C -->|Yes| D[Show shared: P.E. / NSTP / lanyard]
+    C -->|No| E{item.department_id = student.department_id?}
+    E -->|Yes| F[Show exclusive uniform]
+    E -->|No| H
+    D --> G[Choose size if clothing]
+    F --> G
+    G --> I[Add to cart / checkout]
+    I --> J{Still same department?}
+    J -->|No| K([Reject])
+    J -->|Yes| L[Purchase flow continues]
+```
 
 ---
 
@@ -206,6 +225,8 @@ flowchart TD
     SK --> SZ[(inventory_size_stocks)]
 ```
 
+**Canonical departments:** CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY. Academic codes drive Uniform Shop exclusivity; ADMIN and SUPPLY are staff home departments.
+
 ---
 
 ## 7. Swimlane summary (who does what)
@@ -218,7 +239,7 @@ flowchart TB
     end
 
     subgraph Student
-        S1[Shop + choose size + cart] --> S2[Checkout + receipt]
+        S1[Shop: own dept + shared + size] --> S2[Checkout + receipt]
         S3[Receive items after release]
     end
 
@@ -264,4 +285,4 @@ flowchart TB
 
 ---
 
-*Keep this file aligned with `SupplyRequestService`, `PurchaseRequestService`, and `InventoryService` when workflows change.*
+*Keep this file aligned with `SupplyRequestService`, `PurchaseRequestService`, `InventoryService`, and the canonical departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) when workflows change.*

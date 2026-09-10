@@ -5,9 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\Inventory;
+use App\Models\InventoryPriceAdjustment;
+use App\Models\Supplier;
+use App\Models\UnitOfMeasurement;
 use App\Models\User;
 use App\Services\InventoryService;
 use App\Services\AuditLogService;
+use App\Services\StockCardService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,12 +57,13 @@ class InventoryController extends Controller
         return view('inventory.create', [
             'inventory' => null,
             'categories' => Category::orderBy('name')->get(),
-            'departments' => Department::orderBy('name')->get(),
+            'departments' => Department::active()->orderBy('name')->get(),
+            'units' => UnitOfMeasurement::orderBy('name')->get(),
             'sizes' => config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']),
         ]);
     }
 
-    public function store(Request $request, AuditLogService $auditLog): RedirectResponse
+    public function store(Request $request, AuditLogService $auditLog, InventoryService $inventoryService): RedirectResponse
     {
         $this->authorize('create', Inventory::class);
 
@@ -73,7 +78,7 @@ class InventoryController extends Controller
             ]);
         }
 
-        $item = DB::transaction(function () use ($data, $size, $request, $auditLog) {
+        $item = DB::transaction(function () use ($data, $size, $request, $auditLog, $inventoryService) {
             $item = Inventory::create($data + ['reserved_quantity' => 0]);
 
             if ($item->requiresSize()) {
@@ -86,6 +91,13 @@ class InventoryController extends Controller
             }
 
             $item->updateStatus();
+
+            $inventoryService->recordOpeningBalance(
+                $item->fresh(['sizeStocks']),
+                (int) ($data['quantity'] ?? 0),
+                $request->user(),
+                $item->requiresSize() ? $size : null,
+            );
 
             $auditLog->log($request->user(), 'inventory.created', $item, null, [
                 'item_code' => $item->item_code,
@@ -104,9 +116,23 @@ class InventoryController extends Controller
     {
         $this->authorize('view', $inventory);
 
-        $inventory->load(['category', 'department', 'sizeStocks', 'transactions' => fn ($q) => $q->latest()->limit(10)]);
+        $inventory->load(['category', 'department', 'sizeStocks', 'unitOfMeasurement']);
 
         return view('inventory.show', compact('inventory'));
+    }
+
+    public function stockCard(Request $request, Inventory $inventory, StockCardService $stockCard): View
+    {
+        $this->authorize('viewStockCard', $inventory);
+
+        $inventory->load(['category', 'unitOfMeasurement']);
+
+        return view('inventory.stock-card', [
+            'inventory' => $inventory,
+            'entries' => $stockCard->paginate($inventory, $request),
+            'types' => \App\Enums\InventoryTransactionType::stockCardFilters(),
+            'suppliers' => Supplier::orderBy('name')->get(),
+        ]);
     }
 
     public function edit(Inventory $inventory): View
@@ -116,7 +142,8 @@ class InventoryController extends Controller
         return view('inventory.edit', [
             'inventory' => $inventory->load('sizeStocks'),
             'categories' => Category::orderBy('name')->get(),
-            'departments' => Department::orderBy('name')->get(),
+            'departments' => Department::active()->orderBy('name')->get(),
+            'units' => UnitOfMeasurement::orderBy('name')->get(),
             'sizes' => config('psis.uniform_sizes', ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL']),
         ]);
     }
@@ -130,8 +157,20 @@ class InventoryController extends Controller
         unset($data['size_quantities']);
 
         $before = $inventory->only(['item_code', 'item_name', 'unit_price', 'minimum_stock', 'student_shop', 'department_id', 'status']);
+        $oldPrice = (float) $inventory->unit_price;
         $inventory->update($data);
         $inventory->refresh();
+
+        if (isset($data['unit_price']) && (float) $data['unit_price'] !== $oldPrice) {
+            InventoryPriceAdjustment::create([
+                'inventory_id' => $inventory->id,
+                'old_unit_price' => $oldPrice,
+                'new_unit_price' => $data['unit_price'],
+                'reason' => $request->input('price_adjustment_reason') ?: 'Unit price updated on item edit.',
+                'adjusted_by' => $request->user()->id,
+                'adjusted_at' => now(),
+            ]);
+        }
 
         if ($inventory->requiresSize()) {
             try {
@@ -187,7 +226,7 @@ class InventoryController extends Controller
             'item_name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'category_id' => ['required', 'exists:categories,id'],
-            'unit' => ['required', 'string', 'max:50'],
+            'unit_of_measurement_id' => ['required', 'exists:units_of_measurement,id'],
             'unit_price' => ['required', 'numeric', 'min:0'],
             'minimum_stock' => ['required', 'integer', 'min:0'],
             'location' => ['nullable', 'string', 'max:255'],
@@ -206,6 +245,10 @@ class InventoryController extends Controller
 
         $data = $request->validate($rules);
         $data['student_shop'] = $request->boolean('student_shop');
+        $uom = UnitOfMeasurement::find($data['unit_of_measurement_id']);
+        if ($uom) {
+            $data['unit'] = $uom->symbol === 'pcs' ? 'piece' : $uom->symbol;
+        }
 
         return $data;
     }

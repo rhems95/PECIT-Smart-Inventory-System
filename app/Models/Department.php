@@ -31,6 +31,11 @@ class Department extends Model
         return $this->hasMany(Inventory::class);
     }
 
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
     public function supplyRequests(): HasMany
     {
         return $this->hasMany(SupplyRequest::class);

@@ -33,7 +33,7 @@
             <li><strong>last_name</strong> — login credential with student ID</li>
             <li><strong>name</strong> — full display name</li>
             <li><strong>email</strong> — for notifications only</li>
-            <li><strong>department_code</strong> — e.g. CIT, COE, COB, SHS</li>
+            <li><strong>department_code</strong> — e.g. CCS, CC, CTHM, CTE, CBA, SHS</li>
             <li><strong>phone</strong> — optional</li>
         </ul>
         <p class="text-slate-500">Existing student IDs or emails are skipped. Department codes currently available:</p>

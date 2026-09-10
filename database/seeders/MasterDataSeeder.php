@@ -35,16 +35,21 @@ class MasterDataSeeder extends Seeder
         );
 
         $departments = [
-            ['College of Engineering', 'COE'],
-            ['College of Information Technology', 'CIT'],
-            ['College of Business', 'COB'],
+            ['College of Computer Studies', 'CCS'],
+            ['College of Criminology', 'CC'],
+            ['College of Tourism and Hospitality Management', 'CTHM'],
+            ['College of Teacher Education', 'CTE'],
+            ['College of Business Administration', 'CBA'],
             ['Senior High School', 'SHS'],
             ['Administration', 'ADMIN'],
             ['Supply Office', 'SUPPLY'],
         ];
 
         foreach ($departments as [$name, $code]) {
-            Department::firstOrCreate(['code' => $code], ['name' => $name]);
+            Department::updateOrCreate(
+                ['code' => $code],
+                ['name' => $name, 'is_active' => true],
+            );
         }
     }
 }

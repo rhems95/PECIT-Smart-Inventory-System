@@ -16,10 +16,10 @@ class SupplyRecentPurchasesAndAuditLogsTest extends TestCase
 
     public function test_supply_dashboard_shows_recent_student_purchases_with_department(): void
     {
-        $department = Department::create([
-            'name' => 'College of Information Technology',
-            'code' => 'CIT',
-        ]);
+        $department = Department::query()->firstOrCreate(
+            ['code' => 'CCS'],
+            ['name' => 'College of Computer Studies', 'is_active' => true],
+        );
 
         $student = User::factory()->create([
             'name' => 'Ana Santos',
@@ -52,7 +52,7 @@ class SupplyRecentPurchasesAndAuditLogsTest extends TestCase
                 'Date',
                 'PR-TEST-001',
                 'Ana Santos',
-                'College of Information Technology',
+                'College of Computer Studies',
             ])
             ->assertDontSee('Purchase #');
     }
@@ -71,10 +71,10 @@ class SupplyRecentPurchasesAndAuditLogsTest extends TestCase
 
     public function test_accounting_dashboard_shows_recent_verified_payments(): void
     {
-        $department = Department::create([
-            'name' => 'College of Engineering',
-            'code' => 'COE',
-        ]);
+        $department = Department::query()->firstOrCreate(
+            ['code' => 'CC'],
+            ['name' => 'College of Criminology', 'is_active' => true],
+        );
 
         $student = User::factory()->create([
             'name' => 'Luis Mendoza',
@@ -105,7 +105,7 @@ class SupplyRecentPurchasesAndAuditLogsTest extends TestCase
             ->assertOk()
             ->assertSee('Recent verified payments')
             ->assertSee('Luis Mendoza')
-            ->assertSee('College of Engineering')
+            ->assertSee('College of Criminology')
             ->assertSee('PR-VERIFIED-001')
             ->assertDontSee('PR-WAITING-001');
 

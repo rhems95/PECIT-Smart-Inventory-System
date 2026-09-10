@@ -7,17 +7,21 @@ Dates are in **Asia/Manila**.
 
 ---
 
-## [Unreleased] — 2026-09-08
+## [Unreleased] — 2026-09-10
 
 ### Added
 
 - Supply / Admin dashboard **Recent Student Purchases** (order date, student name, department, purchase #, status).
 - Accounting dashboard and **Verify Payments** show **Recent verified payments** (verified date, student, department, purchase #, amount, status). Waiting payments stay in the top queue; after verify they appear in this list.
+- Stock Card (`inventory.stock-card`) for Admin, Supply, Accounting, Admission — generated from `transactions`
+- **Suppliers** and **Units of measurement** (Admin / Supply). Supplier is stored on each stock movement, not as a single supplier on the item.
+- AI Assistant uses a **question list** (no free typing). Questions are role-specific; answers still come from live PSIS data.
 - Students can **Cancel Purchase** until Supply releases (before or after Accounting verifies).
 - Audit Logs now record logins, inventory/stock, users, master data, and profile changes, with who / action / record / details.
 
 ### Changed
 
+- Academic departments are now **CCS** (College of Computer Studies), **CC** (College of Criminology), **CTHM** (College of Tourism and Hospitality Management), **CTE** (College of Teacher Education), and **CBA** (College of Business Administration), plus **SHS**, **Administration** (`ADMIN`), and **Supply Office** (`SUPPLY`). Existing records were remapped **CIT→CCS**, **COE→CC**, **COB→CBA**. Demo student `STU-COE-001` is now `STU-CC-001` (Mendoza / Criminology).
 - Student login: **Last name** first (visible); **Student ID** below, hidden while typing, with a Show Student ID checkbox. Staff/Student tabs work with HTML + CSS (no Alpine), so the form still works when JS assets fail to load.
 - App URLs follow the incoming request (`SetRootUrlFromRequest`, trusted proxies, relative Vite paths) so login and CSS/JS work when the site is opened from another PC or a port-forward / tunnel, not only `APP_URL` localhost.
 - Inventory **Add Item**: uniform size shows when Uniform Shop is checked even if Alpine does not start. Faculty **New Request** always has a first item line (Add line works without Alpine). Shop **Add to Cart** stays visible without Alpine.
@@ -134,4 +138,4 @@ Staff password: `password`
 | Accounting | `accounting@pecit.edu.ph` |
 | Supply Personnel | `supply@pecit.edu.ph` |
 | Faculty | `faculty@pecit.edu.ph` |
-| Student | Student tab: `STU-001` / `Santos` or `STU-COE-001` / `Mendoza` |
+| Student | Student tab: `STU-001` / `Santos` (CCS) or `STU-CC-001` / `Mendoza` (CC) |

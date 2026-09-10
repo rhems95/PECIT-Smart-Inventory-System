@@ -3,6 +3,8 @@
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\SupplierController;
+use App\Http\Controllers\Admin\UnitOfMeasurementController;
 use App\Http\Controllers\AdminRequestController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AccountingController;
@@ -27,6 +29,11 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
     Route::resource('inventory', InventoryController::class)
         ->only(['create', 'store', 'edit', 'update', 'destroy'])
         ->middleware('role:Administrator|Supply Personnel');
+
+    Route::get('inventory/{inventory}/stock-card', [InventoryController::class, 'stockCard'])
+        ->whereNumber('inventory')
+        ->middleware('role:Administrator|Admission|Accounting|Supply Personnel')
+        ->name('inventory.stock-card');
 
     Route::resource('inventory', InventoryController::class)
         ->only(['index', 'show'])
@@ -89,6 +96,16 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
             Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
             Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
 
+            Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+            Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+            Route::get('/suppliers/{supplier}', [SupplierController::class, 'show'])->name('suppliers.show');
+            Route::put('/suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
+            Route::post('/suppliers/{supplier}/toggle', [SupplierController::class, 'toggle'])->name('suppliers.toggle');
+
+            Route::get('/units', [UnitOfMeasurementController::class, 'index'])->name('units.index');
+            Route::post('/units', [UnitOfMeasurementController::class, 'store'])->name('units.store');
+            Route::put('/units/{unit}', [UnitOfMeasurementController::class, 'update'])->name('units.update');
+
             Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
             Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
         });
@@ -97,7 +114,11 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
     Route::prefix('supply')->name('supply.')->middleware('role:Supply Personnel|Administrator')->group(function () {
         Route::get('/stock', [SupplyOperationsController::class, 'stockIndex'])->name('stock.index');
         Route::post('/stock-in', [SupplyOperationsController::class, 'stockIn'])->name('stock.in');
+        Route::post('/stock-out', [SupplyOperationsController::class, 'stockOut'])->name('stock.out');
         Route::post('/adjust', [SupplyOperationsController::class, 'adjust'])->name('stock.adjust');
+        Route::post('/damage', [SupplyOperationsController::class, 'damage'])->name('stock.damage');
+        Route::post('/bad-order', [SupplyOperationsController::class, 'badOrder'])->name('stock.bad-order');
+        Route::post('/return-supplier', [SupplyOperationsController::class, 'returnToSupplier'])->name('stock.return');
 
         Route::get('/releases', [SupplyOperationsController::class, 'releases'])->name('releases');
         Route::get('/releases/{request}', [SupplyOperationsController::class, 'showRelease'])->name('releases.show');

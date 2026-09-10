@@ -4,9 +4,11 @@
 **Database:** `pecit_sis` (MySQL / MariaDB via XAMPP)  
 **Source:** Laravel migrations under `database/migrations/`
 
-This document is for project documentation. Render the Mermaid diagrams in GitHub, VS Code/Cursor Markdown preview, or [mermaid.live](https://mermaid.live).
+This document is for project documentation. Render the Mermaid diagrams in GitHub, VS Code/Cursor Markdown preview, or [mermaid.live](https://mermaid.live). Stock Card / ledger (Phase 1 & 2): [`STOCK-LEDGER.md`](STOCK-LEDGER.md).
 
-There is **no `suppliers` table**. `supplier_id` was dropped from `inventory`. Uniform Shop exclusivity is modeled on `inventory.student_shop` + `inventory.department_id` (null = shared; set = department-exclusive).
+There is **no `supplier_id` on the inventory item**. Supplier (when used) is recorded on the stock movement. Uniform Shop exclusivity is modeled on `inventory.student_shop` + `inventory.department_id` (null = shared; set = exclusive to that department’s students).
+
+Canonical `departments.code` values: **CCS**, **CC**, **CTHM**, **CTE**, **CBA**, **SHS**, **ADMIN**, **SUPPLY**.
 
 **Available quantity is not a stored column.**
 
@@ -57,7 +59,7 @@ erDiagram
     DEPARTMENTS {
         bigint id PK
         string name
-        string code UK
+        string code UK "CCS CC CTHM CTE CBA SHS ADMIN SUPPLY"
         text description
         boolean is_active
     }
@@ -305,11 +307,28 @@ erDiagram
 
 1. `student_shop = true`
 2. `department_id` **null** → shared (P.E., NSTP, ID lanyard)
-3. `department_id` **set** → only students whose `users.department_id` matches
-4. Students never see another department’s exclusive uniform
+3. `department_id` **set** → only students whose `users.department_id` matches (CCS, CC, CTHM, CTE, CBA, or SHS exclusive uniforms)
+4. Students never see another department’s exclusive uniform (e.g. CCS students never see the CC exclusive)
 5. Clothing uniforms require `purchase_request_items.size`; stock is reserved/released on that size. Accessories (e.g. ID lanyard) skip size.
 
 Checkout and cart enforce the same checks. Students have **no** `/inventory` access.
+
+---
+
+## 3a. Canonical departments
+
+| Code | Name | Typical shop use |
+|------|------|------------------|
+| `CCS` | College of Computer Studies | Exclusive uniforms |
+| `CC` | College of Criminology | Exclusive uniforms |
+| `CTHM` | College of Tourism and Hospitality Management | Exclusive uniforms |
+| `CTE` | College of Teacher Education | Exclusive uniforms |
+| `CBA` | College of Business Administration | Exclusive uniforms |
+| `SHS` | Senior High School | Exclusive uniforms |
+| `ADMIN` | Administration | Staff home department |
+| `SUPPLY` | Supply Office | Staff home department |
+
+Seeded exclusive item codes: `UNI-CCS`, `UNI-CC`, `UNI-CTHM`, `UNI-CTE`, `UNI-CBA`, `UNI-SHS`. Shared shop items leave `department_id` null (`UNI-PE`, `UNI-NSTP`, `UNI-LANYARD`).
 
 ---
 
@@ -318,7 +337,7 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 | Table | Purpose |
 |-------|---------|
 | `users` | Accounts (all roles). Students log in with `employee_id` + `last_name` |
-| `departments` | Organizational units; also Uniform Shop exclusivity |
+| `departments` | Organizational units (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) and Uniform Shop exclusivity |
 | `categories` | Inventory categories (includes Uniforms) |
 | `inventory` | Stock: on hand, reserved, shop flag, optional exclusive department. For sized uniforms, totals are sums of size rows |
 | `inventory_size_stocks` | Per-size on-hand and reserved qty (unique `inventory_id` + `size`). Clothing shop items only |
@@ -334,9 +353,9 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 | `announcements` | Campus announcements |
 | `roles` / `permissions` / pivots | Spatie RBAC (`Administrator`, `Admission`, `Accounting`, `Supply Personnel`, `Faculty`, `Student`) |
 
-### Removed (do not document as current)
+### Note on suppliers
 
-`suppliers` and `inventory.supplier_id` — dropped in `2026_08_06_000001_drop_suppliers_from_inventory.php`.
+`inventory.supplier_id` was dropped from the item master (`2026_08_06_000001_drop_suppliers_from_inventory.php`). Supplier is stored on **stock movements** (`transactions.supplier_id`), not as a single supplier on the inventory item.
 
 ### Framework tables (not shown above)
 
@@ -355,7 +374,7 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 | Relationship | Cardinality | Notes |
 |--------------|-------------|--------|
 | Department → Users | 1:N (optional) | `users.department_id` nullable; `SET NULL` |
-| Department → Inventory | 1:N (optional) | Exclusive shop items only; null = shared |
+| Department → Inventory | 1:N (optional) | Exclusive shop items only; null = shared (P.E. / NSTP / lanyard) |
 | Category → Inventory | 1:N | Required; `CASCADE` |
 | User → Requests | 1:N | Faculty requester |
 | Request → Request Items | 1:N | Identifying |
@@ -380,4 +399,4 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 
 ---
 
-*Keep this file updated when migrations change. Last aligned with uniform size stocks (`inventory_size_stocks`), `purchase_request_items.size`, Admission role, and the suppliers drop.*
+*Keep this file updated when migrations change. Last aligned with academic departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY), uniform size stocks (`inventory_size_stocks`), `purchase_request_items.size`, Admission role, and supplier on stock movements (not on the item).*

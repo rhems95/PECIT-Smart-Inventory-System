@@ -39,7 +39,7 @@ class SupplyStudentController extends Controller
     {
         return view('supply.students.form', [
             'student' => new User,
-            'departments' => Department::orderBy('name')->get(),
+            'departments' => Department::active()->orderBy('name')->get(),
         ]);
     }
 
@@ -57,7 +57,7 @@ class SupplyStudentController extends Controller
 
         return view('supply.students.form', [
             'student' => $student,
-            'departments' => Department::orderBy('name')->get(),
+            'departments' => Department::active()->orderBy('name')->get(),
         ]);
     }
 
@@ -73,7 +73,7 @@ class SupplyStudentController extends Controller
     public function importForm(): View
     {
         return view('supply.students.import', [
-            'departments' => Department::orderBy('code')->get(),
+            'departments' => Department::active()->orderBy('code')->get(),
         ]);
     }
 
