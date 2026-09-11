@@ -5,7 +5,9 @@
 
 Render Mermaid diagrams in GitHub, Cursor/VS Code Markdown preview, or [mermaid.live](https://mermaid.live) (export PNG/SVG for reports).
 
-Related: [`ER-DIAGRAM.md`](ER-DIAGRAM.md) · [`STOCK-LEDGER.md`](STOCK-LEDGER.md)
+Related: [`ER-DIAGRAM.md`](ER-DIAGRAM.md)
+
+There is **no public self-registration**. Staff use email + password; students use last name + Student ID. AI answers a **question list** from live data (`AiInsightService`); it is not an external LLM. Stock Card shows **physical** `transactions` only (reserve/restore hidden). Supplier and optional unit cost live on the **movement**, not on the item. Typed PO / DR numbers on stock-in are receiving text, not a purchase-order module.
 
 ---
 
@@ -13,33 +15,38 @@ Related: [`ER-DIAGRAM.md`](ER-DIAGRAM.md) · [`STOCK-LEDGER.md`](STOCK-LEDGER.md
 
 ```mermaid
 flowchart TD
-    A([User opens PSIS]) --> B[Login / Register]
-    B --> C{Authenticated?}
-    C -->|No| B
-    C -->|Yes| D{Email verified?}
-    D -->|No| E[Verify email]
-    E --> D
-    D -->|Yes| F{Account active?}
-    F -->|No| G([Access blocked])
-    F -->|Yes| H{Session timed out?}
-    H -->|Yes| B
-    H -->|No| I[Dashboard]
+    A([User opens PSIS]) --> B{Login tab}
+    B -->|Staff| C[Email + password]
+    B -->|Student| D[Last name + Student ID]
+    C --> E{Authenticated?}
+    D --> E
+    E -->|No| B
+    E -->|Yes| F{Email verified?}
+    F -->|No| G[Verify email]
+    G --> F
+    F -->|Yes| H{Account active?}
+    H -->|No| I([Access blocked])
+    H -->|Yes| J{Session timed out?}
+    J -->|Yes| B
+    J -->|No| K[Dashboard]
 
-    I --> J{Role}
-    J -->|Administrator| K[Users / Approvals / Master data / Reports / AI]
-    J -->|Admission| K2[Dashboard / Inventory view / Approve requests]
-    J -->|Accounting| L[Review faculty requests / Verify payments / Reports]
-    J -->|Supply Personnel| M[Stock / Release / Students / Users / Master data / Audit]
-    J -->|Faculty| N[Submit and track supply requests]
-    J -->|Student| O[Shop / Cart / Size / Pay / Track purchases]
+    K --> L{Role}
+    L -->|Administrator| M[Users / Approvals / Master data / Suppliers / Units / Stock / Reports / Audit / AI]
+    L -->|Admission| N[Dashboard / Inventory view / Stock Card / Approve requests]
+    L -->|Accounting| O[Review faculty requests / Verify payments / Reports / Inventory + Stock Card]
+    L -->|Supply Personnel| P[Stock ops / Release / Students / Users / Master data / Suppliers / Units / Audit]
+    L -->|Faculty| Q[Submit and track supply requests / View inventory]
+    L -->|Student| R[Shop / Cart / Size / Pay / Track / Cancel until release]
 
-    K --> P[Notifications + AI assistant]
-    K2 --> P
-    L --> P
-    M --> P
-    N --> P
-    O --> P
+    M --> S[Notifications + AI question list]
+    N --> S
+    O --> S
+    P --> S
+    Q --> S
+    R --> S
 ```
+
+Students never receive an Inventory or Stock Card menu. Faculty can view inventory but cannot open the Stock Card or change stock.
 
 ---
 
@@ -52,10 +59,9 @@ flowchart TD
     C --> D[Status: pending]
     D --> E[Notify Accounting]
     E --> F{Faculty cancels?}
-    F -->|Yes| G([Status: cancelled])
+    F -->|Yes| G([Status: cancelled — no stock change])
     F -->|No| H[Accounting reviews quantities / prices]
     H --> I{Accounting decision}
-    I -->|Reject path via Admin| J[Status: admin_review then reject]
     I -->|Forward| K[Status: admin_review]
     K --> L[Notify Admission + Administrator]
     L --> M{Admission or Admin decision}
@@ -64,24 +70,29 @@ flowchart TD
     M -->|Approve| P[Reserve stock per line item]
     P --> Q[Status: approved]
     Q --> R[Notify Faculty + Supply Personnel]
-    R --> S[Supply Personnel releases items]
-    S --> T[Deduct reserved stock / log transaction]
-    T --> U([Status: released])
-    U --> V[Notify Faculty]
+    R --> S{Faculty cancels before release?}
+    S -->|Yes| T[Restore reserved / status cancelled]
+    S -->|No| U[Supply Personnel releases items]
+    U --> V[Deduct on-hand and reserved / physical ledger row]
+    V --> W([Status: released])
+    W --> X[Notify Faculty]
 
     style P fill:#fff3cd
-    style T fill:#d1e7dd
+    style T fill:#f8d7da
+    style V fill:#d1e7dd
 ```
 
-**Stock rule:** Submit does **not** deduct stock. **Approve** reserves. **Release** deducts.
+**Stock rule:** Submit does **not** deduct stock. **Approve** reserves. **Release** deducts. **Cancel after approve** restores reserved.
 
 | Status | Actor | Stock effect |
 |--------|--------|--------------|
 | `pending` | Faculty | None |
 | `accounting_review` / `admin_review` | Accounting → Admission / Admin | None |
-| `approved` | Admission or Administrator | Reserve |
-| `released` | Supply Personnel | Deduct (from reserved) |
-| `rejected` / `cancelled` | Admission / Admin / Faculty | None |
+| `approved` | Admission or Administrator | Reserve (`transactions.type = reserve`, hidden on Stock Card) |
+| `released` | Supply Personnel | Deduct on-hand and reserved (`type = release`, shown on card) |
+| `cancelled` while pending / admin_review | Faculty | None |
+| `cancelled` while approved | Faculty (or Admin) | Restore reserved (`type = restore`, hidden on card) |
+| `rejected` | Admission / Admin | None |
 
 ---
 
@@ -90,7 +101,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A([Student]) --> B[Browse shop: own department exclusives + shared]
-    B --> C[Choose size for uniforms]
+    B --> C[Choose size for clothing uniforms]
     C --> D[Add items to cart]
     D --> E{Cart valid + size stock + department allowed?}
     E -->|No| C
@@ -99,33 +110,39 @@ flowchart TD
     G --> H[Status: payment_submitted]
     H --> I[Notify Accounting]
     I --> J[Student uploads receipt optional]
-    J --> K[Accounting verifies payment]
-    K --> L{Payment OK?}
-    L -->|No| M[Remains / follow-up]
-    L -->|Yes| N[Reserve stock for size]
-    N --> O[Status: payment_verified]
-    O --> P[Notify Student + Supply Personnel]
-    P --> Q[Supply Personnel releases purchase]
-    Q --> R[Deduct reserved size stock / log transaction]
-    R --> S([Status: released])
-    S --> T[Notify Student]
+    J --> K{Student cancels?}
+    K -->|Yes before verify| Z([Cancelled — no stock change])
+    K -->|No| L[Accounting verifies payment]
+    L --> M{Payment OK?}
+    M -->|No| N[Remains / follow-up]
+    M -->|Yes| O[Reserve stock for size]
+    O --> P[Status: payment_verified]
+    P --> Q[Notify Student + Supply Personnel]
+    Q --> R{Student cancels?}
+    R -->|Yes| S[Restore reserved size stock / cancelled]
+    R -->|No| T[Supply Personnel releases purchase]
+    T --> U[Deduct reserved size stock / physical ledger row]
+    U --> V([Status: released])
+    V --> W[Notify Student]
 
-    style N fill:#fff3cd
-    style R fill:#d1e7dd
+    style O fill:#fff3cd
+    style S fill:#f8d7da
+    style U fill:#d1e7dd
 ```
 
 | Status | Actor | Stock effect |
 |--------|--------|--------------|
 | `pending` → `payment_submitted` | Student checkout | None |
-| `payment_verified` | Accounting | Reserve |
+| `payment_verified` | Accounting | Reserve (per size when clothing) |
 | `released` | Supply Personnel | Deduct |
-| `cancelled` | Allowed actors | Release reservation if any |
+| `cancelled` before verify | Student | None |
+| `cancelled` after verify | Student / Accounting / Admin | Restore reserved (including size) |
 
-**Shop listing:** students only see items with `student_shop = true` that are either **shared** (`department_id` null: P.E., NSTP, lanyard) or **exclusive to their department** (CCS, CC, CTHM, CTE, CBA, or SHS). Other departments’ exclusives are hidden; cart and checkout reject them.
+**Shop listing:** students only see items with `student_shop = true` that are either **shared** (`department_id` null: P.E., NSTP, lanyard) or **exclusive to their department** (CCS, CC, CTHM, CTE, CBA, or SHS). Other departments’ exclusives are hidden; cart and checkout reject them. Discontinued items are hidden.
 
 ```mermaid
 flowchart TD
-    A[Student opens Uniform Shop] --> B{student_shop = true?}
+    A[Student opens Uniform Shop] --> B{student_shop = true and not discontinued?}
     B -->|No| H([Hidden])
     B -->|Yes| C{department_id null?}
     C -->|Yes| D[Show shared: P.E. / NSTP / lanyard]
@@ -142,18 +159,18 @@ flowchart TD
 
 ---
 
-## 4. Inventory stock lifecycle
+## 4. Inventory stock lifecycle and Stock Card
 
 ```mermaid
 flowchart LR
-    A[Supply Personnel: Stock In by size] --> B[(On Hand quantity)]
-    C[Supply Personnel: Adjust by size] --> B
+    A[Supply: Stock In + source + optional supplier / PO / DR / unit cost] --> B[(On Hand quantity)]
+    C[Supply: Adjust / damage / bad order / return by size] --> B
     B --> D{Available = On Hand − Reserved per size or item}
     D --> E[Admission/Admin approve / Accounting verify payment]
     E --> F[(Reserved quantity ↑)]
     F --> G[Supply release]
     G --> H[(On Hand ↓ and Reserved ↓)]
-    H --> I[Transaction + Stock log]
+    H --> I[Physical row on Stock Card]
     B --> J{Below minimum?}
     J -->|Yes| K[Low-stock alert / AI restock tips]
     J -->|No| D
@@ -169,8 +186,14 @@ flowchart TD
     CHECK -->|Reserve| R1[reserved_quantity += qty]
     CHECK -->|Release| R2[quantity -= qty<br/>reserved_quantity -= qty]
     CHECK -->|Stock In| R3[quantity += qty]
+    CHECK -->|Damage / bad order / return / stock-out| R4[quantity -= qty from available]
+    CHECK -->|Restore| R5[reserved_quantity -= qty]
     CHECK -->|No| ERR([Runtime error: insufficient stock])
 ```
+
+**Stock-in sources** (`StockSourceType` on the form): Manual / external, Purchase order (supplier + PO number **required**), Emergency purchase (reference **required**), Donation, Opening balance, Other. Purchase-order source is **not** a PO module.
+
+**Stock Card** (`StockCardService`): reads `transactions` with physical types only; filters by date, type, supplier, and reference. Admin, Admission, Accounting, and Supply may open it. Faculty cannot.
 
 ---
 
@@ -187,10 +210,13 @@ flowchart TD
     F -->|Yes| G[Email to user]
     F -->|No| E
 
-    H[Scheduled: psis:low-stock-alert] --> D
-    I[User asks AI widget] --> J[AiInsightService]
-    J --> K[Role-aware answer / restock forecast]
+    H[Scheduled: psis:low-stock-alert at 08:00] --> D
+    I[User picks AI question from list] --> J[AiInsightService]
+    J --> K[Role-aware answer from live DB]
+    I2[Free-typed question] --> I3([Rejected])
 ```
+
+Audit logs record logins, inventory/stock, users, master data, and profile changes.
 
 ---
 
@@ -200,32 +226,40 @@ flowchart TD
 flowchart TD
     A([Administrator]) --> B[Manage users + roles]
     A --> C[Departments / Categories]
+    A --> SUP[Suppliers]
+    A --> UOM[Units of measurement]
     A --> D[Announcements]
     A --> E[Approve / reject faculty requests]
     A --> F[View audit logs]
     A --> G[Reports PDF / Excel]
     A --> H[AI restock insights]
+    A --> SC[Stock Card / stock operations]
 
     AD([Admission]) --> E
-    AD --> IV[View inventory + dashboard]
+    AD --> IV[View inventory + Stock Card + dashboard]
 
     SP([Supply Personnel]) --> B
     SP --> C
+    SP --> SUP
+    SP --> UOM
     SP --> D
     SP --> F
     SP --> ST[Students add / CSV]
-    SP --> SK[Stock in-adjust by size]
+    SP --> SK[Stock in / out / damage / return by size]
+    SP --> SC
 
     B --> I[(users + Spatie roles)]
     C --> J[(master tables → inventory)]
+    SUP --> TXN[(transactions.supplier_id)]
+    UOM --> INV[(inventory.unit_of_measurement_id)]
     D --> K[Shown on dashboards]
     E --> L[See Faculty workflow]
     F --> M[(audit_logs)]
     G --> N[Operational decisions]
-    SK --> SZ[(inventory_size_stocks)]
+    SK --> SZ[(inventory_size_stocks + transactions)]
 ```
 
-**Canonical departments:** CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY. Academic codes drive Uniform Shop exclusivity; ADMIN and SUPPLY are staff home departments.
+**Canonical departments:** CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY. Academic codes drive Uniform Shop exclusivity; ADMIN and SUPPLY are staff home departments. CSV import `department_code` uses CCS, CC, CTHM, CTE, CBA, SHS.
 
 ---
 
@@ -236,32 +270,36 @@ flowchart TB
     subgraph Faculty
         F1[Submit request] --> F2[Cancel if still open]
         F3[Receive release notification]
+        F4[View inventory — no Stock Card]
     end
 
     subgraph Student
         S1[Shop: own dept + shared + size] --> S2[Checkout + receipt]
+        S2 --> S2b[Cancel until release]
         S3[Receive items after release]
     end
 
     subgraph Accounting
         A1[Review faculty request] --> A2[Forward to Admission / Admin]
         A3[Verify student payment] --> A4[Trigger reserve]
+        A5[Inventory + Stock Card + reports]
     end
 
     subgraph Admission
         ADM1[Approve / reject request] --> ADM2[Trigger reserve on approve]
-        ADM3[Dashboard + view inventory]
+        ADM3[Dashboard + inventory + Stock Card]
     end
 
     subgraph Administrator
         AD1[Approve / reject request] --> AD2[Trigger reserve on approve]
-        AD3[Users / master data / reports]
+        AD3[Users / master data / suppliers / units / reports]
     end
 
     subgraph Supply Personnel
-        SP1[Stock in / adjust by size] --> SP2[Release approved requests]
+        SP1[Stock in with source / supplier] --> SP2[Release approved requests]
         SP2 --> SP3[Release verified purchases]
-        SP4[Users / categories / departments / students / audit]
+        SP4[Users / categories / departments / suppliers / units / students / audit]
+        SP5[Damage / bad order / return to supplier]
     end
 
     F1 --> A1
@@ -281,8 +319,8 @@ flowchart TB
 
 - Paste any diagram into [mermaid.live](https://mermaid.live) → **Export PNG/SVG** for Word/PDF chapters  
 - GitHub renders Mermaid in Markdown automatically after push  
-- For thesis/docs, use **§2 Faculty** and **§3 Student** as the two primary process chapters; use **§1** as the system context diagram  
+- For thesis/docs, use **§2 Faculty** and **§3 Student** as the two primary process chapters; use **§1** as the system context diagram; use **§4** for Stock Card / stock-in sources  
 
 ---
 
-*Keep this file aligned with `SupplyRequestService`, `PurchaseRequestService`, `InventoryService`, and the canonical departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) when workflows change.*
+*Keep this file aligned with `SupplyRequestService`, `PurchaseRequestService`, `InventoryService`, `StockCardService`, `AiInsightService`, and the canonical departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) when workflows change. Last aligned 11 September 2026.*

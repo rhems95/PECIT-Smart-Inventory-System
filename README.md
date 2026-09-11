@@ -363,7 +363,7 @@ npm run dev
 
 ## Database / Diagrams
 
-GitHub renders the Mermaid ERD below on this README. Workflow notes and cardinality tables: [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md). Process charts: [`docs/FLOWCHART.md`](docs/FLOWCHART.md). Stock Card / ledger (Phase 1 & 2) and why FIFO, moving-average costing, and purchase orders are not in this app: [`docs/STOCK-LEDGER.md`](docs/STOCK-LEDGER.md).
+GitHub renders the Mermaid ERD below on this README. Workflow notes, Stock Card ledger fields, and cardinality tables: [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md). Process charts: [`docs/FLOWCHART.md`](docs/FLOWCHART.md). FIFO, moving-average costing, and a purchase-order **module** are not in this app (typed PO/DR numbers on stock-in are receiving text only).
 
 Suppliers are stored on **stock movements** (`transactions.supplier_id`), not as a single supplier on the item. Available quantity is not stored: non-sized items use `available = quantity − reserved_quantity`; shop uniforms use **per-size** rows (`inventory_size_stocks`). Uniform Shop exclusivity is `inventory.student_shop` plus `inventory.department_id` (null = shared; set = exclusive to CCS, CC, CTHM, CTE, CBA, or SHS). Student clothing purchases store `purchase_request_items.size`. Each item has a **Stock Card** generated from `transactions` (physical movements only).
 
@@ -383,6 +383,9 @@ erDiagram
     USERS ||--o{ STOCK_LOGS : "performs"
 
     CATEGORIES ||--o{ INVENTORY : "classifies"
+    UNITS_OF_MEASUREMENT ||--o{ INVENTORY : "UoM"
+    SUPPLIERS ||--o{ TRANSACTIONS : "optional on movement"
+    USERS ||--o{ INVENTORY_PRICE_ADJUSTMENTS : "adjusts price"
 
     REQUESTS ||--|{ REQUEST_ITEMS : "contains"
     INVENTORY ||--o{ REQUEST_ITEMS : "requested as"
@@ -392,8 +395,9 @@ erDiagram
     PURCHASE_REQUESTS ||--o{ PAYMENTS : "paid via"
 
     INVENTORY ||--o{ INVENTORY_SIZE_STOCKS : "stock by size"
-    INVENTORY ||--o{ TRANSACTIONS : "stock movement"
+    INVENTORY ||--o{ TRANSACTIONS : "stock ledger"
     INVENTORY ||--o{ STOCK_LOGS : "delivery log"
+    INVENTORY ||--o{ INVENTORY_PRICE_ADJUSTMENTS : "selling price history"
 
     ROLES ||--o{ MODEL_HAS_ROLES : "assigned"
     USERS ||--o{ MODEL_HAS_ROLES : "has role"
@@ -432,6 +436,20 @@ erDiagram
         boolean is_active
     }
 
+    UNITS_OF_MEASUREMENT {
+        bigint id PK
+        string name
+        string symbol UK
+        string description
+    }
+
+    SUPPLIERS {
+        bigint id PK
+        string supplier_code UK
+        string name
+        boolean is_active
+    }
+
     INVENTORY {
         bigint id PK
         string item_code UK
@@ -440,6 +458,7 @@ erDiagram
         bigint category_id FK
         bigint department_id FK
         string unit
+        bigint unit_of_measurement_id FK
         decimal unit_price
         int quantity
         int reserved_quantity
@@ -447,6 +466,14 @@ erDiagram
         string location
         enum status
         boolean student_shop
+    }
+
+    INVENTORY_PRICE_ADJUSTMENTS {
+        bigint id PK
+        bigint inventory_id FK
+        decimal old_unit_price
+        decimal new_unit_price
+        bigint adjusted_by FK
     }
 
     INVENTORY_SIZE_STOCKS {
@@ -518,12 +545,16 @@ erDiagram
         bigint id PK
         string transaction_number UK
         bigint inventory_id FK
-        enum type
-        int quantity
-        int quantity_before
-        int quantity_after
-        string reference_type
-        bigint reference_id
+        string type
+        string source_type
+        int quantity_in
+        int quantity_out
+        int balance_after
+        decimal unit_cost
+        bigint supplier_id FK
+        string reference_number
+        string delivery_receipt_number
+        string size
         bigint performed_by FK
     }
 
@@ -613,7 +644,7 @@ app/
 config/psis.php         # PSIS_MAIL_NOTIFICATIONS and related flags
 database/migrations/    # Schema
 database/seeders/       # Roles, master data, demo users & inventory/uniforms
-docs/                   # ER-DIAGRAM.md, FLOWCHART.md, STOCK-LEDGER.md
+docs/                   # ER-DIAGRAM.md, FLOWCHART.md
 CHANGELOG.md            # Release history
 public/images/          # pecit-logo.png, chatbot.png
 resources/views/        # Blade UI (layouts, modules, emails, AI widget)
