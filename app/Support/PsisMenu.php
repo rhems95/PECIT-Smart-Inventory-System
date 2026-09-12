@@ -24,6 +24,8 @@ class PsisMenu
             ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'color' => '#60A5FA', 'roles' => ['Administrator', 'Supply Personnel']],
             ['label' => 'Categories', 'route' => 'admin.categories.index', 'icon' => 'tag', 'color' => '#C084FC', 'roles' => ['Administrator', 'Supply Personnel']],
             ['label' => 'Departments', 'route' => 'admin.departments.index', 'icon' => 'building', 'color' => '#94A3B8', 'roles' => ['Administrator', 'Supply Personnel']],
+            ['label' => 'Suppliers', 'route' => 'admin.suppliers.index', 'icon' => 'truck', 'color' => '#FB923C', 'roles' => ['Administrator', 'Supply Personnel']],
+            ['label' => 'Units', 'route' => 'admin.units.index', 'icon' => 'tag', 'color' => '#2DD4BF', 'roles' => ['Administrator', 'Supply Personnel']],
             ['label' => 'Announcements', 'route' => 'admin.announcements.index', 'icon' => 'megaphone', 'color' => '#F87171', 'roles' => ['Administrator', 'Supply Personnel']],
             ['label' => 'Stock Operations', 'route' => 'supply.stock.index', 'icon' => 'warehouse', 'color' => '#FBBF24', 'roles' => ['Supply Personnel', 'Administrator']],
             ['label' => 'Release Items', 'route' => 'supply.releases', 'icon' => 'package', 'color' => '#FB923C', 'roles' => ['Supply Personnel', 'Administrator']],

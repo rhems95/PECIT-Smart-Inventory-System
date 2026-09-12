@@ -17,6 +17,11 @@ class InventoryPolicy
         return $user->hasAnyRole(['Administrator', 'Admission', 'Accounting', 'Supply Personnel', 'Faculty']);
     }
 
+    public function viewStockCard(User $user, Inventory $inventory): bool
+    {
+        return $user->hasAnyRole(['Administrator', 'Admission', 'Accounting', 'Supply Personnel']);
+    }
+
     public function create(User $user): bool
     {
         return $user->hasAnyRole(['Administrator', 'Supply Personnel']);

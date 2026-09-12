@@ -50,11 +50,14 @@
                     <td class="px-4 py-3">{{ $item->category?->name }}</td>
                     <td class="px-4 py-3 font-semibold">{{ $item->quantity }}</td>
                     <td class="px-4 py-3 text-slate-500">{{ $item->reserved_quantity }}</td>
-                    <td class="px-4 py-3">{{ $item->availableQuantity() }} {{ $item->unit }}</td>
+                    <td class="px-4 py-3">{{ $item->availableQuantity() }} {{ $item->unitLabel() }}</td>
                     <td class="px-4 py-3">₱{{ number_format($item->unit_price, 2) }}</td>
                     <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full @if($item->status==='low_stock') bg-amber-100 text-amber-800 @elseif($item->status==='out_of_stock') bg-red-100 text-red-800 @else bg-green-100 text-green-800 @endif">{{ str_replace('_',' ', $item->status) }}</span></td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         <a href="{{ route('inventory.show', $item) }}" class="text-pecit-blue hover:underline">View</a>
+                        @can('viewStockCard', $item)
+                            <a href="{{ route('inventory.stock-card', $item) }}" class="text-pecit-blue hover:underline ml-3">Stock Card</a>
+                        @endcan
                         @can('delete', $item)
                             <form method="POST" action="{{ route('inventory.destroy', $item) }}" class="inline ml-3" onsubmit="return confirm('Delete this item? This cannot be undone.')">
                                 @csrf

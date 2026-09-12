@@ -41,7 +41,12 @@
     </div>
     <div>
         <label class="psis-label">Unit</label>
-        <input name="unit" value="{{ old('unit', $item?->unit ?? 'piece') }}" class="psis-input" required>
+        <select name="unit_of_measurement_id" class="psis-input" required>
+            <option value="">Select unit</option>
+            @foreach ($units ?? [] as $unit)
+                <option value="{{ $unit->id }}" @selected(old('unit_of_measurement_id', $item?->unit_of_measurement_id) == $unit->id)>{{ $unit->label() }}</option>
+            @endforeach
+        </select>
     </div>
     <div>
         <label class="psis-label">Unit Price</label>

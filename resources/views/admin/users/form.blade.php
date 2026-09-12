@@ -45,7 +45,7 @@
         <label class="psis-label">Department</label>
         <select name="department_id" class="psis-input" x-bind:required="role === 'Student'">
             <option value="">No department</option>
-            @foreach (\App\Models\Department::orderBy('name')->get() as $dept)
+            @foreach (\App\Models\Department::active()->orderBy('name')->get() as $dept)
                 <option value="{{ $dept->id }}" @selected(old('department_id', $user->department_id) == $dept->id)>
                     {{ $dept->name }}
                 </option>

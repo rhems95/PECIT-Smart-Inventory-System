@@ -33,7 +33,7 @@
             </div>
             <div>
                 <dt class="text-slate-500 text-sm">On hand</dt>
-                <dd class="mt-0.5">{{ $inventory->quantity }} {{ $inventory->unit }} (reserved: {{ $inventory->reserved_quantity }})</dd>
+                <dd class="mt-0.5">{{ $inventory->quantity }} {{ $inventory->unitLabel() }} (reserved: {{ $inventory->reserved_quantity }})</dd>
             </div>
             <div>
                 <dt class="text-slate-500 text-sm">Available</dt>
@@ -85,8 +85,11 @@
             </div>
         @endif
 
-        @can('update', $inventory)
-            <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2">
+            @can('viewStockCard', $inventory)
+                <a href="{{ route('inventory.stock-card', $inventory) }}" class="psis-btn-outline inline-flex">Stock Card</a>
+            @endcan
+            @can('update', $inventory)
                 <a href="{{ route('inventory.edit', $inventory) }}" class="psis-btn-outline inline-flex">Edit item &amp; size stock</a>
                 <a href="{{ route('supply.stock.index') }}" class="psis-btn-outline inline-flex">Stock Operations</a>
                 @can('delete', $inventory)
@@ -96,8 +99,8 @@
                         <button type="submit" class="psis-btn-outline inline-flex text-red-600">Delete item</button>
                     </form>
                 @endcan
-            </div>
-        @endcan
+            @endcan
+        </div>
     </div>
 </div>
 @endsection

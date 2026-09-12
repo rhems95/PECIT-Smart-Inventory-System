@@ -2,18 +2,24 @@
 
 **System:** PECIT Smart Inventory System (PSIS)  
 **Database:** `pecit_sis` (MySQL / MariaDB via XAMPP)  
-**Source:** Laravel migrations under `database/migrations/`
+**Source:** Laravel migrations under `database/migrations/` (including `2026_09_10_230000_add_stock_card_foundation.php` and `2026_09_10_233500_replace_academic_departments.php`)
 
 This document is for project documentation. Render the Mermaid diagrams in GitHub, VS Code/Cursor Markdown preview, or [mermaid.live](https://mermaid.live).
 
-There is **no `suppliers` table**. `supplier_id` was dropped from `inventory`. Uniform Shop exclusivity is modeled on `inventory.student_shop` + `inventory.department_id` (null = shared; set = department-exclusive).
+There is **no `supplier_id` on the inventory item**. Supplier (when used) is recorded on the **stock movement** (`transactions.supplier_id`). One item can come from many suppliers, donations, or other sources. There is **no purchase-order document** and **no FIFO / moving-average costing engine**. A source labeled purchase order plus a typed PO or delivery-receipt number is receiving text on stock-in only.
+
+Uniform Shop exclusivity is modeled on `inventory.student_shop` + `inventory.department_id` (null = shared; set = exclusive to that department’s students). There is **no barcode column** on `inventory`.
+
+Canonical `departments.code` values: **CCS**, **CC**, **CTHM**, **CTE**, **CBA**, **SHS**, **ADMIN**, **SUPPLY**. Live remaps: CIT→CCS, COE→CC, COB→CBA.
 
 **Available quantity is not a stored column.**
 
 - Non-sized items: `available = inventory.quantity − inventory.reserved_quantity`
 - Clothing uniforms in the shop: per-size rows on `inventory_size_stocks`; parent `inventory.quantity` / `reserved_quantity` are **sums** of those rows. Students see availability for the **chosen size** only.
 
-Spatie roles include `Admission` (school owner: dashboard, inventory view, request approval).
+**Stock Card** is a view of `transactions` where `type` is physical (`Transaction::scopePhysical()`). Types `reserve` and `restore` are logged for control and **hidden** on the card.
+
+Spatie roles include `Admission` (school owner: dashboard, inventory view, Stock Card, request approval). Students have **no** `/inventory`.
 
 ---
 
@@ -25,6 +31,9 @@ erDiagram
     DEPARTMENTS ||--o{ REQUESTS : "requesting dept"
     DEPARTMENTS ||--o{ INVENTORY : "exclusive shop item"
 
+    UNITS_OF_MEASUREMENT ||--o{ INVENTORY : "UoM"
+    CATEGORIES ||--o{ INVENTORY : "classifies"
+
     USERS ||--o{ REQUESTS : "submits"
     USERS ||--o{ PURCHASE_REQUESTS : "buys"
     USERS ||--o{ PAYMENTS : "pays"
@@ -33,8 +42,7 @@ erDiagram
     USERS ||--o{ AUDIT_LOGS : "performs"
     USERS ||--o{ TRANSACTIONS : "performs"
     USERS ||--o{ STOCK_LOGS : "performs"
-
-    CATEGORIES ||--o{ INVENTORY : "classifies"
+    USERS ||--o{ INVENTORY_PRICE_ADJUSTMENTS : "adjusts price"
 
     REQUESTS ||--|{ REQUEST_ITEMS : "contains"
     INVENTORY ||--o{ REQUEST_ITEMS : "requested as"
@@ -44,8 +52,11 @@ erDiagram
     PURCHASE_REQUESTS ||--o{ PAYMENTS : "paid via"
 
     INVENTORY ||--o{ INVENTORY_SIZE_STOCKS : "stock by size"
-    INVENTORY ||--o{ TRANSACTIONS : "stock movement"
+    INVENTORY ||--o{ TRANSACTIONS : "stock ledger"
     INVENTORY ||--o{ STOCK_LOGS : "delivery log"
+    INVENTORY ||--o{ INVENTORY_PRICE_ADJUSTMENTS : "selling price history"
+
+    SUPPLIERS ||--o{ TRANSACTIONS : "optional on movement"
 
     ROLES ||--o{ MODEL_HAS_ROLES : "assigned"
     USERS ||--o{ MODEL_HAS_ROLES : "has role"
@@ -57,7 +68,7 @@ erDiagram
     DEPARTMENTS {
         bigint id PK
         string name
-        string code UK
+        string code UK "CCS CC CTHM CTE CBA SHS ADMIN SUPPLY"
         text description
         boolean is_active
     }
@@ -84,6 +95,24 @@ erDiagram
         boolean is_active
     }
 
+    UNITS_OF_MEASUREMENT {
+        bigint id PK
+        string name
+        string symbol UK
+        string description
+    }
+
+    SUPPLIERS {
+        bigint id PK
+        string supplier_code UK
+        string name
+        string contact_person
+        string phone
+        string email
+        text address
+        boolean is_active
+    }
+
     INVENTORY {
         bigint id PK
         string item_code UK
@@ -91,8 +120,9 @@ erDiagram
         text description
         bigint category_id FK
         bigint department_id FK "null = shared shop"
-        string unit
-        decimal unit_price
+        string unit "legacy label"
+        bigint unit_of_measurement_id FK "nullable"
+        decimal unit_price "selling price"
         int quantity "on hand"
         int reserved_quantity
         int minimum_stock
@@ -107,6 +137,16 @@ erDiagram
         string size UK "unique per item"
         int quantity "on hand for size"
         int reserved_quantity
+    }
+
+    INVENTORY_PRICE_ADJUSTMENTS {
+        bigint id PK
+        bigint inventory_id FK
+        decimal old_unit_price
+        decimal new_unit_price
+        string reason
+        bigint adjusted_by FK
+        timestamp adjusted_at
     }
 
     REQUESTS {
@@ -148,7 +188,7 @@ erDiagram
         bigint id PK
         bigint purchase_request_id FK
         bigint inventory_id FK
-        string size "nullable; required for clothing uniforms"
+        string size "nullable; required for clothing"
         int quantity
         decimal unit_price
         decimal subtotal
@@ -170,12 +210,23 @@ erDiagram
         bigint id PK
         string transaction_number UK
         bigint inventory_id FK
-        enum type
+        string type "varchar 40"
+        string source_type "nullable"
         int quantity
+        int quantity_in
+        int quantity_out
         int quantity_before
         int quantity_after
+        int balance_after
+        decimal unit_cost "optional delivery cost"
+        decimal total_cost
+        bigint supplier_id FK "nullable"
         string reference_type
         bigint reference_id
+        string reference_number "PO text"
+        string delivery_receipt_number
+        string size
+        timestamp transaction_date
         bigint performed_by FK
     }
 
@@ -260,6 +311,9 @@ Optional actor FKs (all → `users.id`, `ON DELETE SET NULL` unless noted):
 | `payments` | `verified_by` |
 | `announcements` | `created_by` (`CASCADE`) |
 | `transactions` / `stock_logs` | `performed_by` (`CASCADE`) |
+| `inventory_price_adjustments` | `adjusted_by` (`CASCADE`) |
+| `inventory` | `unit_of_measurement_id` (`SET NULL`) |
+| `transactions` | `supplier_id` (`SET NULL`) |
 
 ---
 
@@ -278,7 +332,7 @@ erDiagram
 **Status path:**  
 `pending` → Accounting review → `admin_review` → Admission or Administrator approve (stock **reserved**) → `approved` → Supply release (on-hand **deducted**, reserved cleared)
 
-Cancel before release restores `reserved_quantity`. Submit does **not** deduct stock.
+Submit does **not** deduct stock. Faculty may cancel through `admin_review` and `approved` (before release). Cancelling an **approved** request **restores** `reserved_quantity`.
 
 ---
 
@@ -301,15 +355,61 @@ erDiagram
 **Status path:**  
 `pending` → `payment_submitted` → `payment_verified` (stock **reserved**) → `released` (on-hand **deducted**)
 
+Students may **cancel until Supply releases** (before or after Accounting verifies). Cancel after `payment_verified` **restores** reserved quantity, including the chosen size.
+
 **Shop listing rules** (`Inventory::scopeForStudentShop`):
 
-1. `student_shop = true`
+1. `student_shop = true` and status is not `discontinued`
 2. `department_id` **null** → shared (P.E., NSTP, ID lanyard)
-3. `department_id` **set** → only students whose `users.department_id` matches
-4. Students never see another department’s exclusive uniform
+3. `department_id` **set** → only students whose `users.department_id` matches (CCS, CC, CTHM, CTE, CBA, or SHS exclusive uniforms)
+4. Students never see another department’s exclusive uniform (e.g. CCS students never see the CC exclusive)
 5. Clothing uniforms require `purchase_request_items.size`; stock is reserved/released on that size. Accessories (e.g. ID lanyard) skip size.
 
 Checkout and cart enforce the same checks. Students have **no** `/inventory` access.
+
+---
+
+## 3a. Canonical departments
+
+| Code | Name | Typical shop use |
+|------|------|------------------|
+| `CCS` | College of Computer Studies | Exclusive uniforms |
+| `CC` | College of Criminology | Exclusive uniforms |
+| `CTHM` | College of Tourism and Hospitality Management | Exclusive uniforms |
+| `CTE` | College of Teacher Education | Exclusive uniforms |
+| `CBA` | College of Business Administration | Exclusive uniforms |
+| `SHS` | Senior High School | Exclusive uniforms |
+| `ADMIN` | Administration | Staff home department |
+| `SUPPLY` | Supply Office | Staff home department |
+
+Seeded exclusive item codes: `UNI-CCS`, `UNI-CC`, `UNI-CTHM`, `UNI-CTE`, `UNI-CBA`, `UNI-SHS`. Shared shop items leave `department_id` null (`UNI-PE`, `UNI-NSTP`, `UNI-LANYARD`).
+
+---
+
+## 3b. Stock Card / ledger (logical)
+
+```mermaid
+erDiagram
+    INVENTORY ||--o{ TRANSACTIONS : "ledger rows"
+    SUPPLIERS ||--o{ TRANSACTIONS : "optional"
+    USERS ||--o{ TRANSACTIONS : "performed_by"
+    UNITS_OF_MEASUREMENT ||--o{ INVENTORY : "display unit"
+```
+
+`InventoryService` writes `transactions` for stock-in, stock-out, adjustment, damage, bad order, return to supplier, reserve, release, and restore.
+
+| Type | Physical on Stock Card? | On-hand | Reserved |
+|------|-------------------------|---------|----------|
+| `stock_in`, `opening_balance`, `purchase_delivery` | Yes (in) | ↑ | unchanged |
+| `stock_out`, `damage`, `bad_order`, `return_to_supplier` | Yes (out) | ↓ | unchanged |
+| `release` | Yes (out) | ↓ | ↓ |
+| `adjustment` / `adjustment_in` / `adjustment_out` | Yes | ± | unchanged |
+| `reserve` | Hidden | unchanged | ↑ |
+| `restore` | Hidden | unchanged | ↓ |
+
+Stock-in **source_type** values used on the form: `manual_external`, `purchase_order` (requires supplier + reference number), `emergency_purchase` (requires reference), `donation`, `opening_balance`, `other`. `unit_cost` is optional history; it does not overwrite selling `unit_price` and does not compute a moving average.
+
+Stock Card UI (`inventory.stock-card`): Admin, Admission, Accounting, Supply Personnel. Faculty may view inventory lists but **not** the card. Filters: date range, physical type, supplier, reference / DR / transaction number.
 
 ---
 
@@ -318,25 +418,28 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 | Table | Purpose |
 |-------|---------|
 | `users` | Accounts (all roles). Students log in with `employee_id` + `last_name` |
-| `departments` | Organizational units; also Uniform Shop exclusivity |
+| `departments` | Organizational units (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) and Uniform Shop exclusivity |
 | `categories` | Inventory categories (includes Uniforms) |
-| `inventory` | Stock: on hand, reserved, shop flag, optional exclusive department. For sized uniforms, totals are sums of size rows |
+| `units_of_measurement` | UoM master (`symbol` unique). Linked from `inventory.unit_of_measurement_id` |
+| `suppliers` | Vendor master. Linked from `transactions.supplier_id`, not from the item |
+| `inventory` | Stock: on hand, reserved, shop flag, optional exclusive department, selling price. Sized uniforms: totals are sums of size rows |
 | `inventory_size_stocks` | Per-size on-hand and reserved qty (unique `inventory_id` + `size`). Clothing shop items only |
+| `inventory_price_adjustments` | History when selling `unit_price` changes |
 | `requests` | Faculty (and restock) supply requests |
 | `request_items` | Lines on a faculty request (no size; faculty items are not sold by size) |
-| `purchase_requests` | Student purchases |
+| `purchase_requests` | Student purchases (not vendor POs) |
 | `purchase_request_items` | Lines on a student purchase; `size` required for clothing uniforms |
 | `payments` | Student payment records / receipt path |
-| `transactions` | Stock movement ledger (reserve / release / restore / adjust) |
+| `transactions` | Stock movement ledger / Stock Card source |
 | `stock_logs` | Delivery / stock-in action log |
 | `psis_notifications` | In-app notifications (email via `NotificationService`) |
 | `audit_logs` | Audit trail (polymorphic target) |
 | `announcements` | Campus announcements |
 | `roles` / `permissions` / pivots | Spatie RBAC (`Administrator`, `Admission`, `Accounting`, `Supply Personnel`, `Faculty`, `Student`) |
 
-### Removed (do not document as current)
+### Note on suppliers and barcode
 
-`suppliers` and `inventory.supplier_id` — dropped in `2026_08_06_000001_drop_suppliers_from_inventory.php`.
+`inventory.supplier_id` was dropped from the item master (`2026_08_06_000001_drop_suppliers_from_inventory.php`). The **Suppliers** module was restored as movement-level data (`suppliers` + `transactions.supplier_id`, migration `2026_09_10_230000_add_stock_card_foundation.php`). The unused `barcode` column was removed from `inventory`.
 
 ### Framework tables (not shown above)
 
@@ -355,16 +458,19 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 | Relationship | Cardinality | Notes |
 |--------------|-------------|--------|
 | Department → Users | 1:N (optional) | `users.department_id` nullable; `SET NULL` |
-| Department → Inventory | 1:N (optional) | Exclusive shop items only; null = shared |
+| Department → Inventory | 1:N (optional) | Exclusive shop items only; null = shared (P.E. / NSTP / lanyard) |
 | Category → Inventory | 1:N | Required; `CASCADE` |
+| Unit of measurement → Inventory | 1:N (optional) | `unit_of_measurement_id`; `SET NULL` |
+| Supplier → Transactions | 1:N (optional) | Required when stock-in source is purchase order |
 | User → Requests | 1:N | Faculty requester |
 | Request → Request Items | 1:N | Identifying |
 | Inventory → Request Items | 1:N | Faculty lines (no size column) |
 | Inventory → Size stocks | 1:N | Unique per size; clothing uniforms |
+| Inventory → Price adjustments | 1:N | Selling-price history |
 | User → Purchase Requests | 1:N | Student buyer |
 | Purchase Request → Items | 1:N | Identifying; optional `size` |
 | Purchase Request → Payments | 1:N | |
-| Inventory → Transactions | 1:N | Ledger |
+| Inventory → Transactions | 1:N | Ledger / Stock Card |
 | Inventory → Stock Logs | 1:N | |
 | User → Roles (Spatie) | N:M | Via `model_has_roles` |
 | Role → Permissions | N:M | Via `role_has_permissions` |
@@ -380,4 +486,4 @@ Checkout and cart enforce the same checks. Students have **no** `/inventory` acc
 
 ---
 
-*Keep this file updated when migrations change. Last aligned with uniform size stocks (`inventory_size_stocks`), `purchase_request_items.size`, Admission role, and the suppliers drop.*
+*Keep this file updated when migrations change. Last aligned 11 September 2026 with academic departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY), `units_of_measurement`, `suppliers` on movements, `inventory_price_adjustments`, extended `transactions` (Stock Card), uniform size stocks, Admission role, and no barcode / no item-level supplier / no FIFO or PO module.*

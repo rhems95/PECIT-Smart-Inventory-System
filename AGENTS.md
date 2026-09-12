@@ -31,6 +31,23 @@ Human-facing docs: `README.md`.
 
 Do **not** rename roles without updating seeders, menus, middleware, and policies.
 
+## Departments (exact codes)
+
+Seeded in `MasterDataSeeder`. Do **not** rename codes without updating seeders, shop exclusivity, CSV import, and demo students.
+
+| Code | Name |
+|------|------|
+| `CCS` | College of Computer Studies |
+| `CC` | College of Criminology |
+| `CTHM` | College of Tourism and Hospitality Management |
+| `CTE` | College of Teacher Education |
+| `CBA` | College of Business Administration |
+| `SHS` | Senior High School |
+| `ADMIN` | Administration |
+| `SUPPLY` | Supply Office |
+
+Removed academic codes: `CIT`, `COE`, `COB` (and similar leftovers). Live data remapped **CIT→CCS**, **COE→CC**, **COB→CBA**.
+
 ---
 
 ## Core business rules (do not break)
@@ -44,7 +61,7 @@ Do **not** rename roles without updating seeders, menus, middleware, and policie
 
 Services own this logic:
 
-- `app/Services/InventoryService.php` — stockIn, reserve, release, restore, adjust
+- `app/Services/InventoryService.php` — stockIn, reserve, release, restore, adjust, damage, returnToSupplier
 - `app/Services/SupplyRequestService.php` — faculty workflow
 - `app/Services/PurchaseRequestService.php` — student purchase workflow
 
@@ -69,7 +86,7 @@ Students **cannot** access `/inventory` (menu, routes, policy). They buy only vi
 3. `department_id` **set** → exclusive; **only** students whose `users.department_id` matches may see/buy it
 4. A student must **not** see or buy another department’s exclusive uniform
 
-Example: Engineering (`COE`) exclusive uniform is buyable only by COE students. CIT students see IT exclusive + shared, never the Engineering exclusive.
+Example: Computer Studies (`CCS`) exclusive uniform is buyable only by CCS students. Criminology (`CC`) students see CC exclusive + shared, never the CCS exclusive. Same rule for `CTHM`, `CTE`, `CBA`, and `SHS`.
 
 Helpers (keep logic here):
 
@@ -84,7 +101,7 @@ When creating shop items in admin/supply inventory form:
 - Shared → student shop on, department empty
 - Exclusive → student shop on, department selected
 
-There is **no suppliers** module — do not reintroduce supplier CRUD or `supplier_id` unless explicitly requested.
+There is a **Suppliers** module (Admin / Supply). Supplier is recorded on the **stock movement**, not as a single `supplier_id` on the inventory item. One item can come from many suppliers or from donations / external sources.
 
 ---
 
@@ -114,11 +131,14 @@ public/images/          # pecit-logo.png, chatbot.png
 
 | Model | Table | Notes |
 |-------|-------|-------|
-| `User` | `users` | `employee_id` = Student ID for students; `last_name` for student login; `email` for notifications |
+| `User` | `users` | `employee_id` = Student ID for students; `last_name` for student login; `email` for notifications; `department_id` for shop exclusivity |
+| `Department` | `departments` | Canonical codes: CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY |
 | `SupplyRequest` | `requests` | Faculty requisitions |
 | `RequestItem` | `request_items` | |
 | `PurchaseRequest` | `purchase_requests` | Student purchases |
-| `Inventory` | `inventory` | `student_shop`; `department_id` null = shared shop item, set = department-exclusive |
+| `Inventory` | `inventory` | `student_shop`; `department_id` null = shared shop item, set = department-exclusive; `unit_of_measurement_id` |
+| `Transaction` | `transactions` | Stock ledger / Stock Card (physical movements). Reserve/restore are logged but hidden on the card. |
+| `Supplier` | `suppliers` | Linked to stock-in / return transactions, not to the item master |
 | `PsisNotification` | `psis_notifications` | Custom in-app notifications (not Laravel notifications table) |
 | `Payment` | `payments` | Includes `receipt_path` |
 
@@ -151,7 +171,7 @@ Student: `shop.*`, `purchases.*`. Accounting: `accounting.payments*`. Supply: `s
 Routes: `supply.students.*`
 
 - List / create / edit students only (`Student` role)
-- CSV import: `student_id,last_name,name,email,department_code,phone`
+- CSV import: `student_id,last_name,name,email,department_code,phone` (`department_code` is CCS, CC, CTHM, CTE, CBA, or SHS)
 - Logic in `app/Services/StudentAccountService.php` (create, update, import, template)
 - Controllers: `SupplyStudentController`
 - Auto-generates a random password (students do not use password login)
@@ -233,10 +253,10 @@ Keep AI answers grounded in DB data; do not invent stock numbers.
 
 | Student ID | Last name | Department | Uniform Shop sees |
 |------------|-----------|------------|-------------------|
-| `STU-001` | `Santos` | CIT | IT Exclusive + P.E. / NSTP / lanyard |
-| `STU-COE-001` | `Mendoza` | COE (Engineering) | Engineering Exclusive + P.E. / NSTP / lanyard |
+| `STU-001` | `Santos` | CCS | CCS Exclusive + P.E. / NSTP / lanyard |
+| `STU-CC-001` | `Mendoza` | CC (Criminology) | CC Exclusive + P.E. / NSTP / lanyard |
 
-Seeded exclusive uniforms (via `DemoInventorySeeder`): `UNI-COE`, `UNI-CIT`, `UNI-CCS`, `UNI-COB`, `UNI-SHS` plus shared `UNI-PE`, `UNI-NSTP`, `UNI-LANYARD`.
+Seeded exclusive uniforms (via `DemoInventorySeeder`): `UNI-CCS`, `UNI-CC`, `UNI-CTHM`, `UNI-CTE`, `UNI-CBA`, `UNI-SHS` plus shared `UNI-PE`, `UNI-NSTP`, `UNI-LANYARD`.
 
 Seeders: `RoleAndPermissionSeeder`, `MasterDataSeeder` (includes Uniforms category), `DemoUsersSeeder`, `DemoInventorySeeder`.
 
@@ -294,6 +314,7 @@ Windows scheduler (optional): run `php artisan schedule:run` every minute for da
 | Faculty flow | `app/Services/SupplyRequestService.php` |
 | Student purchase flow | `app/Services/PurchaseRequestService.php` |
 | Student shop filter | `app/Http/Controllers/ShopController.php`, `Inventory` scopes |
+| Departments | `database/seeders/MasterDataSeeder.php`, `DepartmentController` |
 | Student accounts / CSV | `app/Services/StudentAccountService.php`, `SupplyStudentController` |
 | Login (staff + student) | `app/Http/Requests/Auth/LoginRequest.php`, `resources/views/auth/login.blade.php` |
 | AI | `app/Services/AiInsightService.php` |

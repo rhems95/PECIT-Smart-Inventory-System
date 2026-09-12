@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\InventoryTransactionType;
+use App\Enums\StockSourceType;
 use App\Models\Inventory;
 use App\Models\InventorySizeStock;
 use App\Models\StockLog;
@@ -24,14 +26,16 @@ class InventoryService
         ?string $referenceType = null,
         ?int $referenceId = null,
         ?string $size = null,
+        array $extra = [],
     ): Transaction {
         if ($quantity <= 0) {
             throw new RuntimeException('Stock-in quantity must be greater than zero.');
         }
 
         $size = $this->normalizeRequiredSize($inventory, $size, mustHaveSize: true);
+        $extra = $this->normalizeStockInExtra($extra);
 
-        return DB::transaction(function () use ($inventory, $quantity, $performedBy, $notes, $referenceType, $referenceId, $size) {
+        return DB::transaction(function () use ($inventory, $quantity, $performedBy, $notes, $referenceType, $referenceId, $size, $extra) {
             $locked = Inventory::query()->whereKey($inventory->id)->lockForUpdate()->firstOrFail();
 
             if ($size !== null) {
@@ -54,7 +58,7 @@ class InventoryService
 
             $transaction = $this->logTransaction(
                 $locked,
-                'stock_in',
+                $extra['type'] ?? InventoryTransactionType::StockIn->value,
                 $quantity,
                 $before,
                 $qtyAfterForTxn,
@@ -62,6 +66,7 @@ class InventoryService
                 $notes,
                 $referenceType,
                 $referenceId,
+                $extra + ['size' => $size],
             );
 
             StockLog::create([
@@ -96,14 +101,23 @@ class InventoryService
         ?int $referenceId = null,
         ?string $deliveryRecipient = null,
         ?string $size = null,
+        array $extra = [],
     ): Transaction {
         if ($quantity <= 0) {
             throw new RuntimeException('Stock-out quantity must be greater than zero.');
         }
 
+        $type = (string) ($extra['type'] ?? InventoryTransactionType::StockOut->value);
+        if (! filled($notes)) {
+            throw new RuntimeException('A reason is required for this stock movement.');
+        }
+        if ($type === InventoryTransactionType::ReturnToSupplier->value && empty($extra['supplier_id'])) {
+            throw new RuntimeException('Supplier is required when returning items.');
+        }
+
         $size = $this->normalizeRequiredSize($inventory, $size, mustHaveSize: false);
 
-        return DB::transaction(function () use ($inventory, $quantity, $performedBy, $notes, $referenceType, $referenceId, $deliveryRecipient, $size) {
+        return DB::transaction(function () use ($inventory, $quantity, $performedBy, $notes, $referenceType, $referenceId, $deliveryRecipient, $size, $extra, $type) {
             $locked = Inventory::query()->whereKey($inventory->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->requiresSize() && $size === null) {
@@ -138,7 +152,7 @@ class InventoryService
 
             $transaction = $this->logTransaction(
                 $locked,
-                'stock_out',
+                $type,
                 $quantity,
                 $before,
                 $qtyAfterForTxn,
@@ -146,11 +160,12 @@ class InventoryService
                 $notes,
                 $referenceType,
                 $referenceId,
+                $extra + ['size' => $size],
             );
 
             StockLog::create([
                 'inventory_id' => $locked->id,
-                'action' => 'delivery',
+                'action' => $type === InventoryTransactionType::StockOut->value ? 'delivery' : 'stock_out',
                 'quantity' => $quantity,
                 'balance_after' => $locked->quantity,
                 'delivery_recipient' => $deliveryRecipient,
@@ -158,11 +173,92 @@ class InventoryService
                 'performed_by' => $performedBy->id,
             ]);
 
+            $this->auditLog->log($performedBy, 'inventory.'.$type, $locked, null, [
+                'item' => $locked->item_name,
+                'quantity' => $quantity,
+                'size' => $size,
+                'notes' => $notes,
+            ]);
+
             $inventory->setRawAttributes($locked->getAttributes());
             $inventory->syncOriginal();
 
             return $transaction;
         });
+    }
+
+    public function recordDamage(
+        Inventory $inventory,
+        int $quantity,
+        User $performedBy,
+        string $reason,
+        ?string $size = null,
+        array $extra = [],
+    ): Transaction {
+        return $this->stockOut(
+            $inventory,
+            $quantity,
+            $performedBy,
+            $reason,
+            $extra['reference_type'] ?? null,
+            $extra['reference_id'] ?? null,
+            null,
+            $size,
+            $extra + [
+                'type' => InventoryTransactionType::Damage->value,
+                'source_type' => $extra['source_type'] ?? StockSourceType::Other->value,
+            ],
+        );
+    }
+
+    public function recordBadOrder(
+        Inventory $inventory,
+        int $quantity,
+        User $performedBy,
+        string $reason,
+        ?string $size = null,
+        array $extra = [],
+    ): Transaction {
+        return $this->stockOut(
+            $inventory,
+            $quantity,
+            $performedBy,
+            $reason,
+            $extra['reference_type'] ?? null,
+            $extra['reference_id'] ?? null,
+            null,
+            $size,
+            $extra + [
+                'type' => InventoryTransactionType::BadOrder->value,
+                'source_type' => $extra['source_type'] ?? StockSourceType::Other->value,
+            ],
+        );
+    }
+
+    public function returnToSupplier(
+        Inventory $inventory,
+        int $quantity,
+        User $performedBy,
+        string $reason,
+        int $supplierId,
+        ?string $size = null,
+        array $extra = [],
+    ): Transaction {
+        return $this->stockOut(
+            $inventory,
+            $quantity,
+            $performedBy,
+            $reason,
+            $extra['reference_type'] ?? null,
+            $extra['reference_id'] ?? null,
+            null,
+            $size,
+            $extra + [
+                'type' => InventoryTransactionType::ReturnToSupplier->value,
+                'source_type' => StockSourceType::Return->value,
+                'supplier_id' => $supplierId,
+            ],
+        );
     }
 
     public function reserve(
@@ -223,6 +319,7 @@ class InventoryService
                 $notes,
                 $referenceType,
                 $referenceId,
+                ['size' => $size],
             );
         });
     }
@@ -288,6 +385,7 @@ class InventoryService
                 $notes,
                 $referenceType,
                 $referenceId,
+                ['size' => $size],
             );
 
             StockLog::create([
@@ -366,6 +464,7 @@ class InventoryService
                 $notes,
                 $referenceType,
                 $referenceId,
+                ['size' => $size],
             );
         });
     }
@@ -414,14 +513,26 @@ class InventoryService
                 $qtyAfterForTxn = $locked->quantity;
             }
 
+            $adjustType = $qtyAfterForTxn > $before
+                ? InventoryTransactionType::AdjustmentIn->value
+                : ($qtyAfterForTxn < $before
+                    ? InventoryTransactionType::AdjustmentOut->value
+                    : InventoryTransactionType::Adjustment->value);
+
             $transaction = $this->logTransaction(
                 $locked,
-                'adjustment',
+                $adjustType,
                 $difference,
                 $before,
                 $qtyAfterForTxn,
                 $performedBy,
                 $notes,
+                null,
+                null,
+                [
+                    'source_type' => StockSourceType::Adjustment->value,
+                    'size' => $size,
+                ],
             );
 
             StockLog::create([
@@ -459,19 +570,124 @@ class InventoryService
         ?string $notes = null,
         ?string $referenceType = null,
         ?int $referenceId = null,
+        array $extra = [],
     ): Transaction {
+        $type = (string) ($extra['type'] ?? $type);
+        [$quantityIn, $quantityOut] = $this->splitInOut($type, $quantity, $quantityBefore, $quantityAfter);
+        $unitCost = isset($extra['unit_cost']) && $extra['unit_cost'] !== '' && $extra['unit_cost'] !== null
+            ? round((float) $extra['unit_cost'], 2)
+            : null;
+        $moved = max($quantityIn, $quantityOut, $quantity);
+
         return Transaction::create([
             'transaction_number' => 'TXN-'.strtoupper(Str::random(10)),
             'inventory_id' => $inventory->id,
             'type' => $type,
+            'source_type' => $extra['source_type'] ?? null,
             'quantity' => $quantity,
+            'quantity_in' => $quantityIn,
+            'quantity_out' => $quantityOut,
             'quantity_before' => $quantityBefore,
             'quantity_after' => $quantityAfter,
+            'balance_after' => $quantityAfter,
+            'unit_cost' => $unitCost,
+            'total_cost' => $unitCost !== null ? round($unitCost * $moved, 2) : null,
+            'supplier_id' => $extra['supplier_id'] ?? null,
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
+            'reference_number' => $extra['reference_number'] ?? null,
+            'delivery_receipt_number' => $extra['delivery_receipt_number'] ?? null,
+            'size' => $extra['size'] ?? null,
             'notes' => $notes,
             'performed_by' => $performedBy->id,
+            'transaction_date' => $extra['transaction_date'] ?? now(),
         ]);
+    }
+
+    public function recordOpeningBalance(
+        Inventory $inventory,
+        int $quantity,
+        User $performedBy,
+        ?string $size = null,
+    ): ?Transaction {
+        if ($quantity <= 0) {
+            return null;
+        }
+
+        $after = $size
+            ? (int) ($inventory->sizeStockFor($size)?->quantity ?? $quantity)
+            : (int) $inventory->quantity;
+
+        return $this->logTransaction(
+            $inventory,
+            InventoryTransactionType::OpeningBalance->value,
+            $quantity,
+            0,
+            $after,
+            $performedBy,
+            'Opening balance',
+            null,
+            null,
+            [
+                'source_type' => StockSourceType::OpeningBalance->value,
+                'size' => $size,
+                'unit_cost' => $inventory->unit_price,
+            ],
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $extra
+     * @return array<string, mixed>
+     */
+    protected function normalizeStockInExtra(array $extra): array
+    {
+        $source = $extra['source_type'] ?? StockSourceType::ManualExternal->value;
+        $sourceValue = $source instanceof StockSourceType ? $source->value : (string) $source;
+
+        if (! isset($extra['type'])) {
+            $extra['type'] = match ($sourceValue) {
+                StockSourceType::OpeningBalance->value => InventoryTransactionType::OpeningBalance->value,
+                StockSourceType::PurchaseOrder->value => InventoryTransactionType::PurchaseDelivery->value,
+                default => InventoryTransactionType::StockIn->value,
+            };
+        }
+
+        $extra['source_type'] = $sourceValue;
+
+        return $extra;
+    }
+
+    /**
+     * @return array{0: int, 1: int}
+     */
+    protected function splitInOut(string $type, int $quantity, int $before, int $after): array
+    {
+        $enum = InventoryTransactionType::tryFrom($type);
+
+        if (in_array($type, [
+            InventoryTransactionType::Reserve->value,
+            InventoryTransactionType::Restore->value,
+        ], true)) {
+            return [0, 0];
+        }
+
+        if ($type === InventoryTransactionType::Adjustment->value) {
+            if ($after > $before) {
+                return [$quantity, 0];
+            }
+            if ($after < $before) {
+                return [0, $quantity];
+            }
+
+            return [0, 0];
+        }
+
+        if ($enum?->isInbound()) {
+            return [$quantity, 0];
+        }
+
+        return [0, $quantity];
     }
 
     protected function normalizeRequiredSize(Inventory $inventory, ?string $size, bool $mustHaveSize = false): ?string

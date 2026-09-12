@@ -17,6 +17,7 @@ class Inventory extends Model
         'description',
         'category_id',
         'unit',
+        'unit_of_measurement_id',
         'unit_price',
         'quantity',
         'reserved_quantity',
@@ -41,6 +42,21 @@ class Inventory extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function unitOfMeasurement(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasurement::class);
+    }
+
+    public function priceAdjustments(): HasMany
+    {
+        return $this->hasMany(InventoryPriceAdjustment::class);
+    }
+
+    public function unitLabel(): string
+    {
+        return $this->unitOfMeasurement?->symbol ?? $this->unit ?? '';
     }
 
     public function department(): BelongsTo

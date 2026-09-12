@@ -76,23 +76,12 @@
             </div>
         </div>
 
-        <div class="psis-ai-suggestions">
-            <p class="psis-ai-suggestions-label">Frequent questions</p>
-            <div class="psis-ai-chips">
-                @foreach ($aiSuggestions as $tip)
-                    <button type="button" class="psis-ai-chip" @click="askSuggestion(@js($tip))" :disabled="loading">
-                        {{ $tip }}
-                    </button>
-                @endforeach
-            </div>
-        </div>
-
         <div class="psis-ai-thread" x-ref="thread">
             <template x-if="messages.length === 0">
                 <div class="psis-ai-row is-bot">
                     <img src="{{ asset('images/chatbot.png') }}" alt="" class="psis-ai-avatar">
                     <div class="psis-ai-bubble is-bot">
-                        Hi! Ask about stock, requests, purchases, or tap a frequent question above.
+                        Hi! Choose a question below — I’ll answer from live PSIS data.
                     </div>
                 </div>
             </template>
@@ -115,10 +104,16 @@
             </div>
         </div>
 
-        <form class="psis-ai-form" @submit.prevent="send()">
-            <input x-model="message" type="text" class="psis-ai-input" placeholder="Type a question..." :disabled="loading" maxlength="1000">
-            <button type="submit" class="psis-ai-send" :disabled="loading || !message.trim()">Send</button>
-        </form>
+        <div class="psis-ai-questions">
+            <p class="psis-ai-suggestions-label">Choose a question</p>
+            <div class="psis-ai-question-list">
+                @foreach ($aiSuggestions as $tip)
+                    <button type="button" class="psis-ai-question" @click="askSuggestion(@js($tip))" :disabled="loading">
+                        {{ $tip }}
+                    </button>
+                @endforeach
+            </div>
+        </div>
     </div>
 
     <button

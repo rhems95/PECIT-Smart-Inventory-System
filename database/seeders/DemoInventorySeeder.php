@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\Inventory;
+use App\Models\UnitOfMeasurement;
 use Illuminate\Database\Seeder;
 
 class DemoInventorySeeder extends Seeder
@@ -25,6 +26,7 @@ class DemoInventorySeeder extends Seeder
         foreach ($items as [$name, $categoryName, $unit, $price, $qty, $min, $location]) {
             $category = Category::where('name', $categoryName)->first();
             $code = 'PECIT-'.strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 8));
+            $uom = $this->unit($unit);
 
             Inventory::firstOrCreate(
                 ['item_code' => $code],
@@ -33,6 +35,7 @@ class DemoInventorySeeder extends Seeder
                     'description' => "PECIT standard {$name}",
                     'category_id' => $category->id,
                     'unit' => $unit,
+                    'unit_of_measurement_id' => $uom?->id,
                     'unit_price' => $price,
                     'quantity' => $qty,
                     'reserved_quantity' => 0,
@@ -70,6 +73,7 @@ class DemoInventorySeeder extends Seeder
                     'description' => $description,
                     'category_id' => $uniforms->id,
                     'unit' => 'piece',
+                    'unit_of_measurement_id' => $this->unit('piece')?->id,
                     'unit_price' => $price,
                     'quantity' => $qty,
                     'reserved_quantity' => 0,
@@ -86,10 +90,11 @@ class DemoInventorySeeder extends Seeder
 
         // Exclusive: ONLY students of that department can buy.
         $deptUniforms = [
-            'COE' => ['Engineering Uniform (Exclusive)', 'UNI-COE', 'Exclusive to College of Engineering students only.'],
-            'CIT' => ['IT Uniform (Exclusive)', 'UNI-CIT', 'Exclusive to College of Information Technology students only.'],
             'CCS' => ['Computer Studies Uniform (Exclusive)', 'UNI-CCS', 'Exclusive to College of Computer Studies students only.'],
-            'COB' => ['Business Uniform (Exclusive)', 'UNI-COB', 'Exclusive to College of Business students only.'],
+            'CC' => ['Criminology Uniform (Exclusive)', 'UNI-CC', 'Exclusive to College of Criminology students only.'],
+            'CTHM' => ['Tourism and Hospitality Uniform (Exclusive)', 'UNI-CTHM', 'Exclusive to College of Tourism and Hospitality Management students only.'],
+            'CTE' => ['Teacher Education Uniform (Exclusive)', 'UNI-CTE', 'Exclusive to College of Teacher Education students only.'],
+            'CBA' => ['Business Administration Uniform (Exclusive)', 'UNI-CBA', 'Exclusive to College of Business Administration students only.'],
             'SHS' => ['SHS Uniform (Exclusive)', 'UNI-SHS', 'Exclusive to Senior High School students only.'],
         ];
 
@@ -106,6 +111,7 @@ class DemoInventorySeeder extends Seeder
                     'description' => $description,
                     'category_id' => $uniforms->id,
                     'unit' => 'set',
+                    'unit_of_measurement_id' => $this->unit('set')?->id,
                     'unit_price' => 1200,
                     'quantity' => 40,
                     'reserved_quantity' => 0,
@@ -156,5 +162,17 @@ class DemoInventorySeeder extends Seeder
 
         $item->syncAggregatesFromSizeStocks();
         $item->updateStatus();
+    }
+
+    protected function unit(string $symbol): ?UnitOfMeasurement
+    {
+        $lookup = strtolower($symbol) === 'piece' ? 'pcs' : $symbol;
+
+        return UnitOfMeasurement::query()
+            ->where(function ($q) use ($lookup, $symbol) {
+                $q->whereRaw('LOWER(symbol) = ?', [strtolower($lookup)])
+                    ->orWhereRaw('LOWER(symbol) = ?', [strtolower($symbol)]);
+            })
+            ->first();
     }
 }

@@ -134,7 +134,10 @@ class ReportController extends Controller
                 return $this->rows->map(fn ($t) => [
                     'Transaction' => $t->transaction_number,
                     'Item' => $t->inventory?->item_name,
-                    'Type' => $t->type,
+                    'Type' => $t->typeLabel(),
+                    'In' => $t->quantity_in,
+                    'Out' => $t->quantity_out,
+                    'Balance' => $t->runningBalance(),
                     'Quantity' => $t->quantity,
                     'Before' => $t->quantity_before,
                     'After' => $t->quantity_after,
