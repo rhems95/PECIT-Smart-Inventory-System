@@ -16,7 +16,7 @@ Release history: [`CHANGELOG.md`](CHANGELOG.md).
 | Frontend | Blade, Tailwind CSS, Alpine.js, Chart.js |
 | Auth / RBAC | Laravel Breeze, Spatie Laravel Permission |
 | Exports | DomPDF, Laravel Excel (Maatwebsite) |
-| Other | Simple QR Code |
+| Other | Simple QR Code; optional local [Ollama](https://ollama.com) for chat wording |
 
 **Branding:** PECIT Blue `#0B3C91` · Gold `#F4B400` · Dark mode supported
 
@@ -29,6 +29,7 @@ Release history: [`CHANGELOG.md`](CHANGELOG.md).
 - Node.js & npm
 - MySQL (database name: `pecit_sis`)
 - XAMPP (or equivalent Apache/MySQL stack)
+- Optional: [Ollama](https://ollama.com) on this PC for natural-language chat (`llama3.2:3b` or similar)
 
 ---
 
@@ -119,13 +120,24 @@ Canonical codes (`MasterDataSeeder` / `departments.code`):
 
 CSV student import `department_code` uses the academic/SHS codes (CCS, CC, CTHM, CTE, CBA, SHS). Old codes CIT, COE, and COB were remapped to CCS, CC, and CBA.
 
+Sample suppliers (`MasterDataSeeder`) for Stock In / return to supplier:
+
+| Code | Name |
+|------|------|
+| `SUP-0001` | Cebu Paper & Office Supply |
+| `SUP-0002` | Visayas Uniform House |
+| `SUP-0003` | Island Tech Computer Trading |
+| `SUP-0004` | Campus Care Janitorial Supply |
+
+Supplier is recorded on the stock movement, not as a single supplier on the inventory item.
+
 ---
 
 ## User Roles & Workflows
 
 ### 1. Faculty
 - View / search inventory
-- Submit supply requests
+- Submit supply requests (department faculty budget **₱10,000 per semester**, two semesters per year, unless Admin changes the limit)
 - Track status, cancel pending requests
 - Receive in-app + email notifications
 
@@ -165,6 +177,7 @@ Example: a Computer Studies student can buy **Computer Studies Uniform (Exclusiv
 ### 4. Supply Personnel
 - Inventory CRUD (with Admin)
 - Stock in / inventory adjustment
+- **Purchase History** — check whether the supplier gave the correct or wrong item
 - Release faculty requests & student purchases
 - **Add / edit students** and **CSV bulk import**
 - Users, categories, departments, announcements, and audit logs (with Admin)
@@ -271,24 +284,49 @@ Cart add and checkout re-check exclusivity so students cannot purchase another d
 - Audit Trail (PDF)
 - Transactions (Excel)
 
-### AI Module (rule-based decision support)
+### AI Module (live data + optional local Ollama)
+
 - Role-aware chat assistant (Faculty / Student / Accounting / Supply / Admin)
-- Floating chatbot widget (Messenger-style, uses `chatbot.png`)
-- Frequent question chips by role
+- Floating chatbot widget (uses `chatbot.png`): type box plus a **Choose a question** list that expands only when you open it
+- Listed questions answered from `AiInsightService` (live database numbers)
+- Free-typed questions: keyword match first, then optional **local Ollama** (`OllamaChatService`, `127.0.0.1` only)
+- Chat thread **stays while you browse** other pages; it is **cleared on logout**
 - Inventory forecast & reorder suggestions (90-day usage)
 - Restock Tips page for Supply / Admin
 - Monthly AI summary on dashboard & reports
 - Daily alert command: `php artisan psis:low-stock-alert` (scheduled 08:00)
 
-> Note: AI is keyword / analytics based (not an external LLM). Answers are grounded in database data.
+> Chat is not a cloud LLM. Stock and request figures come from MySQL. If Ollama is off or down, the question list still works.
+
+### Local Ollama (optional)
+
+On the same PC as PSIS:
+
+```bash
+ollama pull llama3.2:3b
+```
+
+Then in `.env`:
+
+```env
+PSIS_OLLAMA_ENABLED=true
+PSIS_OLLAMA_URL=http://127.0.0.1:11434
+PSIS_OLLAMA_MODEL=llama3.2:3b
+```
+
+```bash
+php artisan config:clear
+```
+
+Ollama must stay bound to localhost. Non-localhost URLs are rejected. Other PCs talking to this site still hit Laravel; only the machine running Ollama generates the wording.
 
 ### UI / UX
-- Responsive PSIS layout with modern sidebar
+- Responsive PSIS layout with a **fixed sidebar** (stays on screen while the page scrolls)
 - Dark mode toggle
 - Toast-style success / error messages
 - Aligned data tables, search filters
 - PECIT logo on sidebar & login
-- Floating AI button (bottom-right)
+- Floating AI button (bottom-right): drag a little up/left so it does not cover text; **click** opens the chat pinned to the lower-right corner
 
 The app is **web-session only**. There is no JSON or Sanctum token API.
 
@@ -647,6 +685,7 @@ database/seeders/       # Roles, master data, demo users & inventory/uniforms
 docs/                   # ER-DIAGRAM.md, FLOWCHART.md
 CHANGELOG.md            # Release history
 public/images/          # pecit-logo.png, chatbot.png
+resources/js/app.js     # Alpine, Chart.js, AI chat session store
 resources/views/        # Blade UI (layouts, modules, emails, AI widget)
 routes/web.php          # Application routes
 routes/auth.php         # Breeze auth routes

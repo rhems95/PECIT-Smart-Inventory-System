@@ -19,11 +19,11 @@
     display: block;
 }
 
-/* Floating AI assistant — always available at bottom-right */
+/* Floating AI assistant — bottom of the screen; FAB can be dragged a little */
 .psis-ai-widget {
     position: fixed !important;
-    right: 20px !important;
-    bottom: 20px !important;
+    right: 20px;
+    bottom: 20px;
     z-index: 9999 !important;
     display: flex !important;
     flex-direction: column;
@@ -45,7 +45,9 @@
     background: #fff;
     color: #0B3C91;
     box-shadow: 0 10px 25px rgba(11, 60, 145, 0.35);
-    cursor: pointer;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -54,6 +56,11 @@
 
 .psis-ai-fab:hover {
     transform: scale(1.05);
+}
+
+.psis-ai-fab.is-dragging {
+    cursor: grabbing;
+    transform: none;
 }
 
 .psis-ai-fab-img {
@@ -72,7 +79,8 @@
 
 .psis-ai-panel {
     width: min(calc(100vw - 2rem), 24rem);
-    height: min(70vh, 32rem);
+    height: min(70vh, 32rem, calc(100vh - 6.5rem));
+    max-height: calc(100vh - 6.5rem);
     display: flex;
     flex-direction: column;
     border-radius: 1rem;
@@ -184,21 +192,51 @@
 }
 
 .psis-ai-questions {
-    padding: 0.5rem 0.75rem 0.75rem;
+    padding: 0;
     border-top: 1px solid var(--psis-border, #E2E8F0);
     background: rgba(248, 250, 252, 0.9);
-    max-height: 11.5rem;
-    overflow-y: auto;
 }
 
 .dark .psis-ai-questions {
     background: rgba(15, 23, 42, 0.45);
 }
 
+.psis-ai-questions-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin: 0;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.psis-ai-questions-caret {
+    display: inline-block;
+    font-size: 0.7rem;
+    line-height: 1;
+    transition: transform 0.15s ease;
+}
+
+.psis-ai-questions-caret.is-open {
+    transform: rotate(180deg);
+}
+
 .psis-ai-question-list {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    padding: 0 0.75rem 0.75rem;
+    max-height: 8.5rem;
+    overflow-y: auto;
 }
 
 .psis-ai-question {

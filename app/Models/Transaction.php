@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\InventoryTransactionType;
+use App\Enums\ReceivingInspectionStatus;
 use App\Enums\StockSourceType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -32,7 +33,12 @@ class Transaction extends Model
         'size',
         'notes',
         'performed_by',
+        'purchased_by',
         'transaction_date',
+        'inspection_status',
+        'inspection_notes',
+        'inspected_by',
+        'inspected_at',
     ];
 
     protected function casts(): array
@@ -49,6 +55,8 @@ class Transaction extends Model
             'unit_cost' => 'decimal:2',
             'total_cost' => 'decimal:2',
             'transaction_date' => 'datetime',
+            'inspection_status' => ReceivingInspectionStatus::class,
+            'inspected_at' => 'datetime',
         ];
     }
 
@@ -62,9 +70,46 @@ class Transaction extends Model
         return $this->belongsTo(User::class, 'performed_by');
     }
 
+    public function buyer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'purchased_by');
+    }
+
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function inspector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'inspected_by');
+    }
+
+    public function scopePurchaseHistory(Builder $query): Builder
+    {
+        return $query->whereIn('type', [
+            InventoryTransactionType::StockIn->value,
+            InventoryTransactionType::PurchaseDelivery->value,
+        ]);
+    }
+
+    public function isPurchaseHistoryRow(): bool
+    {
+        $type = $this->type instanceof InventoryTransactionType ? $this->type->value : (string) $this->type;
+
+        return in_array($type, [
+            InventoryTransactionType::StockIn->value,
+            InventoryTransactionType::PurchaseDelivery->value,
+        ], true);
+    }
+
+    public function inspectionLabel(): string
+    {
+        $status = $this->inspection_status;
+
+        return $status instanceof ReceivingInspectionStatus
+            ? $status->label()
+            : ReceivingInspectionStatus::Pending->label();
     }
 
     public function reference(): MorphTo
@@ -87,5 +132,10 @@ class Transaction extends Model
     public function runningBalance(): int
     {
         return (int) ($this->balance_after ?? $this->quantity_after);
+    }
+
+    public function buyerName(): string
+    {
+        return $this->buyer?->name ?? $this->performer?->name ?? '—';
     }
 }

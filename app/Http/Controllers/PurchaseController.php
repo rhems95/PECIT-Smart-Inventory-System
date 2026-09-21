@@ -7,7 +7,9 @@ use App\Services\PurchaseRequestService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PurchaseController extends Controller
 {
@@ -93,6 +95,19 @@ class PurchaseController extends Controller
         }
 
         return back()->with('success', 'Payment receipt uploaded successfully.');
+    }
+
+    public function showReceipt(PurchaseRequest $purchase): StreamedResponse
+    {
+        $this->authorize('view', $purchase);
+
+        $path = $purchase->payments()->latest()->value('receipt_path');
+
+        if (! is_string($path) || $path === '' || str_contains($path, '..') || ! Storage::disk('public')->exists($path)) {
+            abort(404, 'Receipt file not found.');
+        }
+
+        return Storage::disk('public')->response($path);
     }
 
     public function cancel(PurchaseRequest $purchase, PurchaseRequestService $service): RedirectResponse

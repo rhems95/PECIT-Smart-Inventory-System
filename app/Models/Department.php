@@ -12,12 +12,14 @@ class Department extends Model
         'code',
         'description',
         'is_active',
+        'faculty_budget_limit',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'faculty_budget_limit' => 'decimal:2',
         ];
     }
 

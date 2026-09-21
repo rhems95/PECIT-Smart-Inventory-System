@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\InventoryTransactionType;
+use App\Enums\ReceivingInspectionStatus;
 use App\Enums\StockSourceType;
 use App\Models\Inventory;
 use App\Models\InventorySizeStock;
@@ -579,6 +580,11 @@ class InventoryService
             : null;
         $moved = max($quantityIn, $quantityOut, $quantity);
 
+        $inbound = in_array($type, [
+            InventoryTransactionType::StockIn->value,
+            InventoryTransactionType::PurchaseDelivery->value,
+        ], true);
+
         return Transaction::create([
             'transaction_number' => 'TXN-'.strtoupper(Str::random(10)),
             'inventory_id' => $inventory->id,
@@ -600,7 +606,9 @@ class InventoryService
             'size' => $extra['size'] ?? null,
             'notes' => $notes,
             'performed_by' => $performedBy->id,
+            'purchased_by' => $extra['purchased_by'] ?? ($inbound ? $performedBy->id : null),
             'transaction_date' => $extra['transaction_date'] ?? now(),
+            'inspection_status' => $extra['inspection_status'] ?? ($inbound ? ReceivingInspectionStatus::Pending->value : null),
         ]);
     }
 

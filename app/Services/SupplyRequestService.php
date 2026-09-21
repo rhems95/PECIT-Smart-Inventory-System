@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Department;
 use App\Models\Inventory;
 use App\Models\RequestItem;
 use App\Models\SupplyRequest;
@@ -16,33 +17,51 @@ class SupplyRequestService
         protected InventoryService $inventoryService,
         protected NotificationService $notifications,
         protected AuditLogService $auditLog,
+        protected FacultyBudgetService $budget,
     ) {}
 
     public function create(User $user, array $items, ?string $purpose, ?int $departmentId = null): SupplyRequest
     {
         return DB::transaction(function () use ($user, $items, $purpose, $departmentId) {
-            $request = SupplyRequest::create([
-                'request_number' => 'REQ-'.strtoupper(Str::random(8)),
-                'user_id' => $user->id,
-                'department_id' => $departmentId ?? $user->department_id,
-                'type' => 'faculty',
-                'status' => 'pending',
-                'purpose' => $purpose,
-            ]);
+            $departmentId = $departmentId ?? $user->department_id;
+            $department = $departmentId ? Department::query()->find($departmentId) : null;
+
+            $prepared = [];
+            $total = 0.0;
 
             foreach ($items as $row) {
                 $inventory = Inventory::findOrFail($row['inventory_id']);
-                RequestItem::create([
-                    'request_id' => $request->id,
-                    'inventory_id' => $inventory->id,
-                    'quantity_requested' => (int) $row['quantity'],
-                    'unit_price' => $inventory->unit_price,
-                    'subtotal' => $inventory->unit_price * (int) $row['quantity'],
-                ]);
+                $qty = (int) $row['quantity'];
+                $subtotal = (float) $inventory->unit_price * $qty;
+                $total += $subtotal;
+                $prepared[] = [
+                    'inventory' => $inventory,
+                    'quantity' => $qty,
+                    'subtotal' => $subtotal,
+                ];
             }
 
-            $request->load('items');
-            $request->update(['total_amount' => $request->items->sum('subtotal')]);
+            $this->budget->assertWithinBudget($department, round($total, 2));
+
+            $request = SupplyRequest::create([
+                'request_number' => 'REQ-'.strtoupper(Str::random(8)),
+                'user_id' => $user->id,
+                'department_id' => $department?->id,
+                'type' => 'faculty',
+                'status' => 'pending',
+                'purpose' => $purpose,
+                'total_amount' => round($total, 2),
+            ]);
+
+            foreach ($prepared as $row) {
+                RequestItem::create([
+                    'request_id' => $request->id,
+                    'inventory_id' => $row['inventory']->id,
+                    'quantity_requested' => $row['quantity'],
+                    'unit_price' => $row['inventory']->unit_price,
+                    'subtotal' => $row['subtotal'],
+                ]);
+            }
 
             $this->notifications->notifyRole(
                 'Accounting',
@@ -118,6 +137,7 @@ class SupplyRequestService
         }
 
         return DB::transaction(function () use ($request, $reviewer, $pricedItems) {
+            $request->loadMissing(['department', 'user.department']);
             $total = 0;
 
             foreach ($pricedItems as $row) {
@@ -134,6 +154,8 @@ class SupplyRequestService
 
                 $total += $subtotal;
             }
+
+            $this->budget->assertWithinBudget($request->department ?? $request->user?->department, round($total, 2), $request->id);
 
             $request->update([
                 'status' => 'admin_review',
@@ -271,7 +293,10 @@ class SupplyRequestService
                     $request->user?->name,
                 );
 
-                $item->update(['quantity_released' => $qty]);
+                $item->update([
+                    'quantity_released' => $qty,
+                    'inspection_status' => 'pending',
+                ]);
             }
 
             $request->update([

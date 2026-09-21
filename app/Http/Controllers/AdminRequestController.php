@@ -22,9 +22,15 @@ class AdminRequestController extends Controller
 
     public function show(SupplyRequest $request): View
     {
-        $request->load(['items.inventory', 'user', 'department', 'reviewer']);
+        $request->load(['items.inventory', 'user.department', 'department', 'reviewer']);
 
-        return view('admin.requests-show', ['supplyRequest' => $request]);
+        return view('admin.requests-show', [
+            'supplyRequest' => $request,
+            'budget' => app(\App\Services\FacultyBudgetService::class)->snapshot(
+                $request->department ?? $request->user?->department,
+                $request->id,
+            ),
+        ]);
     }
 
     public function approve(SupplyRequest $request, SupplyRequestService $service): RedirectResponse

@@ -11,6 +11,8 @@
         <p class="sm:col-span-2"><span class="text-slate-500">Purpose:</span> {{ $supplyRequest->purpose ?? '—' }}</p>
     </div>
 
+    @include('partials.faculty-budget', ['budget' => $budget ?? null, 'budgetMode' => 'create'])
+
     <div class="psis-card overflow-x-auto">
         <table class="min-w-full text-sm">
             <thead>
@@ -18,6 +20,7 @@
                     <th class="px-4 py-3 font-medium">Item</th>
                     <th class="px-4 py-3 font-medium">Requested</th>
                     <th class="px-4 py-3 font-medium">Approved</th>
+                    <th class="px-4 py-3 font-medium">Released</th>
                     <th class="px-4 py-3 font-medium text-right">Subtotal</th>
                 </tr>
             </thead>
@@ -27,6 +30,7 @@
                         <td class="px-4 py-3">{{ $line->inventory?->item_name ?? '—' }}</td>
                         <td class="px-4 py-3">{{ $line->quantity_requested }}</td>
                         <td class="px-4 py-3">{{ $line->quantity_approved ?: '—' }}</td>
+                        <td class="px-4 py-3">{{ $line->quantity_released ?: '—' }}</td>
                         <td class="px-4 py-3 text-right">₱{{ number_format($line->subtotal, 2) }}</td>
                     </tr>
                 @endforeach

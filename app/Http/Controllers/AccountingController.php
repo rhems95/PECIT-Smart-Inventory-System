@@ -24,9 +24,15 @@ class AccountingController extends Controller
 
     public function showRequest(SupplyRequest $request): View
     {
-        $request->load(['items.inventory', 'user', 'department']);
+        $request->load(['items.inventory', 'user.department', 'department']);
 
-        return view('accounting.requests-show', ['supplyRequest' => $request]);
+        return view('accounting.requests-show', [
+            'supplyRequest' => $request,
+            'budget' => app(\App\Services\FacultyBudgetService::class)->snapshot(
+                $request->department ?? $request->user?->department,
+                $request->id,
+            ),
+        ]);
     }
 
     public function reviewRequest(Request $httpRequest, SupplyRequest $request, SupplyRequestService $service): RedirectResponse
