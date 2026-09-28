@@ -43,12 +43,22 @@
             message: '',
             loading: false,
             messages: [],
+            questionsOpen: false,
+            userId: @js(auth()->id()),
             askUrl: @js(route('ai.ask')),
             csrf: @js(csrf_token()),
+            init() {
+                this.messages = window.psisAiChat ? window.psisAiChat.load(this.userId) : [];
+                this.$nextTick(() => { if (this.$refs.thread) this.$refs.thread.scrollTop = this.$refs.thread.scrollHeight; });
+            },
+            persistChat() {
+                if (window.psisAiChat) window.psisAiChat.save(this.userId, this.messages);
+            },
             async send(text = null) {
                 const content = (text ?? this.message).trim();
                 if (!content || this.loading) return;
                 this.messages.push({ role: 'user', text: content });
+                this.persistChat();
                 this.message = '';
                 this.loading = true;
                 this.$nextTick(() => { if (this.$refs.thread) this.$refs.thread.scrollTop = this.$refs.thread.scrollHeight; });
@@ -64,6 +74,7 @@
                     this.messages.push({ role: 'assistant', text: 'Sorry, something went wrong.' });
                 } finally {
                     this.loading = false;
+                    this.persistChat();
                     this.$nextTick(() => { if (this.$refs.thread) this.$refs.thread.scrollTop = this.$refs.thread.scrollHeight; });
                 }
             }
@@ -82,7 +93,7 @@
                 <div class="flex items-end gap-2">
                     <img src="{{ asset('images/chatbot.png') }}" alt="" class="w-8 h-8 rounded-full object-cover border border-pecit-gold shrink-0">
                     <div class="rounded-2xl rounded-bl-md bg-white dark:bg-slate-800 px-3 py-2 text-sm shadow-sm">
-                        Choose a question below. Answers use live stock and request data for your role.
+                        Type a question or pick one below. Answers use live stock and request data for your role{{ config('psis.ollama.enabled') ? '. Natural-language replies use Ollama on this PC.' : '.' }}
                     </div>
                 </div>
             </template>
@@ -108,10 +119,33 @@
         </div>
 
         <div class="flex flex-col gap-2">
-            <p class="text-xs uppercase tracking-wide text-slate-500">Choose a question</p>
-            @foreach ($suggestions as $tip)
-                <button type="button" class="psis-btn-outline text-left text-sm py-2 px-3" @click="send(@js($tip))" :disabled="loading">{{ $tip }}</button>
-            @endforeach
+            <button
+                type="button"
+                class="flex items-center justify-between text-xs uppercase tracking-wide text-slate-500 py-1"
+                @click="questionsOpen = ! questionsOpen"
+                :aria-expanded="questionsOpen.toString()"
+            >
+                <span>Choose a question</span>
+                <span :class="questionsOpen ? 'rotate-180' : ''" class="inline-block transition-transform">▾</span>
+            </button>
+            <div class="flex flex-col gap-2 max-h-40 overflow-y-auto" x-show="questionsOpen" x-cloak>
+                @foreach ($suggestions as $tip)
+                    <button type="button" class="psis-btn-outline text-left text-sm py-2 px-3" @click="send(@js($tip)); questionsOpen = false" :disabled="loading">{{ $tip }}</button>
+                @endforeach
+            </div>
+            <form class="flex gap-2 mt-2" @submit.prevent="send()">
+                <input
+                    type="text"
+                    class="psis-input flex-1"
+                    x-model="message"
+                    maxlength="1000"
+                    autocomplete="off"
+                    :disabled="loading"
+                    placeholder="Type a question…"
+                    aria-label="Type a question"
+                >
+                <button type="submit" class="psis-btn-primary" :disabled="loading">Send</button>
+            </form>
         </div>
     </div>
 </div>

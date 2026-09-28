@@ -28,6 +28,7 @@ class PsisMenu
             ['label' => 'Units', 'route' => 'admin.units.index', 'icon' => 'tag', 'color' => '#2DD4BF', 'roles' => ['Administrator', 'Supply Personnel']],
             ['label' => 'Announcements', 'route' => 'admin.announcements.index', 'icon' => 'megaphone', 'color' => '#F87171', 'roles' => ['Administrator', 'Supply Personnel']],
             ['label' => 'Stock Operations', 'route' => 'supply.stock.index', 'icon' => 'warehouse', 'color' => '#FBBF24', 'roles' => ['Supply Personnel', 'Administrator']],
+            ['label' => 'Purchase History', 'route' => 'supply.purchase-history', 'icon' => 'clipboard', 'color' => '#38BDF8', 'roles' => ['Supply Personnel', 'Administrator']],
             ['label' => 'Release Items', 'route' => 'supply.releases', 'icon' => 'package', 'color' => '#FB923C', 'roles' => ['Supply Personnel', 'Administrator']],
             ['label' => 'Student Purchases', 'route' => 'supply.purchases', 'icon' => 'receipt', 'color' => '#F472B6', 'roles' => ['Supply Personnel', 'Administrator']],
             ['label' => 'Students', 'route' => 'supply.students.index', 'icon' => 'academic-cap', 'color' => '#2DD4BF', 'roles' => ['Supply Personnel', 'Administrator']],

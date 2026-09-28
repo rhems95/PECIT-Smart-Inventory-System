@@ -7,7 +7,7 @@ Dates are in **Asia/Manila**.
 
 ---
 
-## [Unreleased] — 2026-09-10
+## [Unreleased] — 2026-09-21
 
 ### Added
 
@@ -15,9 +15,13 @@ Dates are in **Asia/Manila**.
 - Accounting dashboard and **Verify Payments** show **Recent verified payments** (verified date, student, department, purchase #, amount, status). Waiting payments stay in the top queue; after verify they appear in this list.
 - Stock Card (`inventory.stock-card`) for Admin, Supply, Accounting, Admission — generated from `transactions`
 - **Suppliers** and **Units of measurement** (Admin / Supply). Supplier is stored on each stock movement, not as a single supplier on the item.
-- AI Assistant uses a **question list** (no free typing). Questions are role-specific; answers still come from live PSIS data.
+- Sample suppliers in `MasterDataSeeder` (`SUP-0001`–`SUP-0004`) for stock-in / return-to-supplier demos.
+- AI Assistant uses a **question list** plus a type box. Listed questions stay rule-based; free text can use local Ollama.
 - Students can **Cancel Purchase** until Supply releases (before or after Accounting verifies).
-- Audit Logs now record logins, inventory/stock, users, master data, and profile changes, with who / action / record / details.
+- Faculty **department supply budget** of ₱10,000 **per semester** (two semesters per academic year: June–November and December–May). Pending through released count; cancelled/rejected do not. Shown on New Request; Accounting/Admin see remaining room for the current request. Admin/Supply can edit the limit per department.
+- Supply **Purchase History** lists **student shop purchases**, **department released items** (faculty requests), and **supplier stock-in**, with a receiving check: correct item vs wrong item.
+- Local **Ollama** chatbot (`OllamaChatService`): type box restored; listed questions stay rule-based from live PSIS data; free text can use `http://127.0.0.1:11434` when `PSIS_OLLAMA_ENABLED=true`. Cloud APIs are not used. If Ollama is off, keyword answers and the question list still work.
+- AI chat **thread stays** while you navigate the app; it is cleared on **logout** (and on the login page) so the next user does not see it.
 
 ### Changed
 
@@ -25,6 +29,9 @@ Dates are in **Asia/Manila**.
 - Student login: **Last name** first (visible); **Student ID** below, hidden while typing, with a Show Student ID checkbox. Staff/Student tabs work with HTML + CSS (no Alpine), so the form still works when JS assets fail to load.
 - App URLs follow the incoming request (`SetRootUrlFromRequest`, trusted proxies, relative Vite paths) so login and CSS/JS work when the site is opened from another PC or a port-forward / tunnel, not only `APP_URL` localhost.
 - Inventory **Add Item**: uniform size shows when Uniform Shop is checked even if Alpine does not start. Faculty **New Request** always has a first item line (Add line works without Alpine). Shop **Add to Cart** stays visible without Alpine.
+- Desktop **sidebar stays on screen** while the main page scrolls (`#psis-sidebar` is fixed; content uses `.psis-main-col`).
+- Floating AI chat **Choose a question** list is collapsed until you expand it, so the thread has more room.
+- Chatbot icon can be dragged a short way up and left (bottom-right pocket). **Click** opens the panel pinned to the lower-right corner; closing puts the icon back where you left it.
 
 ### Removed
 
@@ -32,6 +39,7 @@ Dates are in **Asia/Manila**.
 
 ### Fixed
 
+- Viewing an uploaded payment receipt from another PC no longer hits Apache **403 Forbidden** on the `/storage` symlink. Receipts open through a logged-in Laravel route (`purchases.receipt.show`).
 - **Add Item** opened `/inventory/create` as a 404 because `create` was treated as an inventory id. Create/edit routes are registered first; show only accepts numeric ids.
 - Saving a Uniform Shop clothing item without a size no longer 500s; staff get a validation error until they pick a size.
 - Faculty can cancel through **admin review** and **approved** (before release). Cancelling an approved request **restores reserved** stock. The Cancel button matches the policy (no 403 on admin review).

@@ -2,17 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReceivingInspectionStatus;
 use App\Enums\StockSourceType;
 use App\Models\Inventory;
 use App\Models\PurchaseRequest;
+use App\Models\PurchaseRequestItem;
+use App\Models\RequestItem;
 use App\Models\Supplier;
 use App\Models\SupplyRequest;
+use App\Models\Transaction;
+use App\Models\User;
+use App\Services\AuditLogService;
 use App\Services\InventoryService;
 use App\Services\PurchaseRequestService;
 use App\Services\SupplyRequestService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SupplyOperationsController extends Controller
@@ -22,6 +29,12 @@ class SupplyOperationsController extends Controller
         return view('supply.stock', [
             'items' => Inventory::with('sizeStocks')->orderBy('item_name')->get(),
             'suppliers' => Supplier::query()->where('is_active', true)->orderBy('name')->get(),
+            'buyers' => User::query()
+                ->with('department')
+                ->where('is_active', true)
+                ->role(['Administrator', 'Admission', 'Accounting', 'Supply Personnel', 'Faculty'])
+                ->orderBy('name')
+                ->get(),
             'sources' => StockSourceType::stockInSources(),
         ]);
     }
@@ -41,6 +54,7 @@ class SupplyOperationsController extends Controller
             'reference_number' => ['nullable', 'string', 'max:100'],
             'delivery_receipt_number' => ['nullable', 'string', 'max:100'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'purchased_by' => ['nullable', 'exists:users,id'],
         ]);
 
         $source = StockSourceType::from($data['source_type']);
@@ -68,6 +82,7 @@ class SupplyOperationsController extends Controller
                     'reference_number' => $data['reference_number'] ?? null,
                     'delivery_receipt_number' => $data['delivery_receipt_number'] ?? null,
                     'unit_cost' => $data['unit_cost'] ?? null,
+                    'purchased_by' => $data['purchased_by'] ?? auth()->id(),
                 ],
             );
         } catch (\RuntimeException $e) {
@@ -240,6 +255,220 @@ class SupplyOperationsController extends Controller
         }
 
         return redirect()->route('supply.purchases')->with('success', 'Purchase released. On-hand inventory has been deducted.');
+    }
+
+    public function purchaseHistory(Request $request): View
+    {
+        $kind = $request->query('kind', 'all');
+        if (! in_array($kind, ['all', 'shop', 'department', 'supplier'], true)) {
+            $kind = 'all';
+        }
+
+        $search = trim((string) $request->query('q', ''));
+        $inspection = $request->query('inspection');
+
+        $shopRows = null;
+        $departmentRows = null;
+        $supplierRows = null;
+
+        if ($kind === 'all' || $kind === 'shop') {
+            $shopQuery = PurchaseRequestItem::query()
+                ->with(['inventory', 'inspector', 'purchaseRequest.user.department'])
+                ->whereHas('purchaseRequest', function ($query) {
+                    $query->whereNotIn('status', ['cancelled', 'rejected']);
+                })
+                ->latest('id');
+
+            if ($search !== '') {
+                $shopQuery->where(function ($inner) use ($search) {
+                    $inner->whereHas('inventory', fn ($inv) => $inv->where('item_name', 'like', "%{$search}%")->orWhere('item_code', 'like', "%{$search}%"))
+                        ->orWhereHas('purchaseRequest', function ($purchase) use ($search) {
+                            $purchase->where('purchase_number', 'like', "%{$search}%")
+                                ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%")->orWhere('employee_id', 'like', "%{$search}%"));
+                        });
+                });
+            }
+
+            $this->applyInspectionFilter($shopQuery, $inspection);
+
+            $shopRows = $shopQuery->paginate(20, ['*'], 'shop_page')->withQueryString();
+        }
+
+        if ($kind === 'all' || $kind === 'department') {
+            $deptQuery = RequestItem::query()
+                ->with(['inventory', 'inspector', 'supplyRequest.user', 'supplyRequest.department', 'supplyRequest.releaser'])
+                ->where('quantity_released', '>', 0)
+                ->whereHas('supplyRequest', fn ($query) => $query->where('status', 'released'))
+                ->latest('id');
+
+            if ($search !== '') {
+                $deptQuery->where(function ($inner) use ($search) {
+                    $inner->whereHas('inventory', fn ($inv) => $inv->where('item_name', 'like', "%{$search}%")->orWhere('item_code', 'like', "%{$search}%"))
+                        ->orWhereHas('supplyRequest', function ($req) use ($search) {
+                            $req->where('request_number', 'like', "%{$search}%")
+                                ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%"))
+                                ->orWhereHas('department', fn ($dept) => $dept->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"));
+                        });
+                });
+            }
+
+            $this->applyInspectionFilter($deptQuery, $inspection);
+
+            $departmentRows = $deptQuery->paginate(20, ['*'], 'department_page')->withQueryString();
+        }
+
+        if ($kind === 'all' || $kind === 'supplier') {
+            $query = Transaction::query()
+                ->purchaseHistory()
+                ->with(['inventory', 'supplier', 'performer.department', 'inspector', 'buyer.department'])
+                ->latest('transaction_date')
+                ->latest('id');
+
+            if ($search !== '') {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('transaction_number', 'like', "%{$search}%")
+                        ->orWhere('reference_number', 'like', "%{$search}%")
+                        ->orWhere('delivery_receipt_number', 'like', "%{$search}%")
+                        ->orWhereHas('inventory', fn ($inv) => $inv->where('item_name', 'like', "%{$search}%")->orWhere('item_code', 'like', "%{$search}%"))
+                        ->orWhereHas('buyer', fn ($buyer) => $buyer->where('name', 'like', "%{$search}%"));
+                });
+            }
+
+            $this->applyInspectionFilter($query, $inspection);
+
+            $supplierRows = $query->paginate(20, ['*'], 'supplier_page')->withQueryString();
+        }
+
+        return view('supply.purchase-history', [
+            'kind' => $kind,
+            'shopRows' => $shopRows,
+            'departmentRows' => $departmentRows,
+            'supplierRows' => $supplierRows,
+        ]);
+    }
+
+    public function inspectDepartmentItem(Request $request, RequestItem $item, AuditLogService $auditLog): RedirectResponse
+    {
+        if ((int) $item->quantity_released <= 0) {
+            abort(404);
+        }
+
+        $status = $this->validatedInspection($request);
+
+        $before = [
+            'inspection_status' => $item->inspection_status instanceof ReceivingInspectionStatus
+                ? $item->inspection_status->value
+                : $item->inspection_status,
+            'inspection_notes' => $item->inspection_notes,
+        ];
+        $item->update([
+            'inspection_status' => $status->value,
+            'inspection_notes' => $request->input('inspection_notes'),
+            'inspected_by' => auth()->id(),
+            'inspected_at' => now(),
+        ]);
+
+        $item->loadMissing(['inventory', 'supplyRequest']);
+
+        $auditLog->log(auth()->user(), 'supply_request.receiving_inspected', $item->supplyRequest, $before, [
+            'request' => $item->supplyRequest?->request_number,
+            'item' => $item->inventory?->item_name,
+            'status' => $status->value,
+            'notes' => $request->input('inspection_notes'),
+        ]);
+
+        return back()->with('success', 'Item check saved for '.$item->supplyRequest?->request_number.'.');
+    }
+
+    public function inspectShopItem(Request $request, PurchaseRequestItem $item, AuditLogService $auditLog): RedirectResponse
+    {
+        $status = $this->validatedInspection($request);
+
+        $before = [
+            'inspection_status' => $item->inspection_status instanceof ReceivingInspectionStatus
+                ? $item->inspection_status->value
+                : $item->inspection_status,
+            'inspection_notes' => $item->inspection_notes,
+        ];
+        $item->update([
+            'inspection_status' => $status->value,
+            'inspection_notes' => $request->input('inspection_notes'),
+            'inspected_by' => auth()->id(),
+            'inspected_at' => now(),
+        ]);
+
+        $item->loadMissing(['inventory', 'purchaseRequest']);
+
+        $auditLog->log(auth()->user(), 'shop.receiving_inspected', $item->purchaseRequest, $before, [
+            'purchase' => $item->purchaseRequest?->purchase_number,
+            'item' => $item->inventory?->item_name,
+            'status' => $status->value,
+            'notes' => $request->input('inspection_notes'),
+        ]);
+
+        return back()->with('success', 'Item check saved for '.$item->purchaseRequest?->purchase_number.'.');
+    }
+
+    public function inspectPurchase(Request $request, Transaction $transaction, AuditLogService $auditLog): RedirectResponse
+    {
+        if (! $transaction->isPurchaseHistoryRow()) {
+            abort(404);
+        }
+
+        $data = $this->validatedInspection($request);
+
+        $transaction->loadMissing('inventory');
+
+        $before = [
+            'inspection_status' => $transaction->inspection_status instanceof ReceivingInspectionStatus
+                ? $transaction->inspection_status->value
+                : $transaction->inspection_status,
+            'inspection_notes' => $transaction->inspection_notes,
+        ];
+        $transaction->update([
+            'inspection_status' => $data->value,
+            'inspection_notes' => $request->input('inspection_notes'),
+            'inspected_by' => auth()->id(),
+            'inspected_at' => now(),
+        ]);
+
+        $auditLog->log(auth()->user(), 'inventory.receiving_inspected', $transaction, $before, [
+            'transaction' => $transaction->transaction_number,
+            'item' => $transaction->inventory?->item_name,
+            'status' => $data->value,
+            'notes' => $request->input('inspection_notes'),
+        ]);
+
+        return back()->with('success', 'Receiving check saved for '.$transaction->transaction_number.'.');
+    }
+
+    protected function applyInspectionFilter(mixed $query, mixed $status): void
+    {
+        if ($status === 'pending') {
+            $query->where(function ($inner) {
+                $inner->where('inspection_status', ReceivingInspectionStatus::Pending->value)
+                    ->orWhereNull('inspection_status');
+            });
+        } elseif (in_array($status, ['correct', 'incorrect'], true)) {
+            $query->where('inspection_status', $status);
+        }
+    }
+
+    protected function validatedInspection(Request $request): ReceivingInspectionStatus
+    {
+        $data = $request->validate([
+            'inspection_status' => ['required', Rule::enum(ReceivingInspectionStatus::class)],
+            'inspection_notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $status = ReceivingInspectionStatus::from($data['inspection_status']);
+        if ($status === ReceivingInspectionStatus::Incorrect && blank($data['inspection_notes'] ?? null)) {
+            throw ValidationException::withMessages([
+                'inspection_notes' => 'Describe the wrong item that was given so Supply can follow up.',
+            ]);
+        }
+
+        return $status;
     }
 
     protected function runDeduct(Request $request, InventoryService $inventoryService, string $method, string $success): RedirectResponse

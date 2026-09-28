@@ -78,6 +78,7 @@ class PurchaseRequestService
                     'quantity' => $qty,
                     'unit_price' => $inventory->unit_price,
                     'subtotal' => $subtotal,
+                    'inspection_status' => 'pending',
                 ]);
 
                 $total += $subtotal;

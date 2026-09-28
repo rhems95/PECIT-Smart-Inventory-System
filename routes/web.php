@@ -62,6 +62,7 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
         Route::post('/checkout', [PurchaseController::class, 'checkout'])->middleware('role:Student')->name('checkout');
         Route::get('/{purchase}', [PurchaseController::class, 'show'])->name('show');
         Route::get('/{purchase}/payment-slip', [PurchaseController::class, 'paymentSlip'])->name('payment-slip');
+        Route::get('/{purchase}/receipt', [PurchaseController::class, 'showReceipt'])->name('receipt.show');
         Route::post('/{purchase}/receipt', [PurchaseController::class, 'uploadReceipt'])->middleware('role:Student')->name('receipt.upload');
         Route::post('/{purchase}/cancel', [PurchaseController::class, 'cancel'])->middleware('role:Student')->name('cancel');
     });
@@ -127,6 +128,11 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
         Route::get('/purchases', [SupplyOperationsController::class, 'purchases'])->name('purchases');
         Route::get('/purchases/{purchase}', [SupplyOperationsController::class, 'showPurchase'])->name('purchases.show');
         Route::post('/purchases/{purchase}/release', [SupplyOperationsController::class, 'releasePurchase'])->name('purchases.release');
+
+        Route::get('/purchase-history', [SupplyOperationsController::class, 'purchaseHistory'])->name('purchase-history');
+        Route::post('/purchase-history/shop-items/{item}/inspect', [SupplyOperationsController::class, 'inspectShopItem'])->name('purchase-history.inspect-shop');
+        Route::post('/purchase-history/request-items/{item}/inspect', [SupplyOperationsController::class, 'inspectDepartmentItem'])->name('purchase-history.inspect-department');
+        Route::post('/purchase-history/{transaction}/inspect', [SupplyOperationsController::class, 'inspectPurchase'])->name('purchase-history.inspect');
 
         Route::get('/students', [SupplyStudentController::class, 'index'])->name('students.index');
         Route::get('/students/create', [SupplyStudentController::class, 'create'])->name('students.create');

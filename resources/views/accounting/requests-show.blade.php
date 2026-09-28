@@ -17,6 +17,7 @@
         <p><span class="text-slate-500">Status:</span> {{ str_replace('_', ' ', $supplyRequest->status) }}</p>
         <p class="sm:col-span-2"><span class="text-slate-500">Purpose:</span> {{ $supplyRequest->purpose ?? '—' }}</p>
     </div>
+    @include('partials.faculty-budget', ['budget' => $budget ?? null, 'budgetMode' => 'review'])
 
     <div class="psis-card overflow-x-auto">
         <table class="min-w-full text-sm">

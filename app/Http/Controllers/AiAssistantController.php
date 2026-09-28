@@ -34,16 +34,15 @@ class AiAssistantController extends Controller
     public function ask(Request $request, AiInsightService $ai): JsonResponse
     {
         $user = $request->user();
-        $allowed = $user ? $ai->chatSuggestions($user) : [];
 
         $data = $request->validate([
             'message' => ['required', 'string', 'max:1000'],
         ]);
 
-        if (! $user || ! $ai->isAllowedChatQuestion($user, $data['message'])) {
+        if (! $user) {
             return response()->json([
-                'reply' => 'Please choose a question from the list.',
-            ], 422);
+                'reply' => 'Please sign in to use the AI assistant.',
+            ], 401);
         }
 
         return response()->json([

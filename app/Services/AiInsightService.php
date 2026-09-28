@@ -16,6 +16,11 @@ class AiInsightService
 {
     protected int $lookbackDays = 90;
 
+    public function __construct(
+        protected OllamaChatService $ollama,
+        protected FacultyBudgetService $facultyBudget,
+    ) {}
+
     /**
      * @return array<int, array{
      *     inventory_id: int,
@@ -87,6 +92,95 @@ class AiInsightService
     }
 
     public function chatResponse(User $user, string $question): string
+    {
+        if ($this->isAllowedChatQuestion($user, $question)) {
+            return $this->ruleBasedChatResponse($user, $question);
+        }
+
+        $rule = $this->ruleBasedChatResponse($user, $question);
+        if (! $this->isGenericHelpReply($rule, $user)) {
+            return $rule;
+        }
+
+        $llm = $this->ollama->reply($user, $question, $this->groundingContext($user));
+        if (is_string($llm) && trim($llm) !== '') {
+            return trim($llm);
+        }
+
+        if ($this->ollama->isEnabled()) {
+            return 'The local AI (Ollama) did not reply. '.$this->helpForRole($user);
+        }
+
+        return $rule;
+    }
+
+    /**
+     * Compact live facts injected into the local Ollama prompt.
+     */
+    public function groundingContext(User $user): string
+    {
+        $lines = [];
+        $lines[] = 'User: '.$user->name;
+        $lines[] = 'Role: '.($user->getRoleNames()->implode(', ') ?: 'none');
+        $dept = $user->department;
+        $lines[] = 'Department: '.($dept?->name ?? 'none').($dept?->code ? ' ('.$dept->code.')' : '');
+        $lines[] = $this->monthlySummary();
+
+        $low = $this->lowStockItems()->take(8);
+        $lines[] = $low->isEmpty()
+            ? 'Low stock: none'
+            : 'Low stock: '.$low->map(
+                fn (Inventory $i) => $i->item_name.' available '.$i->availableQuantity().' min '.$i->minimum_stock
+            )->implode('; ');
+
+        $out = Inventory::query()->get()->filter(fn (Inventory $i) => $i->isOutOfStock())->take(8);
+        $lines[] = $out->isEmpty()
+            ? 'Out of stock: none'
+            : 'Out of stock: '.$out->map(fn (Inventory $i) => $i->item_name)->implode(', ');
+
+        foreach ($this->inventoryForecasts(5, 14) as $forecast) {
+            $days = $forecast['days_until_depletion'] ?? 'n/a';
+            $lines[] = "Forecast {$forecast['item']}: available {$forecast['available']}, days {$days}, reorder {$forecast['recommended_reorder']}";
+        }
+
+        if ($user->hasRole('Student')) {
+            $latest = PurchaseRequest::query()->where('user_id', $user->id)->latest('id')->first();
+            $lines[] = $latest
+                ? "Latest purchase {$latest->request_number} status {$latest->status}"
+                : 'No student purchases yet.';
+            $lines[] = 'Shop rule: only this department exclusive uniforms plus shared P.E., NSTP, ID lanyard.';
+        }
+
+        if ($user->hasRole('Faculty') && $dept) {
+            $snapshot = $this->facultyBudget->snapshot($dept);
+            $lines[] = sprintf(
+                'Faculty budget %s %s: used %.2f of %.2f remaining %.2f',
+                $snapshot['period_label'],
+                $dept->name,
+                $snapshot['used'],
+                $snapshot['limit'],
+                $snapshot['remaining']
+            );
+            $latest = SupplyRequest::query()->where('user_id', $user->id)->latest('id')->first();
+            $lines[] = $latest
+                ? "Latest request {$latest->request_number} status {$latest->status} amount {$latest->total_amount}"
+                : 'No faculty requests yet.';
+        }
+
+        if ($user->hasAnyRole(['Accounting', 'Administrator', 'Admission', 'Supply Personnel'])) {
+            $lines[] = 'Pending faculty requests: '.SupplyRequest::query()->where('status', 'pending')->count();
+            $lines[] = 'Accounting review: '.SupplyRequest::query()->where('status', 'accounting_review')->count();
+            $lines[] = 'Admin review: '.SupplyRequest::query()->where('status', 'admin_review')->count();
+            $lines[] = 'Ready to release: '.SupplyRequest::query()->whereIn('status', ['approved', 'reserved'])->count();
+            $lines[] = 'Payments waiting verify: '.PurchaseRequest::query()->where('status', 'payment_submitted')->count();
+        }
+
+        $lines[] = 'Never invent quantities that are not listed above.';
+
+        return implode("\n", $lines);
+    }
+
+    public function ruleBasedChatResponse(User $user, string $question): string
     {
         $q = $this->normalizeQuestion($question);
         $role = $user->getRoleNames()->first() ?? 'User';
@@ -374,8 +468,15 @@ class AiInsightService
         $options = collect($this->chatSuggestions($user))->map(fn (string $q) => '"'.$q.'"')->implode(', ');
 
         return $options !== ''
-            ? 'Choose one of these questions: '.$options.'.'
+            ? 'You can type a question or choose one of these: '.$options.'.'
             : 'No questions are available for your role.';
+    }
+
+    protected function isGenericHelpReply(string $reply, User $user): bool
+    {
+        $role = $user->getRoleNames()->first() ?? 'User';
+
+        return $reply === "I'm your {$role} assistant. ".$this->helpForRole($user);
     }
 
     protected function answerHowToBuy(User $user): string

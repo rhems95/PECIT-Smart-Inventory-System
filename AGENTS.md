@@ -75,6 +75,10 @@ available = quantity - reserved_quantity
 
 Inventory UI should show **On Hand**, **Reserved**, and **Available**.
 
+### Faculty department budget (do not break)
+
+Each department’s faculty requisitions are capped by `departments.faculty_budget_limit` (default **₱10,000**) **per semester**. There are **two semesters** per academic year: **1st** June 1–November 30, **2nd** December 1–May 31. Count statuses: pending, accounting review, admin review, approved, reserved, released. Cancelled and rejected do **not** count. Enforce in `FacultyBudgetService` / `SupplyRequestService` (create and accounting review). Faculty must have a `department_id`.
+
 ### Student shop / department exclusivity (do not break)
 
 Students **cannot** access `/inventory` (menu, routes, policy). They buy only via **Uniform Shop** (`shop.*`).
@@ -111,19 +115,20 @@ There is a **Suppliers** module (Admin / Supply). Supplier is recorded on the **
 routes/web.php          # Main app routes (role middleware)
 routes/auth.php         # Breeze auth (login, password reset; no public register)
 
-app/Http/Controllers/   # Thin controllers (incl. SupplyStudentController)
-app/Services/           # Business logic
+app/Http/Controllers/   # Thin controllers (incl. AiAssistantController)
+app/Services/           # Business logic (AiInsightService, OllamaChatService)
 app/Policies/           # Inventory, SupplyRequest, PurchaseRequest
 app/Support/PsisMenu.php# Sidebar items + isActive() matching
 app/Mail/               # Email for notifications
-config/psis.php         # PSIS_MAIL_NOTIFICATIONS
+config/psis.php         # PSIS_MAIL_*, PSIS_OLLAMA_*
 
 resources/views/
-  layouts/psis.blade.php
+  layouts/psis.blade.php        # Fixed sidebar + sticky header
   auth/login.blade.php          # Staff / Student tabs
   supply/students/              # Supply student list, form, CSV import
   partials/ai-chat-widget.blade.php
   emails/
+resources/js/app.js     # Alpine, Chart.js, psisAiChat (clears chat on login page)
 public/images/          # pecit-logo.png, chatbot.png
 ```
 
@@ -156,7 +161,9 @@ public/images/          # pecit-logo.png, chatbot.png
 
 `pending` → Accounting review → `admin_review` → Admission/Admin approve (reserve) → `approved` → Supply release → `released`
 
-Routes under `requests.*` (Faculty only). Accounting: `accounting.requests*`. Admission/Admin: `admin.requests*`. Supply: `supply.releases*`.
+Routes under `requests.*` (Faculty only). Accounting: `accounting.requests*`. Admission/Admin: `admin.requests*`. Supply: `supply.releases*`. Department budget: `FacultyBudgetService`.
+
+Stock-in purchase history (correct vs wrong item): `supply.purchase-history`.
 
 ### Student purchase
 
@@ -196,14 +203,20 @@ Env flags: `MAIL_*`, `PSIS_MAIL_NOTIFICATIONS`.
 
 ## AI module
 
-- **Not an external LLM** — rule-based / analytics in `app/Services/AiInsightService.php`
-- Chat: `AiAssistantController` + `POST /ai/ask`
-- Floating widget: `resources/views/partials/ai-chat-widget.blade.php` (included in PSIS layout)
-- Restock page: `/ai/restock` (Supply / Admin)
-- Daily alert: `php artisan psis:low-stock-alert` (scheduled in `bootstrap/app.php` at 08:00)
+Hybrid, **local only** — no OpenAI / cloud API.
 
-Role-aware suggestions: `AiInsightService::chatSuggestions()`.
-Keep AI answers grounded in DB data; do not invent stock numbers.
+1. `app/Services/AiInsightService.php` — live stock, requests, budget snapshot, keyword answers, restock math
+2. `app/Services/OllamaChatService.php` — optional wording via Ollama on `http://127.0.0.1:11434` (localhost / `::1` only)
+3. Chat: `AiAssistantController` + `POST /ai/ask` (type box + collapsible role question list)
+4. Floating widget: `resources/views/partials/ai-chat-widget.blade.php` (PSIS layout)
+5. Restock page: `/ai/restock` (Supply / Admin)
+6. Daily alert: `php artisan psis:low-stock-alert` (scheduled in `bootstrap/app.php` at 08:00)
+
+Env: `PSIS_OLLAMA_ENABLED`, `PSIS_OLLAMA_URL`, `PSIS_OLLAMA_MODEL`, `PSIS_OLLAMA_TIMEOUT` in `config/psis.php`.
+
+Listed questions stay rule-based (exact numbers). Free text uses keyword match first, then Ollama with an injected fact snapshot. If Ollama is off or down, the question list still works. Never invent stock numbers.
+
+Widget UX: **Choose a question** is collapsed by default. The FAB can be dragged a short way up/left (not into the middle); click opens the panel **pinned to the lower-right corner**. The thread is stored in `sessionStorage` (`psis-ai-chat:{userId}` via `window.psisAiChat` in `resources/js/app.js`) and **cleared on logout** and on the login page. Do not persist chat after logout on a shared PC.
 
 ---
 
@@ -214,6 +227,7 @@ Keep AI answers grounded in DB data; do not invent stock numbers.
 - Brand colors: `#0B3C91` (blue), `#F4B400` (gold)
 - Tables: give **every** `<th>` and `<td>` the same horizontal padding (`px-4 py-3`); avoid “header-only padding” bugs
 - Sidebar active state: use `PsisMenu::isActive()` — Faculty **My Requests** vs **New Request** must stay mutually exclusive
+- Desktop sidebar stays visible while scrolling: keep `#psis-sidebar` **fixed** (`inset-y-0`) and offset content with `.psis-main-col` / `lg:ml-64`. Do not use `lg:static` on the aside (that scrolls the menu off-screen).
 - Assets: `public/images/pecit-logo.png`, `public/images/chatbot.png`
 - After CSS/JS changes under `resources/`, run `npm run build` (or `npm run dev`)
 
@@ -266,10 +280,10 @@ Seeders: `RoleAndPermissionSeeder`, `MasterDataSeeder` (includes Uniforms catego
 
 - Laravel Sanctum / JSON API (the app is web-session only)
 - Broad domain PHPUnit coverage (mostly Breeze auth tests)
-- External LLM integration
+- Cloud LLM APIs (OpenAI, etc.). Optional **local** Ollama is in `OllamaChatService`
 - Public self-registration (Admin / Supply create student accounts)
 
-Do not add Sanctum/LLM unless the user asks.
+Do not add Sanctum or a cloud LLM unless the user asks.
 
 ---
 
@@ -300,6 +314,8 @@ php artisan psis:low-stock-alert
 npm run build
 ```
 
+Optional local chat: install Ollama, `ollama pull llama3.2:3b`, set `PSIS_OLLAMA_ENABLED=true`.
+
 Windows scheduler (optional): run `php artisan schedule:run` every minute for daily low-stock emails.
 
 ---
@@ -311,13 +327,15 @@ Windows scheduler (optional): run `php artisan schedule:run` every minute for da
 | Routes / roles | `routes/web.php` |
 | Sidebar | `app/Support/PsisMenu.php` |
 | Stock math | `app/Services/InventoryService.php` |
-| Faculty flow | `app/Services/SupplyRequestService.php` |
+| Faculty flow | `app/Services/SupplyRequestService.php`, `app/Services/FacultyBudgetService.php` |
+| Stock receive check | `supply.purchase-history`, `transactions.inspection_status` |
 | Student purchase flow | `app/Services/PurchaseRequestService.php` |
 | Student shop filter | `app/Http/Controllers/ShopController.php`, `Inventory` scopes |
 | Departments | `database/seeders/MasterDataSeeder.php`, `DepartmentController` |
 | Student accounts / CSV | `app/Services/StudentAccountService.php`, `SupplyStudentController` |
 | Login (staff + student) | `app/Http/Requests/Auth/LoginRequest.php`, `resources/views/auth/login.blade.php` |
-| AI | `app/Services/AiInsightService.php` |
+| AI | `app/Services/AiInsightService.php`, `app/Services/OllamaChatService.php` |
+| Chat widget / persist | `partials/ai-chat-widget.blade.php`, `resources/js/app.js` (`psisAiChat`) |
 | Email + bell | `app/Services/NotificationService.php` |
-| Layout / FAB | `resources/views/layouts/psis.blade.php`, `partials/ai-chat-widget.blade.php` |
+| Layout / FAB / sidebar | `resources/views/layouts/psis.blade.php`, `partials/ai-chat-widget.blade.php` |
 | App config bootstrap | `bootstrap/app.php` |

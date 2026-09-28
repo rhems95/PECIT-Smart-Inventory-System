@@ -4,6 +4,7 @@
 @section('page-title', 'Submit Supply Request')
 
 @section('content')
+@include('partials.faculty-budget', ['budget' => $budget, 'budgetMode' => 'create'])
 <form method="POST" action="{{ route('requests.store') }}" class="psis-card p-6 space-y-4 max-w-4xl">
     @csrf
     <div>
@@ -26,7 +27,7 @@
                     <select class="psis-input" name="items[{{ $index }}][inventory_id]" required>
                         <option value="">Select item</option>
                         @foreach ($inventory as $item)
-                            <option value="{{ $item->id }}" @selected((string) ($oldLine['inventory_id'] ?? '') === (string) $item->id)>{{ $item->item_name }} (avail: {{ $item->availableQuantity() }})</option>
+                            <option value="{{ $item->id }}" data-price="{{ $item->unit_price }}" @selected((string) ($oldLine['inventory_id'] ?? '') === (string) $item->id)>{{ $item->item_name }} — ₱{{ number_format($item->unit_price, 2) }} (avail: {{ $item->availableQuantity() }})</option>
                         @endforeach
                     </select>
                 </div>
@@ -38,6 +39,7 @@
             @endforeach
         </div>
     </div>
+    <p id="request-estimate" class="text-sm text-slate-500">Estimated total: ₱0.00</p>
     <button type="submit" class="psis-btn-primary">Submit Request</button>
 </form>
 @endsection
@@ -57,6 +59,36 @@ document.getElementById('add-request-line')?.addEventListener('click', function 
         if (el.type === 'number') el.value = '1';
     });
     wrap.appendChild(clone);
+    bindEstimate();
+    updateEstimate();
 });
+
+function lineTotal(line) {
+    var select = line.querySelector('select');
+    var qty = parseFloat(line.querySelector('input[type="number"]')?.value || '0');
+    var price = parseFloat(select?.selectedOptions?.[0]?.getAttribute('data-price') || '0');
+    return (qty > 0 ? qty : 0) * (price > 0 ? price : 0);
+}
+
+function updateEstimate() {
+    var total = 0;
+    document.querySelectorAll('.request-line').forEach(function (line) {
+        total += lineTotal(line);
+    });
+    var el = document.getElementById('request-estimate');
+    if (el) el.textContent = 'Estimated total: ₱' + total.toFixed(2);
+}
+
+function bindEstimate() {
+    document.querySelectorAll('.request-line select, .request-line input[type="number"]').forEach(function (el) {
+        el.removeEventListener('change', updateEstimate);
+        el.removeEventListener('input', updateEstimate);
+        el.addEventListener('change', updateEstimate);
+        el.addEventListener('input', updateEstimate);
+    });
+}
+
+bindEstimate();
+updateEstimate();
 </script>
 @endpush

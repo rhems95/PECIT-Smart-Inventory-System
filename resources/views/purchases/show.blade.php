@@ -15,7 +15,7 @@
         @if ($payment = $purchase->payments->first())
             <p>Payment Ref: {{ $payment->reference_number }}</p>
             @if ($payment->receipt_path)
-                <p>Receipt: <a href="{{ asset('storage/'.$payment->receipt_path) }}" target="_blank" class="text-pecit-blue dark:text-pecit-gold hover:underline">View uploaded receipt</a></p>
+                <p>Receipt: <a href="{{ route('purchases.receipt.show', $purchase) }}" target="_blank" class="text-pecit-blue dark:text-pecit-gold hover:underline">View uploaded receipt</a></p>
             @endif
         @endif
         <a href="{{ route('purchases.payment-slip', $purchase) }}" class="psis-btn-secondary inline-flex mt-2">Download Payment Slip (PDF)</a>

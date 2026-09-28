@@ -10,7 +10,7 @@ class AiChatQuestionListTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_ai_chat_page_lists_questions_and_has_no_type_box(): void
+    public function test_ai_chat_page_lists_questions_and_has_a_type_box(): void
     {
         $user = User::factory()->create();
         $user->assignRole('Supply Personnel');
@@ -20,8 +20,7 @@ class AiChatQuestionListTest extends TestCase
             ->assertOk()
             ->assertSee('Choose a question')
             ->assertSee('Reorder recommendations')
-            ->assertDontSee('Type your question', false)
-            ->assertDontSee('Type a question', false);
+            ->assertSee('Type a question');
     }
 
     public function test_ask_accepts_a_listed_question(): void
@@ -35,14 +34,14 @@ class AiChatQuestionListTest extends TestCase
             ->assertJsonStructure(['reply']);
     }
 
-    public function test_ask_rejects_free_typed_questions(): void
+    public function test_ask_accepts_free_typed_questions(): void
     {
         $user = User::factory()->create();
         $user->assignRole('Supply Personnel');
 
         $this->actingAs($user)
             ->postJson(route('ai.ask'), ['message' => 'What is the meaning of life?'])
-            ->assertStatus(422)
-            ->assertJsonFragment(['reply' => 'Please choose a question from the list.']);
+            ->assertOk()
+            ->assertJsonStructure(['reply']);
     }
 }

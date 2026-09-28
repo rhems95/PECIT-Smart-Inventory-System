@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ReceivingInspectionStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +16,10 @@ class RequestItem extends Model
         'quantity_released',
         'unit_price',
         'subtotal',
+        'inspection_status',
+        'inspection_notes',
+        'inspected_by',
+        'inspected_at',
     ];
 
     protected function casts(): array
@@ -25,6 +30,8 @@ class RequestItem extends Model
             'quantity_released' => 'integer',
             'unit_price' => 'decimal:2',
             'subtotal' => 'decimal:2',
+            'inspection_status' => ReceivingInspectionStatus::class,
+            'inspected_at' => 'datetime',
         ];
     }
 
@@ -36,5 +43,19 @@ class RequestItem extends Model
     public function inventory(): BelongsTo
     {
         return $this->belongsTo(Inventory::class);
+    }
+
+    public function inspector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'inspected_by');
+    }
+
+    public function inspectionLabel(): string
+    {
+        $status = $this->inspection_status;
+
+        return $status instanceof ReceivingInspectionStatus
+            ? $status->label()
+            : ReceivingInspectionStatus::Pending->label();
     }
 }

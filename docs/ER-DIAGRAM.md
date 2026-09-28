@@ -71,6 +71,7 @@ erDiagram
         string code UK "CCS CC CTHM CTE CBA SHS ADMIN SUPPLY"
         text description
         boolean is_active
+        decimal faculty_budget_limit "default 10000 per semester"
     }
 
     USERS {
@@ -172,6 +173,7 @@ erDiagram
         int quantity_released
         decimal unit_price
         decimal subtotal
+        string inspection_status "pending correct incorrect"
     }
 
     PURCHASE_REQUESTS {
@@ -228,6 +230,10 @@ erDiagram
         string size
         timestamp transaction_date
         bigint performed_by FK
+        bigint purchased_by FK "who bought the item"
+        string inspection_status "pending correct incorrect"
+        text inspection_notes
+        bigint inspected_by FK
     }
 
     STOCK_LOGS {
@@ -311,6 +317,7 @@ Optional actor FKs (all → `users.id`, `ON DELETE SET NULL` unless noted):
 | `payments` | `verified_by` |
 | `announcements` | `created_by` (`CASCADE`) |
 | `transactions` / `stock_logs` | `performed_by` (`CASCADE`) |
+| `transactions` | `inspected_by` (`SET NULL`), `purchased_by` (`SET NULL`) |
 | `inventory_price_adjustments` | `adjusted_by` (`CASCADE`) |
 | `inventory` | `unit_of_measurement_id` (`SET NULL`) |
 | `transactions` | `supplier_id` (`SET NULL`) |
@@ -333,6 +340,8 @@ erDiagram
 `pending` → Accounting review → `admin_review` → Admission or Administrator approve (stock **reserved**) → `approved` → Supply release (on-hand **deducted**, reserved cleared)
 
 Submit does **not** deduct stock. Faculty may cancel through `admin_review` and `approved` (before release). Cancelling an **approved** request **restores** `reserved_quantity`.
+
+Each department has a **faculty supply budget** (`faculty_budget_limit`, default ₱10,000) **per semester** (two semesters per academic year: June–November and December–May). Pending through released requests count; cancelled and rejected do not.
 
 ---
 
@@ -418,7 +427,7 @@ Stock Card UI (`inventory.stock-card`): Admin, Admission, Accounting, Supply Per
 | Table | Purpose |
 |-------|---------|
 | `users` | Accounts (all roles). Students log in with `employee_id` + `last_name` |
-| `departments` | Organizational units (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) and Uniform Shop exclusivity |
+| `departments` | Organizational units (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY). `faculty_budget_limit` caps faculty requisitions per semester (default ₱10,000; two semesters per year) |
 | `categories` | Inventory categories (includes Uniforms) |
 | `units_of_measurement` | UoM master (`symbol` unique). Linked from `inventory.unit_of_measurement_id` |
 | `suppliers` | Vendor master. Linked from `transactions.supplier_id`, not from the item |
@@ -430,7 +439,7 @@ Stock Card UI (`inventory.stock-card`): Admin, Admission, Accounting, Supply Per
 | `purchase_requests` | Student purchases (not vendor POs) |
 | `purchase_request_items` | Lines on a student purchase; `size` required for clothing uniforms |
 | `payments` | Student payment records / receipt path |
-| `transactions` | Stock movement ledger / Stock Card source |
+| `transactions` | Stock movement ledger / Stock Card source. Stock-in / purchase-delivery rows also store receiving inspection (correct vs wrong item) |
 | `stock_logs` | Delivery / stock-in action log |
 | `psis_notifications` | In-app notifications (email via `NotificationService`) |
 | `audit_logs` | Audit trail (polymorphic target) |
@@ -486,4 +495,4 @@ Stock Card UI (`inventory.stock-card`): Admin, Admission, Accounting, Supply Per
 
 ---
 
-*Keep this file updated when migrations change. Last aligned 11 September 2026 with academic departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY), `units_of_measurement`, `suppliers` on movements, `inventory_price_adjustments`, extended `transactions` (Stock Card), uniform size stocks, Admission role, and no barcode / no item-level supplier / no FIFO or PO module.*
+*Keep this file updated when migrations change. Last aligned 15 September 2026 with faculty department budget (`departments.faculty_budget_limit`), receiving inspection on buy/stock-in rows, academic departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY), `units_of_measurement`, `suppliers` on movements, `inventory_price_adjustments`, extended `transactions` (Stock Card), uniform size stocks, Admission role, and no barcode / no item-level supplier / no FIFO or PO module.*

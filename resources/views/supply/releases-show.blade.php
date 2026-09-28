@@ -29,6 +29,7 @@
                     <th class="px-4 py-3 font-medium">Item</th>
                     <th class="px-4 py-3 font-medium">Requested</th>
                     <th class="px-4 py-3 font-medium">Approved</th>
+                    <th class="px-4 py-3 font-medium">To give</th>
                     <th class="px-4 py-3 font-medium text-right">Subtotal</th>
                 </tr>
             </thead>
@@ -38,6 +39,7 @@
                         <td class="px-4 py-3">{{ $line->inventory?->item_name ?? '—' }}</td>
                         <td class="px-4 py-3">{{ $line->quantity_requested }}</td>
                         <td class="px-4 py-3">{{ $line->quantity_approved ?: '—' }}</td>
+                        <td class="px-4 py-3">{{ $line->quantity_approved ?: $line->quantity_requested }}</td>
                         <td class="px-4 py-3 text-right">₱{{ number_format($line->subtotal, 2) }}</td>
                     </tr>
                 @endforeach

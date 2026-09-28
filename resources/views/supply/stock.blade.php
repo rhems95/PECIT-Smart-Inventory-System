@@ -46,6 +46,7 @@
         <button type="button" class="psis-btn-outline" :class="tab === 'bad' && 'ring-2 ring-pecit-blue'" @click="tab = 'bad'">Bad Order</button>
         <button type="button" class="psis-btn-outline" :class="tab === 'return' && 'ring-2 ring-pecit-blue'" @click="tab = 'return'">Return to Supplier</button>
         <a href="{{ route('admin.suppliers.index') }}" class="psis-btn-outline">Suppliers</a>
+        <a href="{{ route('supply.purchase-history') }}" class="psis-btn-outline">Purchase History</a>
     </div>
 
     <form method="POST" action="{{ route('supply.stock.in') }}" class="psis-card p-5 space-y-3" x-show="tab === 'in'" x-cloak>
@@ -91,6 +92,17 @@
             <input name="delivery_receipt_number" class="psis-input" placeholder="DR number">
         </div>
         <input type="number" name="quantity" min="1" class="psis-input" placeholder="Quantity to add" required>
+        <div x-show="source === 'purchase_order' || source === 'emergency_purchase' || source === 'manual_external' || source === 'other'">
+            <label class="psis-label">Bought by</label>
+            <select name="purchased_by" class="psis-input">
+                @foreach ($buyers as $buyer)
+                    <option value="{{ $buyer->id }}" @selected($buyer->id === auth()->id())>
+                        {{ $buyer->name }}@if ($buyer->department) — {{ $buyer->department->code }}@endif
+                    </option>
+                @endforeach
+            </select>
+            <p class="text-xs text-slate-500 mt-1">Staff member who bought this item. Shown on Purchase History.</p>
+        </div>
         <input type="number" step="0.01" min="0" name="unit_cost" class="psis-input" placeholder="Unit cost (optional)">
         <input name="notes" class="psis-input" placeholder="Remarks">
         <button class="psis-btn-primary">Record Stock In</button>

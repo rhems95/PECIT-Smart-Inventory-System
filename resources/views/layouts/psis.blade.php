@@ -8,13 +8,21 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{-- Fallback so AI FAB shows even before Vite rebuild --}}
     <style>
-        #psis-ai-widget.psis-ai-widget{position:fixed!important;right:20px!important;bottom:20px!important;z-index:9999!important;display:flex!important;flex-direction:column;align-items:flex-end;gap:12px}
-        #psis-ai-widget .psis-ai-fab{width:64px;height:64px;padding:0;border:2px solid #F4B400;border-radius:9999px;background:#fff;box-shadow:0 10px 25px rgba(11,60,145,.35);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
+        #psis-ai-widget.psis-ai-widget{position:fixed!important;right:20px;bottom:20px;z-index:9999!important;display:flex!important;flex-direction:column;align-items:flex-end;gap:12px}
+        #psis-ai-widget .psis-ai-fab{width:64px;height:64px;padding:0;border:2px solid #F4B400;border-radius:9999px;background:#fff;box-shadow:0 10px 25px rgba(11,60,145,.35);cursor:grab;touch-action:none;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
         #psis-ai-widget .psis-ai-fab-img{width:100%;height:100%;object-fit:cover;display:block}
         [x-cloak]{display:none!important}
-        .psis-ai-questions{padding:.5rem .75rem .75rem;border-top:1px solid #E2E8F0;max-height:11.5rem;overflow-y:auto}
-        .psis-ai-question-list{display:flex;flex-direction:column;gap:.35rem}
+        .psis-ai-questions{padding:0;border-top:1px solid #E2E8F0}
+        .psis-ai-questions-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#64748b;background:transparent;border:0;cursor:pointer}
+        .psis-ai-question-list{display:flex;flex-direction:column;gap:.35rem;padding:0 .75rem .75rem;max-height:8.5rem;overflow-y:auto}
         .psis-ai-question{width:100%;text-align:left;font-size:.8rem;padding:.45rem .65rem;border-radius:.5rem;border:1px solid #E2E8F0;background:#fff;cursor:pointer}
+        .psis-ai-form{display:flex;gap:.5rem;padding:.75rem;border-top:1px solid #E2E8F0}
+        .psis-ai-input{flex:1;min-width:0;border-radius:.5rem;border:1px solid #cbd5e1;padding:.5rem .75rem;font-size:.875rem;background:transparent;color:inherit}
+        .psis-ai-send{border:none;border-radius:.5rem;background:#0B3C91;color:#fff;padding:.5rem .85rem;font-size:.875rem;font-weight:600;cursor:pointer}
+        @media (min-width: 1024px) {
+            #psis-sidebar{position:fixed!important;top:0;bottom:0;left:0;height:100vh;height:100dvh}
+            .psis-main-col{margin-left:16rem}
+        }
     </style>
     @stack('head')
 </head>
@@ -22,7 +30,12 @@
     <div class="min-h-screen flex">
         <div x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 bg-black/40 z-40 lg:hidden" @click="sidebarOpen = false"></div>
 
-        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'" class="fixed lg:static inset-y-0 left-0 z-50 w-64 flex flex-col text-white transition-transform duration-200" style="background: var(--psis-sidebar-bg);">
+        <aside
+            id="psis-sidebar"
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+            class="fixed inset-y-0 left-0 z-50 w-64 flex flex-col text-white transition-transform duration-200"
+            style="background: var(--psis-sidebar-bg);"
+        >
             <div class="p-5 border-b border-white/10">
                 <div class="flex items-center gap-3">
                 <img src="{{ asset('images/pecit-logo.png') }}" alt="PECIT" class="w-10 h-10 rounded-lg object-contain">
@@ -50,7 +63,7 @@
             </div>
         </aside>
 
-        <div class="flex-1 flex flex-col min-w-0">
+        <div class="psis-main-col flex-1 flex flex-col min-w-0 lg:ml-64">
             <header class="sticky top-0 z-30 bg-[var(--psis-surface)] border-b border-[var(--psis-border)] shadow-sm">
                 <div class="flex items-center justify-between px-4 lg:px-8 h-16">
                     <button type="button" class="lg:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-pecit-blue" @click="sidebarOpen = !sidebarOpen">
@@ -79,7 +92,7 @@
                             </button>
                             <div x-show="open" @click.outside="open = false" x-transition class="absolute right-0 mt-2 w-48 bg-[var(--psis-surface)] border border-[var(--psis-border)] rounded-lg shadow-soft-lg py-1 z-50">
                                 <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">Profile</a>
-                                <form method="POST" action="{{ route('logout') }}">
+                                <form method="POST" action="{{ route('logout') }}" onsubmit="window.psisAiChat && window.psisAiChat.clear()">
                                     @csrf
                                     <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">Logout</button>
                                 </form>

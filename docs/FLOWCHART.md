@@ -7,7 +7,7 @@ Render Mermaid diagrams in GitHub, Cursor/VS Code Markdown preview, or [mermaid.
 
 Related: [`ER-DIAGRAM.md`](ER-DIAGRAM.md)
 
-There is **no public self-registration**. Staff use email + password; students use last name + Student ID. AI answers a **question list** from live data (`AiInsightService`); it is not an external LLM. Stock Card shows **physical** `transactions` only (reserve/restore hidden). Supplier and optional unit cost live on the **movement**, not on the item. Typed PO / DR numbers on stock-in are receiving text, not a purchase-order module.
+There is **no public self-registration**. Staff use email + password; students use last name + Student ID. AI chat uses live data (`AiInsightService`); listed questions are rule-based and optional **local Ollama** (`OllamaChatService`, localhost only) can word free-typed answers. It is not a cloud LLM. Stock Card shows **physical** `transactions` only (reserve/restore hidden). Supplier and optional unit cost live on the **movement**, not on the item. Typed PO / DR numbers on stock-in are receiving text, not a purchase-order module.
 
 ---
 
@@ -211,9 +211,12 @@ flowchart TD
     F -->|No| E
 
     H[Scheduled: psis:low-stock-alert at 08:00] --> D
-    I[User picks AI question from list] --> J[AiInsightService]
-    J --> K[Role-aware answer from live DB]
-    I2[Free-typed question] --> I3([Rejected])
+    I[User asks AI: list or typed] --> J[AiInsightService live facts]
+    J --> K{Listed question or keyword match?}
+    K -->|Yes| L[Rule-based answer from DB]
+    K -->|No| M{Ollama on localhost?}
+    M -->|Yes| N[OllamaChatService wording]
+    M -->|No / down| O[Question-list help]
 ```
 
 Audit logs record logins, inventory/stock, users, master data, and profile changes.
@@ -323,4 +326,4 @@ flowchart TB
 
 ---
 
-*Keep this file aligned with `SupplyRequestService`, `PurchaseRequestService`, `InventoryService`, `StockCardService`, `AiInsightService`, and the canonical departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) when workflows change. Last aligned 11 September 2026.*
+*Keep this file aligned with `SupplyRequestService`, `PurchaseRequestService`, `InventoryService`, `StockCardService`, `AiInsightService`, `OllamaChatService`, and the canonical departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) when workflows change. Last aligned 19 September 2026.*

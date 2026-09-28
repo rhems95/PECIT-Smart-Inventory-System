@@ -27,8 +27,12 @@ class FacultyRequestController extends Controller
     {
         $this->authorize('create', SupplyRequest::class);
 
+        $user = auth()->user();
+        $user->loadMissing('department');
+
         return view('requests.create', [
             'inventory' => Inventory::with('category')->orderBy('item_name')->get(),
+            'budget' => app(\App\Services\FacultyBudgetService::class)->snapshot($user->department),
         ]);
     }
 
@@ -43,7 +47,11 @@ class FacultyRequestController extends Controller
             'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $supplyRequest = $service->create(auth()->user(), $data['items'], $data['purpose']);
+        try {
+            $supplyRequest = $service->create(auth()->user(), $data['items'], $data['purpose']);
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('requests.show', $supplyRequest)->with('success', 'Request submitted successfully.');
     }
@@ -52,9 +60,14 @@ class FacultyRequestController extends Controller
     {
         $this->authorize('view', $request);
 
-        $request->load(['items.inventory', 'department', 'reviewer', 'approver', 'releaser']);
+        $request->load(['items.inventory', 'department', 'reviewer', 'approver', 'releaser', 'user.department']);
 
-        return view('requests.show', ['supplyRequest' => $request]);
+        return view('requests.show', [
+            'supplyRequest' => $request,
+            'budget' => app(\App\Services\FacultyBudgetService::class)->snapshot(
+                $request->department ?? $request->user?->department,
+            ),
+        ]);
     }
 
     public function cancel(SupplyRequest $request, SupplyRequestService $service): RedirectResponse

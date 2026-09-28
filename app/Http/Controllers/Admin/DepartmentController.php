@@ -5,17 +5,28 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Services\AuditLogService;
+use App\Services\FacultyBudgetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DepartmentController extends Controller
 {
-    public function index(): View
+    public function index(FacultyBudgetService $budget): View
     {
-        return view('admin.departments.index', [
-            'departments' => Department::withCount(['users', 'supplyRequests'])->latest()->paginate(15),
-        ]);
+        $period = $budget->period();
+        $departments = Department::withCount(['users', 'supplyRequests'])
+            ->withSum([
+                'supplyRequests as faculty_budget_used' => function ($query) use ($period) {
+                    $query->where('type', 'faculty')
+                        ->whereIn('status', FacultyBudgetService::COUNTING_STATUSES)
+                        ->whereBetween('created_at', [$period['starts_at'], $period['ends_at']]);
+                },
+            ], 'total_amount')
+            ->latest()
+            ->paginate(15);
+
+        return view('admin.departments.index', compact('departments', 'period'));
     }
 
     public function store(Request $request, AuditLogService $auditLog): RedirectResponse
@@ -24,7 +35,10 @@ class DepartmentController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:20', 'unique:departments,code'],
             'description' => ['nullable', 'string'],
+            'faculty_budget_limit' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
         ]);
+
+        $data['faculty_budget_limit'] = $data['faculty_budget_limit'] ?? FacultyBudgetService::DEFAULT_LIMIT;
 
         $department = Department::create($data);
         $auditLog->log($request->user(), 'department.created', $department, null, [
@@ -41,13 +55,15 @@ class DepartmentController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:20', 'unique:departments,code,'.$department->id],
             'description' => ['nullable', 'string'],
+            'faculty_budget_limit' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
         ]);
 
-        $before = $department->only(['name', 'code']);
+        $before = $department->only(['name', 'code', 'faculty_budget_limit']);
         $department->update($data);
         $auditLog->log($request->user(), 'department.updated', $department, $before, [
             'name' => $department->name,
             'code' => $department->code,
+            'faculty_budget_limit' => $department->faculty_budget_limit,
         ]);
 
         return back()->with('success', 'Department updated.');
