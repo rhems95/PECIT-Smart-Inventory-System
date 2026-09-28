@@ -51,6 +51,6 @@ return [
         'enabled' => (bool) env('PSIS_OLLAMA_ENABLED', false),
         'url' => env('PSIS_OLLAMA_URL', 'http://127.0.0.1:11434'),
         'model' => env('PSIS_OLLAMA_MODEL', 'llama3.2:3b'),
-        'timeout' => (int) env('PSIS_OLLAMA_TIMEOUT', 45),
+        'timeout' => (int) env('PSIS_OLLAMA_TIMEOUT', 12),
     ],
 ];

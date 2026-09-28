@@ -25,7 +25,7 @@ Human-facing docs: `README.md`.
 | `Administrator` | Users, master data, audit, reports; can also approve requests |
 | `Admission` | School owner: dashboard, **view inventory**, **approve/reject** faculty requests — no users, stock ops, or master data |
 | `Accounting` | Review faculty requests, verify student payments |
-| `Supply Personnel` | Stock ops, release orders, **student accounts**, users, categories, departments, announcements, audit logs |
+| `Supply Personnel` | Stock ops, release orders, dashboard **work queue** (ready-to-release + inspect), **student accounts**, users, categories, departments, announcements, audit logs |
 | `Faculty` | Submit/cancel supply requests |
 | `Student` | Uniform shop (department), cart, checkout, receipts, purchases — **no inventory module** |
 
@@ -126,7 +126,11 @@ resources/views/
   layouts/psis.blade.php        # Fixed sidebar + sticky header
   auth/login.blade.php          # Staff / Student tabs
   supply/students/              # Supply student list, form, CSV import
+  dashboard/index.blade.php     # Role KPI cards; Supply/Admin work queue
   partials/ai-chat-widget.blade.php
+  partials/supply-work-queue.blade.php
+  partials/forecast-demand.blade.php
+  reports/index.blade.php       # Month/semester/year ranking; separate semester demand trend
   emails/
 resources/js/app.js     # Alpine, Chart.js, psisAiChat (clears chat on login page)
 public/images/          # pecit-logo.png, chatbot.png
@@ -161,7 +165,7 @@ public/images/          # pecit-logo.png, chatbot.png
 
 `pending` → Accounting review → `admin_review` → Admission/Admin approve (reserve) → `approved` → Supply release → `released`
 
-Routes under `requests.*` (Faculty only). Accounting: `accounting.requests*`. Admission/Admin: `admin.requests*`. Supply: `supply.releases*`. Department budget: `FacultyBudgetService`.
+Routes under `requests.*` (Faculty only). Accounting: `accounting.requests*`. Admission/Admin: `admin.requests*`. Supply: `supply.releases*` (dashboard work queue lists `approved`/`reserved`). Department budget: `FacultyBudgetService`.
 
 Stock-in purchase history (correct vs wrong item): `supply.purchase-history`.
 
@@ -214,9 +218,11 @@ Hybrid, **local only** — no OpenAI / cloud API.
 
 Env: `PSIS_OLLAMA_ENABLED`, `PSIS_OLLAMA_URL`, `PSIS_OLLAMA_MODEL`, `PSIS_OLLAMA_TIMEOUT` in `config/psis.php`.
 
-Listed questions stay rule-based (exact numbers). Free text uses keyword match first, then Ollama with an injected fact snapshot. If Ollama is off or down, the question list still works. Never invent stock numbers.
+Listed questions stay rule-based (exact numbers). Free text uses keyword match first, then Ollama with an injected fact snapshot (live departments/categories/units of measurement/users/suppliers and **only items clearly named in the question**, not a sample catalog). Inventory totals (SKU count, on hand, reserved, available, and **by category**) are in that snapshot and in the **How many items?** / available-by-type answers. **List all items** returns each item with its available quantity (first 30, then type a name; students: shop items only), **one bullet per line**. Monthly **most requested** ranking (faculty + student; cancelled/rejected excluded) is on Reports (stacked bar; filter by **month, semester, or year**) and in chat (**Most requested this month**). Demand trend has its **own semester filter**: **item names on the left**, months of that semester on the bottom, and a predicted finish from last year the same months (or current pace). Remaining months of that semester also get an **item forecast** (likely trend items + restock vs available). Forecast / Restock Tips also split **faculty most requested** and **student most purchased**; the AI remembers those tops for the month and suggests restock when available stock cannot cover demand (**What needs restock this month**). The Reports / Restock **Monthly summary** is organized (counts + lists) and exportable as PDF/Excel (`reports.summary.pdf`, `reports.summary.excel`, `?month=Y-m`). The assistant also answers **one item or every row with the same name** (name/code, listed one per line), **REQ-/PUR-** status (own records for Faculty/Student), **What should I do next?**, **where to view a page** (role-gated sidebar URL, clickable in the widget and `/ai` chat), **Compare this month to last month**, **What will trend this semester?** (remaining months vs last year + restock, listed one per line), and faculty **budget fit** for a quantity. Follow-ups such as “that item” use the last few chat messages (`history` on `POST /ai/ask`). Typed questions are understood in **English, Filipino (Tagalog), and Cebuano (Bisaya)**; rule-based replies and Ollama should answer in the same language. The greeting bubble is a **short shared intro** (type or pick a question) — **do not list those language names** in the widget or `/ai` page. If Ollama is off or down, the question list still works. Never invent stock numbers.
 
 Widget UX: **Choose a question** is collapsed by default. The FAB can be dragged a short way up/left (not into the middle); click opens the panel **pinned to the lower-right corner**. The thread is stored in `sessionStorage` (`psis-ai-chat:{userId}` via `window.psisAiChat` in `resources/js/app.js`) and **cleared on logout** and on the login page. Do not persist chat after logout on a shared PC.
+
+Supply dashboard (Supply Personnel): KPI cards are **Ready to release**, **Inspect today**, **Reserved**, **Today’s movements** — not **Pending Requests** (that stays Accounting / Admin / Faculty). Admin keeps pending/approved cards **and** the same work-queue block. Queue data: faculty `approved`/`reserved`, student `payment_verified`, purchase-history rows with `inspection_status` pending/null, low-stock items with Stock In links (`supply.stock.index?item=`).
 
 ---
 
@@ -311,8 +317,14 @@ php artisan storage:link
 php artisan config:clear
 php artisan view:clear
 php artisan psis:low-stock-alert
+php artisan psis:import-supplies-xlsx --force
+php artisan psis:purge-student-purchases --force
 npm run build
 ```
+
+`psis:import-supplies-xlsx` replaces office inventory and faculty request history from `docs/.supply data/SUPPLIES DATA.xlsx`. It **keeps** users, students, Uniform Shop items, and student purchases. Do not re-run unless asked (it wipes imported faculty history first). QTY cells that Excel stored as dates (typed `1/2`) are read as half a unit from TOTAL AMOUNT ÷ UNIT PRICE. Date cells follow the visible **month/day** on the sheet, not Excel’s day/month serial.
+
+`psis:purge-student-purchases` deletes student purchases and payment history. It **keeps** student accounts and the Uniform Shop catalog.
 
 Optional local chat: install Ollama, `ollama pull llama3.2:3b`, set `PSIS_OLLAMA_ENABLED=true`.
 
@@ -338,4 +350,7 @@ Windows scheduler (optional): run `php artisan schedule:run` every minute for da
 | Chat widget / persist | `partials/ai-chat-widget.blade.php`, `resources/js/app.js` (`psisAiChat`) |
 | Email + bell | `app/Services/NotificationService.php` |
 | Layout / FAB / sidebar | `resources/views/layouts/psis.blade.php`, `partials/ai-chat-widget.blade.php` |
+| Supply dashboard queue | `DashboardController`, `partials/supply-work-queue.blade.php` |
+| Reports / demand charts | `ReportController`, `resources/views/reports/index.blade.php` |
+| Supplies issuance log | `SuppliesIssuanceService`, `SimplePdf`, `reports.supplies-issuance` |
 | App config bootstrap | `bootstrap/app.php` |

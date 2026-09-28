@@ -135,6 +135,11 @@
     gap: 0.25rem;
 }
 
+.psis-ai-panel-actions .psis-ai-link {
+    color: #fff;
+    font-weight: 600;
+}
+
 .psis-ai-link,
 .psis-ai-icon-btn {
     color: #fff;
@@ -346,6 +351,22 @@
 
 .dark .psis-ai-bubble.is-bot {
     background: #1e293b;
+}
+
+.psis-ai-bubble .psis-ai-link {
+    color: #0B3C91;
+    font-weight: 600;
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.psis-ai-bubble.is-user .psis-ai-link {
+    color: #fff;
+}
+
+.dark .psis-ai-bubble.is-bot .psis-ai-link {
+    color: #F4B400;
 }
 
 .psis-ai-form {

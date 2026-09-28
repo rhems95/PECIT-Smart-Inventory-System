@@ -11,6 +11,22 @@ class OllamaChatTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_available_by_type_question_does_not_call_ollama(): void
+    {
+        config(['psis.ollama.enabled' => true]);
+        Http::fake();
+
+        $user = User::factory()->create();
+        $user->assignRole('Supply Personnel');
+
+        $this->actingAs($user)
+            ->postJson(route('ai.ask'), ['message' => 'how many available item by type in inventory'])
+            ->assertOk()
+            ->assertJsonFragment(['reply' => 'Inventory has 0 item type(s). On hand 0, reserved 0, available 0.']);
+
+        Http::assertNothingSent();
+    }
+
     public function test_listed_question_does_not_call_ollama(): void
     {
         config(['psis.ollama.enabled' => true]);
@@ -55,7 +71,13 @@ class OllamaChatTest extends TestCase
             return $request->url() === 'http://127.0.0.1:11434/api/chat'
                 && ($payload['model'] ?? null) === 'llama3.2:3b'
                 && ($payload['stream'] ?? null) === false
-                && str_contains((string) data_get($payload, 'messages.1.content'), 'Live PSIS facts');
+                && str_contains((string) data_get($payload, 'messages.0.content'), 'one item per line')
+                && str_contains((string) data_get($payload, 'messages.0.content'), 'Do not pick an item because a word')
+                && str_contains((string) data_get($payload, 'messages.1.content'), 'Live PSIS facts')
+                && str_contains((string) data_get($payload, 'messages.1.content'), 'Departments in PSIS')
+                && str_contains((string) data_get($payload, 'messages.1.content'), 'Units of measurement in PSIS')
+                && str_contains((string) data_get($payload, 'messages.1.content'), 'Named items in this question: none')
+                && ! str_contains((string) data_get($payload, 'messages.1.content'), 'Sample items (available)');
         });
     }
 

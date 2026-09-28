@@ -8,6 +8,8 @@ This document is for project documentation. Render the Mermaid diagrams in GitHu
 
 There is **no `supplier_id` on the inventory item**. Supplier (when used) is recorded on the **stock movement** (`transactions.supplier_id`). One item can come from many suppliers, donations, or other sources. There is **no purchase-order document** and **no FIFO / moving-average costing engine**. A source labeled purchase order plus a typed PO or delivery-receipt number is receiving text on stock-in only.
 
+The Supply / Admin **dashboard work queue** is not a table. It reads live `requests` (`approved` / `reserved`), `purchase_requests` (`payment_verified`), and inbound `transactions` with `inspection_status` pending or null.
+
 Uniform Shop exclusivity is modeled on `inventory.student_shop` + `inventory.department_id` (null = shared; set = exclusive to that department’s students). There is **no barcode column** on `inventory`.
 
 Canonical `departments.code` values: **CCS**, **CC**, **CTHM**, **CTE**, **CBA**, **SHS**, **ADMIN**, **SUPPLY**. Live remaps: CIT→CCS, COE→CC, COB→CBA.
@@ -156,12 +158,15 @@ erDiagram
         bigint user_id FK
         bigint department_id FK
         enum type "faculty or restock"
-        enum status
+        enum status "pending accounting_review admin_review approved reserved rejected released cancelled"
         text purpose
         decimal total_amount
         bigint reviewed_by FK
         bigint approved_by FK
         bigint released_by FK
+        timestamp reviewed_at
+        timestamp approved_at
+        timestamp released_at
     }
 
     REQUEST_ITEMS {
@@ -180,10 +185,12 @@ erDiagram
         bigint id PK
         string purchase_number UK
         bigint user_id FK
-        enum status
+        enum status "pending payment_submitted payment_verified approved released cancelled rejected"
         decimal total_amount
         bigint verified_by FK
         bigint released_by FK
+        timestamp verified_at
+        timestamp released_at
     }
 
     PURCHASE_REQUEST_ITEMS {
@@ -337,7 +344,7 @@ erDiagram
 ```
 
 **Status path:**  
-`pending` → Accounting review → `admin_review` → Admission or Administrator approve (stock **reserved**) → `approved` → Supply release (on-hand **deducted**, reserved cleared)
+`pending` → Accounting review → `admin_review` → Admission or Administrator approve (stock **reserved**) → `approved` (legacy rows may still be `reserved`) → Supply release (on-hand **deducted**, reserved cleared). Supply **Release Items** and the dashboard work queue list both `approved` and `reserved`.
 
 Submit does **not** deduct stock. Faculty may cancel through `admin_review` and `approved` (before release). Cancelling an **approved** request **restores** `reserved_quantity`.
 
@@ -434,12 +441,12 @@ Stock Card UI (`inventory.stock-card`): Admin, Admission, Accounting, Supply Per
 | `inventory` | Stock: on hand, reserved, shop flag, optional exclusive department, selling price. Sized uniforms: totals are sums of size rows |
 | `inventory_size_stocks` | Per-size on-hand and reserved qty (unique `inventory_id` + `size`). Clothing shop items only |
 | `inventory_price_adjustments` | History when selling `unit_price` changes |
-| `requests` | Faculty (and restock) supply requests |
+| `requests` | Faculty (and restock) supply requests. Work queue uses `approved` / `reserved` |
 | `request_items` | Lines on a faculty request (no size; faculty items are not sold by size) |
-| `purchase_requests` | Student purchases (not vendor POs) |
+| `purchase_requests` | Student purchases (not vendor POs). Work queue uses `payment_verified` |
 | `purchase_request_items` | Lines on a student purchase; `size` required for clothing uniforms |
 | `payments` | Student payment records / receipt path |
-| `transactions` | Stock movement ledger / Stock Card source. Stock-in / purchase-delivery rows also store receiving inspection (correct vs wrong item) |
+| `transactions` | Stock movement ledger / Stock Card source. Stock-in / purchase-delivery rows also store receiving inspection (correct vs wrong item). Pending inspection rows feed the dashboard inspect queue |
 | `stock_logs` | Delivery / stock-in action log |
 | `psis_notifications` | In-app notifications (email via `NotificationService`) |
 | `audit_logs` | Audit trail (polymorphic target) |
@@ -495,4 +502,4 @@ Stock Card UI (`inventory.stock-card`): Admin, Admission, Accounting, Supply Per
 
 ---
 
-*Keep this file updated when migrations change. Last aligned 15 September 2026 with faculty department budget (`departments.faculty_budget_limit`), receiving inspection on buy/stock-in rows, academic departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY), `units_of_measurement`, `suppliers` on movements, `inventory_price_adjustments`, extended `transactions` (Stock Card), uniform size stocks, Admission role, and no barcode / no item-level supplier / no FIFO or PO module.*
+*Keep this file updated when migrations change. Last aligned 28 September 2026 with Supply/Admin dashboard work queue (reads `requests`, `purchase_requests`, `transactions.inspection_status` — not a new table), faculty department budget (`departments.faculty_budget_limit`), receiving inspection on buy/stock-in rows, academic departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY), `units_of_measurement`, `suppliers` on movements, `inventory_price_adjustments`, extended `transactions` (Stock Card), uniform size stocks, Admission role, and no barcode / no item-level supplier / no FIFO or PO module.*

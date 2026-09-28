@@ -31,10 +31,10 @@ flowchart TD
     J -->|No| K[Dashboard]
 
     K --> L{Role}
-    L -->|Administrator| M[Users / Approvals / Master data / Suppliers / Units / Stock / Reports / Audit / AI]
+    L -->|Administrator| M[Users / Approvals / Master data / Suppliers / Units / Stock / Reports / Audit / AI / work queue]
     L -->|Admission| N[Dashboard / Inventory view / Stock Card / Approve requests]
     L -->|Accounting| O[Review faculty requests / Verify payments / Reports / Inventory + Stock Card]
-    L -->|Supply Personnel| P[Stock ops / Release / Students / Users / Master data / Suppliers / Units / Audit]
+    L -->|Supply Personnel| P[Work queue / Stock ops / Release / Inspect / Students / Users / Master data / Suppliers / Units / Audit]
     L -->|Faculty| Q[Submit and track supply requests / View inventory]
     L -->|Student| R[Shop / Cart / Size / Pay / Track / Cancel until release]
 
@@ -46,7 +46,7 @@ flowchart TD
     R --> S
 ```
 
-Students never receive an Inventory or Stock Card menu. Faculty can view inventory but cannot open the Stock Card or change stock.
+Students never receive an Inventory or Stock Card menu. Faculty can view inventory but cannot open the Stock Card or change stock. **Pending Requests** on the dashboard is Accounting / Admin / Faculty work; Supply’s queue is ready-to-release + inspect (see §4a).
 
 ---
 
@@ -197,6 +197,42 @@ flowchart TD
 
 ---
 
+## 4a. Supply / Admin dashboard work queue
+
+Not a table — a **view** of live rows Supply must act on. Faculty, Accounting, Admission, and Student dashboards do **not** show this block. Administrator keeps **Pending Requests** / **Approved** KPI cards **and** this queue.
+
+```mermaid
+flowchart TD
+    A([Supply or Admin opens Dashboard]) --> B[KPI: Ready to release / Inspect today / Reserved / Today's movements]
+    B --> C{Faculty requests status approved or reserved?}
+    C -->|Yes oldest first| D[Ready to release — Faculty]
+    D --> E[supply.releases.show]
+    E --> F[Release: deduct on-hand, clear reserved]
+    B --> G{Student purchases status payment_verified?}
+    G -->|Yes oldest first| H[Ready to release — Students]
+    H --> I[supply.purchases.show]
+    I --> J[Release: deduct on-hand, clear reserved]
+    B --> K{Stock-in or purchase_delivery inspection pending or null?}
+    K -->|Yes| L[Inspect deliveries]
+    L --> M[supply.purchase-history]
+    M --> N[Mark correct or wrong item]
+    B --> O{Item at or below minimum?}
+    O -->|Yes| P[Actionable low stock]
+    P --> Q[supply.stock.index with item preselected]
+    Q --> R[Stock In]
+```
+
+| Queue | Source | Status / filter | Next screen |
+|-------|--------|-----------------|-------------|
+| Faculty ready | `requests` | `approved` or `reserved` | Release Items |
+| Student ready | `purchase_requests` | `payment_verified` | Student Purchases |
+| Inspect today | `transactions` (stock-in / purchase delivery) | `inspection_status` pending or null | Purchase History |
+| Low stock | `inventory` | available ≤ minimum | Stock Operations (`?item=`) |
+
+Pending faculty requests (`pending` / `accounting_review` / `admin_review`) stay with Accounting then Admission/Admin. They are **not** Supply’s dashboard queue.
+
+---
+
 ## 5. Cross-cutting support flows
 
 ```mermaid
@@ -217,6 +253,9 @@ flowchart TD
     K -->|No| M{Ollama on localhost?}
     M -->|Yes| N[OllamaChatService wording]
     M -->|No / down| O[Question-list help]
+    J --> DEM[Monthly demand memory: faculty requested + student purchased]
+    DEM --> REP[Reports stacked bar + 12-month trend]
+    DEM --> RST[Restock tips / predicted restock]
 ```
 
 Audit logs record logins, inventory/stock, users, master data, and profile changes.
@@ -234,9 +273,10 @@ flowchart TD
     A --> D[Announcements]
     A --> E[Approve / reject faculty requests]
     A --> F[View audit logs]
-    A --> G[Reports PDF / Excel]
+    A --> G[Reports PDF / Excel / issuance log / most-requested]
     A --> H[AI restock insights]
     A --> SC[Stock Card / stock operations]
+    A --> WQ[Dashboard work queue]
 
     AD([Admission]) --> E
     AD --> IV[View inventory + Stock Card + dashboard]
@@ -250,6 +290,8 @@ flowchart TD
     SP --> ST[Students add / CSV]
     SP --> SK[Stock in / out / damage / return by size]
     SP --> SC
+    SP --> WQ
+    SP --> PH[Purchase History inspect]
 
     B --> I[(users + Spatie roles)]
     C --> J[(master tables → inventory)]
@@ -299,8 +341,10 @@ flowchart TB
     end
 
     subgraph Supply Personnel
-        SP1[Stock in with source / supplier] --> SP2[Release approved requests]
+        SP0[Dashboard work queue]
+        SP1[Stock in with source / supplier] --> SP2[Release approved or reserved requests]
         SP2 --> SP3[Release verified purchases]
+        SP2b[Inspect pending deliveries]
         SP4[Users / categories / departments / suppliers / units / students / audit]
         SP5[Damage / bad order / return to supplier]
     end
@@ -308,8 +352,11 @@ flowchart TB
     F1 --> A1
     A2 --> ADM1
     A2 --> AD1
-    ADM2 --> SP2
-    AD2 --> SP2
+    ADM2 --> SP0
+    AD2 --> SP0
+    SP0 --> SP2
+    SP0 --> SP3
+    SP0 --> SP2b
     SP2 --> F3
     S2 --> A3
     A4 --> SP3
@@ -322,8 +369,8 @@ flowchart TB
 
 - Paste any diagram into [mermaid.live](https://mermaid.live) → **Export PNG/SVG** for Word/PDF chapters  
 - GitHub renders Mermaid in Markdown automatically after push  
-- For thesis/docs, use **§2 Faculty** and **§3 Student** as the two primary process chapters; use **§1** as the system context diagram; use **§4** for Stock Card / stock-in sources  
+- For thesis/docs, use **§2 Faculty** and **§3 Student** as the two primary process chapters; use **§1** as the system context diagram; use **§4** for Stock Card / stock-in sources; use **§4a** for the Supply dashboard work queue  
 
 ---
 
-*Keep this file aligned with `SupplyRequestService`, `PurchaseRequestService`, `InventoryService`, `StockCardService`, `AiInsightService`, `OllamaChatService`, and the canonical departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) when workflows change. Last aligned 19 September 2026.*
+*Keep this file aligned with `SupplyRequestService`, `PurchaseRequestService`, `InventoryService`, `StockCardService`, `AiInsightService`, `OllamaChatService`, `DashboardController` (Supply/Admin work queue), and the canonical departments (CCS, CC, CTHM, CTE, CBA, SHS, ADMIN, SUPPLY) when workflows change. Last aligned 28 September 2026.*

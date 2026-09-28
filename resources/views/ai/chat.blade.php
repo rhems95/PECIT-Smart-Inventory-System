@@ -7,10 +7,13 @@
 <div class="grid lg:grid-cols-2 gap-6">
     <div class="space-y-4">
         <div class="psis-card p-5">
-            <h3 class="font-semibold mb-2">Monthly Insight</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-300">{{ $summary }}</p>
+            @include('partials.monthly-summary', [
+                'summaryReport' => $summaryReport,
+                'title' => 'Monthly summary',
+                'canExport' => auth()->user()?->hasAnyRole(['Administrator', 'Accounting', 'Supply Personnel']),
+            ])
             @if ($role)
-                <p class="text-xs text-slate-400 mt-2">Signed in as {{ $role }} — answers are tailored to your role.</p>
+                <p class="text-xs text-slate-400 mt-3">Signed in as {{ $role }} — answers are tailored to your role.</p>
             @endif
         </div>
 
@@ -21,6 +24,10 @@
                     <a href="{{ route('ai.restock') }}" class="text-sm text-pecit-blue dark:text-pecit-gold hover:underline">Full recommendations</a>
                 @endif
             </div>
+            <div class="mb-4 space-y-4">
+                @include('partials.forecast-demand', ['demandMemory' => $demandMemory ?? []])
+            </div>
+            <h4 class="font-semibold mb-2">Usage forecast</h4>
             <ul class="text-sm space-y-3">
                 @forelse ($forecasts as $f)
                     <li class="border-b border-[var(--psis-border)] pb-2 last:border-0">
@@ -31,7 +38,7 @@
                         </p>
                     </li>
                 @empty
-                    <li class="text-slate-500">No urgent forecasts.</li>
+                    <li class="text-slate-500">No urgent usage forecasts.</li>
                 @endforelse
             </ul>
         </div>
@@ -54,6 +61,9 @@
             persistChat() {
                 if (window.psisAiChat) window.psisAiChat.save(this.userId, this.messages);
             },
+            linkify(text) {
+                return window.psisAiChat ? window.psisAiChat.linkify(text) : String(text ?? '');
+            },
             async send(text = null) {
                 const content = (text ?? this.message).trim();
                 if (!content || this.loading) return;
@@ -66,7 +76,10 @@
                     const res = await fetch(this.askUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrf, 'Accept': 'application/json' },
-                        body: JSON.stringify({ message: content }),
+                        body: JSON.stringify({
+                            message: content,
+                            history: this.messages.slice(0, -1).slice(-4).map((m) => ({ role: m.role, text: String(m.text).slice(0, 500) })),
+                        }),
                     });
                     const data = await res.json();
                     this.messages.push({ role: 'assistant', text: data.reply || 'No reply received.' });
@@ -105,11 +118,18 @@
                         alt=""
                         class="w-8 h-8 rounded-full object-cover border border-pecit-gold shrink-0"
                     >
-                    <div
-                        class="max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap shadow-sm"
-                        :class="m.role === 'user' ? 'bg-pecit-blue text-white rounded-br-md' : 'bg-white dark:bg-slate-800 rounded-bl-md'"
-                        x-text="m.text"
-                    ></div>
+                    <template x-if="m.role === 'user'">
+                        <div
+                            class="psis-ai-bubble is-user max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap shadow-sm bg-pecit-blue text-white rounded-br-md"
+                            x-text="m.text"
+                        ></div>
+                    </template>
+                    <template x-if="m.role !== 'user'">
+                        <div
+                            class="psis-ai-bubble is-bot max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap shadow-sm bg-white dark:bg-slate-800 rounded-bl-md"
+                            x-html="linkify(m.text)"
+                        ></div>
+                    </template>
                 </div>
             </template>
             <div x-show="loading" class="flex items-end gap-2" x-cloak>

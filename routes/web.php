@@ -146,6 +146,8 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
 
     Route::prefix('reports')->name('reports.')->middleware('role:Administrator|Accounting|Supply Personnel')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('/summary/pdf', [ReportController::class, 'monthlySummaryPdf'])->name('summary.pdf');
+        Route::get('/summary/excel', [ReportController::class, 'monthlySummaryExcel'])->name('summary.excel');
         Route::get('/low-stock/pdf', [ReportController::class, 'lowStockPdf'])->name('low-stock.pdf');
         Route::get('/valuation/pdf', [ReportController::class, 'inventoryValuationPdf'])->name('valuation.pdf');
         Route::get('/faculty-requests', [ReportController::class, 'facultyRequests'])->name('faculty-requests');
@@ -153,6 +155,9 @@ Route::middleware(['auth', 'verified', 'active', 'session.timeout'])->group(func
         Route::get('/monthly-inventory/pdf', [ReportController::class, 'monthlyInventory'])->name('monthly-inventory.pdf');
         Route::get('/out-of-stock/pdf', [ReportController::class, 'outOfStockPdf'])->name('out-of-stock.pdf');
         Route::get('/student-purchases', [ReportController::class, 'studentPurchases'])->name('student-purchases');
+        Route::get('/supplies-issuance', [ReportController::class, 'suppliesIssuance'])->name('supplies-issuance');
+        Route::get('/supplies-issuance/pdf', [ReportController::class, 'suppliesIssuancePdf'])->name('supplies-issuance.pdf');
+        Route::get('/supplies-issuance/excel', [ReportController::class, 'suppliesIssuanceExcel'])->name('supplies-issuance.excel');
         Route::get('/audit-trail/pdf', [ReportController::class, 'auditTrailPdf'])->name('audit-trail.pdf');
         Route::get('/transactions/excel', [ReportController::class, 'transactionsExcel'])->name('transactions.excel');
     });

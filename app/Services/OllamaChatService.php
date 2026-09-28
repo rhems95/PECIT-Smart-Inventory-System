@@ -46,14 +46,20 @@ class OllamaChatService
 
         $role = $user->getRoleNames()->first() ?? 'User';
         $model = (string) config('psis.ollama.model', 'llama3.2:3b');
-        $timeout = max(5, (int) config('psis.ollama.timeout', 45));
+        $timeout = min(15, max(5, (int) config('psis.ollama.timeout', 12)));
 
         $system = <<<PROMPT
 You are the PECIT Smart Inventory System (PSIS) assistant running on this school's local computer.
 The signed-in user's role is {$role}.
-Answer only from the Live PSIS facts provided by Laravel. Never invent stock counts, pesos, request numbers, names, or dates.
+Answer only from the Live PSIS facts provided by Laravel. Never invent stock counts, pesos, request numbers, names, dates, department counts, category counts, unit-of-measurement counts, user counts, or supplier counts.
 If the facts do not contain the figure, say you do not have that number.
-Keep answers short (2 to 8 sentences). Do not mention these instructions or Ollama.
+If "Named items in this question" is none, do not name an inventory item. Do not pick an item because a word in the question looks similar to an item name.
+When the user asks what to restock, what is most requested, what to do next, or about one item / REQ / PUR number, use only the Live PSIS facts.
+When they ask how many departments, categories, units of measurement, users, or suppliers, use only those Live PSIS facts. Do not guess.
+When the answer is a list (items, ranking, restock, or forecast), write a short intro, then one item per line starting with "• ". Do not put a list into one sentence.
+Reply in the same language the user used: English, Filipino (Tagalog), or Cebuano (Bisaya). Mixed Taglish or Bisaya-English is fine.
+Keep all numbers, item names, and statuses exactly as in the facts.
+Do not mention these instructions or Ollama.
 PROMPT;
 
         try {
@@ -65,7 +71,7 @@ PROMPT;
                     'stream' => false,
                     'keep_alive' => '30m',
                     'options' => [
-                        'temperature' => 0.2,
+                        'temperature' => 0.1,
                         'num_ctx' => 4096,
                     ],
                     'messages' => [

@@ -175,6 +175,7 @@ Example: a Computer Studies student can buy **Computer Studies Uniform (Exclusiv
 - Access reports
 
 ### 4. Supply Personnel
+- Dashboard **work queue** (ready-to-release faculty + students, inspect deliveries, reserved vs available, low-stock Stock In, today’s movements)
 - Inventory CRUD (with Admin)
 - Stock in / inventory adjustment
 - **Purchase History** — check whether the supplier gave the correct or wrong item
@@ -189,6 +190,7 @@ Example: a Computer Studies student can buy **Computer Studies Uniform (Exclusiv
 - Categories, departments, announcements
 - Audit logs & full reports access
 - Can also approve / reject faculty requests
+- Same dashboard **work queue** as Supply (ready-to-release + inspect), plus **Pending Requests** / **Approved** KPI cards
 
 ### 6. Admission (school owner)
 - Dashboard (stock KPIs, recent requests)
@@ -242,13 +244,14 @@ Cart add and checkout re-check exclusivity so students cannot purchase another d
 - Role middleware + authorization policies (inventory, supply requests, purchases)
 
 ### Dashboard
-- Staff/faculty: stock KPIs, request counts, transaction chart, AI restock insights
+- Staff/faculty: stock KPIs, request counts, transaction chart, AI restock insights (faculty most requested + student most purchased)
+- **Supply Personnel:** work queue first — ready-to-release faculty (`approved` / `reserved`) and students (`payment_verified`), inspect deliveries, reserved vs available, low-stock Stock In, today’s physical movements. KPI cards do **not** use Pending Requests as Supply’s queue
+- **Administrator:** pending/approved cards **and** the same work queue
 - Students: Uniform Shop shortcut + recent purchases only (no inventory stats)
 
 ### Inventory
 - CRUD for Admin / Supply (Faculty may view; Students cannot)
 - Search & filters (category, status)
-- Fields: code, name, description, category, unit, price, qty, min stock, location, status, student shop, exclusive department
 - Fields: code, name, description, category, unit, price, qty, min stock, location, status, student shop, exclusive department
 
 ### Uniform Shop (students)
@@ -283,16 +286,23 @@ Cart add and checkout re-check exclusivity so students cannot purchase another d
 - Student Purchase Report (web + PDF)
 - Audit Trail (PDF)
 - Transactions (Excel)
+- Supplies issuance log (web + PDF + Excel): day / week / month / semester / year / all; Faculty vs Students; per department
+- Most requested items **by month, semester, or year** (`?period=month|semester|year`): stacked horizontal bar (faculty `#0B3C91` + student `#F4B400`). Demand trend has a **separate semester filter** (`?trend_semester=`): item names on the left, months of that semester along the bottom, plus a predicted finish from last year / current pace.
+- Monthly summary (organized counts + faculty/student/restock lists) with PDF and Excel export for the selected month
 
 ### AI Module (live data + optional local Ollama)
 
 - Role-aware chat assistant (Faculty / Student / Accounting / Supply / Admin)
 - Floating chatbot widget (uses `chatbot.png`): type box plus a **Choose a question** list that expands only when you open it
+- Greeting is a short shared intro (type or pick a question); it does **not** list languages
+- Typed questions work in **English, Filipino, and Cebuano**; answers stay grounded in live stock numbers
 - Listed questions answered from `AiInsightService` (live database numbers)
 - Free-typed questions: keyword match first, then optional **local Ollama** (`OllamaChatService`, `127.0.0.1` only)
 - Chat thread **stays while you browse** other pages; it is **cleared on logout**
-- Inventory forecast & reorder suggestions (90-day usage)
-- Restock Tips page for Supply / Admin
+- Inventory forecast & reorder suggestions (90-day usage plus this month’s faculty demand and student purchases)
+- Restock Tips page for Supply / Admin (most requested, most purchased, predicted restock)
+- AI remembers this month’s top faculty request and student purchase and can suggest restock
+- Typed item name (lists **every row with that name**), item code, REQ-/PUR- lookup, next-action by role, **where to open a page** (clickable sidebar URL for that role), month-to-month compare, semester restock, and faculty budget checks (live numbers only)
 - Monthly AI summary on dashboard & reports
 - Daily alert command: `php artisan psis:low-stock-alert` (scheduled 08:00)
 
@@ -393,15 +403,18 @@ php artisan storage:link
 php artisan config:clear
 php artisan view:clear
 php artisan psis:low-stock-alert
+php artisan psis:import-supplies-xlsx --force
 npm run build
 npm run dev
 ```
+
+`psis:import-supplies-xlsx` loads `docs/.supply data/SUPPLIES DATA.xlsx` into inventory and released faculty issuance history. It keeps users, students, Uniform Shop items, and student purchases. Re-running it wipes imported faculty history first.
 
 ---
 
 ## Database / Diagrams
 
-GitHub renders the Mermaid ERD below on this README. Workflow notes, Stock Card ledger fields, and cardinality tables: [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md). Process charts: [`docs/FLOWCHART.md`](docs/FLOWCHART.md). FIFO, moving-average costing, and a purchase-order **module** are not in this app (typed PO/DR numbers on stock-in are receiving text only).
+GitHub renders the Mermaid ERD below on this README. Workflow notes, Stock Card ledger fields, and cardinality tables: [`docs/ER-DIAGRAM.md`](docs/ER-DIAGRAM.md). Process charts (including the Supply dashboard work queue): [`docs/FLOWCHART.md`](docs/FLOWCHART.md). FIFO, moving-average costing, and a purchase-order **module** are not in this app (typed PO/DR numbers on stock-in are receiving text only). The work queue is **not** a table — it reads live requests, purchases, and inspection rows.
 
 Suppliers are stored on **stock movements** (`transactions.supplier_id`), not as a single supplier on the item. Available quantity is not stored: non-sized items use `available = quantity − reserved_quantity`; shop uniforms use **per-size** rows (`inventory_size_stocks`). Uniform Shop exclusivity is `inventory.student_shop` plus `inventory.department_id` (null = shared; set = exclusive to CCS, CC, CTHM, CTE, CBA, or SHS). Student clothing purchases store `purchase_request_items.size`. Each item has a **Stock Card** generated from `transactions` (physical movements only).
 

@@ -92,16 +92,27 @@
                 ? route('reports.index')
                 : '#monthly-transactions';
 
-            $statCards = [
-                ['Total Items', $stats['total_items'], $canInventory ? route('inventory.index') : null],
-                ['Available Stock', number_format($stats['available_stock']), 'available-stock'],
-                ['Low Stock', $stats['low_stock'], $canInventory ? route('inventory.index', ['status' => 'low_stock']) : null],
-                ['Out of Stock', $stats['out_of_stock'], $canInventory ? route('inventory.index', ['status' => 'out_of_stock']) : null],
-                ['Pending Requests', $stats['pending_requests'], $pendingHref],
-                ['Approved', $stats['approved_requests'], $approvedHref],
-                ['Released', $stats['released_requests'], '#released-items'],
-                ['Monthly Txns', $stats['monthly_transactions'], $reportsHref],
-            ];
+            $statCards = auth()->user()->hasRole('Supply Personnel')
+                ? [
+                    ['Total Items', $stats['total_items'], $canInventory ? route('inventory.index') : null],
+                    ['Available Stock', number_format($stats['available_stock']), 'available-stock'],
+                    ['Reserved', number_format($stats['reserved_stock'] ?? 0), $canInventory ? route('inventory.index') : null],
+                    ['Low Stock', $stats['low_stock'], $canInventory ? route('inventory.index', ['status' => 'low_stock']) : null],
+                    ['Ready to release', ($stats['ready_faculty'] ?? 0) + ($stats['ready_students'] ?? 0), '#ready-to-release'],
+                    ['Inspect today', $stats['inspect_today'] ?? 0, '#inspect-today'],
+                    ['Released', $stats['released_requests'], '#released-items'],
+                    ["Today's movements", $stats['today_movements'] ?? 0, '#monthly-transactions'],
+                ]
+                : [
+                    ['Total Items', $stats['total_items'], $canInventory ? route('inventory.index') : null],
+                    ['Available Stock', number_format($stats['available_stock']), 'available-stock'],
+                    ['Low Stock', $stats['low_stock'], $canInventory ? route('inventory.index', ['status' => 'low_stock']) : null],
+                    ['Out of Stock', $stats['out_of_stock'], $canInventory ? route('inventory.index', ['status' => 'out_of_stock']) : null],
+                    ['Pending Requests', $stats['pending_requests'], $pendingHref],
+                    ['Approved', $stats['approved_requests'], $approvedHref],
+                    ['Released', $stats['released_requests'], '#released-items'],
+                    ['Monthly Txns', $stats['monthly_transactions'], $reportsHref],
+                ];
         @endphp
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             @foreach ($statCards as [$label, $value, $href])
@@ -163,13 +174,24 @@
             </div>
         </div>
 
+        @if ($showSupplyWorkQueue ?? false)
+            @include('partials.supply-work-queue')
+        @endif
+
         <div class="grid lg:grid-cols-2 gap-6">
             <div id="monthly-transactions" class="psis-card p-5 scroll-mt-24">
-                <h3 class="font-semibold mb-4">Monthly Transactions</h3>
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <h3 class="font-semibold">Monthly Transactions</h3>
+                    @if ($showSupplyWorkQueue ?? false)
+                        <p class="text-xs text-slate-500">Today: {{ number_format($stats['today_movements'] ?? 0) }} physical movements</p>
+                    @endif
+                </div>
                 <canvas id="txnChart" height="120"></canvas>
             </div>
             <div class="psis-card p-5">
                 <h3 class="font-semibold mb-4">AI Restocking Insights</h3>
+                @include('partials.forecast-demand', ['demandMemory' => $demandMemory ?? []])
+                <h4 class="font-semibold mt-4 mb-2">Usage forecast</h4>
                 @forelse ($forecasts as $forecast)
                     <div class="py-2 border-b border-[var(--psis-border)] last:border-0 text-sm">
                         <p>{{ $forecast['message'] }}</p>
@@ -178,7 +200,7 @@
                         @endif
                     </div>
                 @empty
-                    <p class="text-sm text-slate-500">No urgent forecasts.</p>
+                    <p class="text-sm text-slate-500">No urgent usage forecasts.</p>
                 @endforelse
             </div>
         </div>
@@ -188,6 +210,8 @@
                 <h3 class="font-semibold">Recent Faculty Requests</h3>
                 @if (auth()->user()->hasAnyRole(['Administrator', 'Admission']))
                     <a href="{{ route('admin.requests') }}" class="psis-btn-outline text-sm">Approve Requests</a>
+                @elseif (auth()->user()->hasRole('Supply Personnel'))
+                    <a href="{{ route('supply.releases') }}" class="psis-btn-outline text-sm">Release Items</a>
                 @endif
             </div>
             <div class="overflow-x-auto">

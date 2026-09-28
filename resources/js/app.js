@@ -43,6 +43,30 @@ window.psisAiChat = {
             keys.forEach((k) => sessionStorage.removeItem(k));
         } catch (e) {}
     },
+    linkify(text) {
+        const escaped = String(text ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        const wrap = (raw) => {
+            let url = raw;
+            let after = '';
+            while (url.length > 1 && /[.,;:!?)]$/.test(url)) {
+                after = url.slice(-1) + after;
+                url = url.slice(0, -1);
+            }
+            if (! url) {
+                return raw;
+            }
+
+            return `<a href="${url}" class="psis-ai-link" target="_self">${url}</a>${after}`;
+        };
+
+        return escaped
+            .replace(/https?:\/\/[^\s<]+/g, wrap)
+            .replace(/(^|[\s(])(\/[a-zA-Z][a-zA-Z0-9\-_\/]*)/g, (_, prefix, path) => prefix + wrap(path));
+    },
 };
 
 if (document.querySelector('.psis-login-switch')) {

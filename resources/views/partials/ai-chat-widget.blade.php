@@ -40,9 +40,12 @@
             this.$nextTick(() => this.bindDrag());
             window.addEventListener('resize', () => this.clamp());
         },
-        persistChat() {
-            if (window.psisAiChat) window.psisAiChat.save(this.userId, this.messages);
-        },
+            persistChat() {
+                if (window.psisAiChat) window.psisAiChat.save(this.userId, this.messages);
+            },
+            linkify(text) {
+                return window.psisAiChat ? window.psisAiChat.linkify(text) : String(text ?? '');
+            },
         homePos() {
             this.fabLeft = Math.max(12, window.innerWidth - 64 - 20);
             this.bottom = 16;
@@ -169,7 +172,10 @@
                         'X-CSRF-TOKEN': this.csrf,
                         'Accept': 'application/json',
                     },
-                    body: JSON.stringify({ message: content }),
+                    body: JSON.stringify({
+                        message: content,
+                        history: this.messages.slice(0, -1).slice(-4).map((m) => ({ role: m.role, text: String(m.text).slice(0, 500) })),
+                    }),
                 });
                 const data = await res.json();
                 this.messages.push({ role: 'assistant', text: data.reply || 'No reply received.' });
@@ -221,7 +227,7 @@
                 <div class="psis-ai-row is-bot">
                     <img src="{{ asset('images/chatbot.png') }}" alt="" class="psis-ai-avatar">
                     <div class="psis-ai-bubble is-bot">
-                        Hi! Type a question or pick one below — I’ll answer from live PSIS data{{ config('psis.ollama.enabled') ? ' (local Ollama when needed)' : '' }}.
+                        Hi! Type a question or pick one below. I’ll answer from live PSIS data{{ config('psis.ollama.enabled') ? ' (local Ollama when needed)' : '' }}.
                     </div>
                 </div>
             </template>
@@ -233,7 +239,12 @@
                         alt=""
                         class="psis-ai-avatar"
                     >
-                    <div class="psis-ai-bubble" :class="m.role === 'user' ? 'is-user' : 'is-bot'" x-text="m.text"></div>
+                    <template x-if="m.role === 'user'">
+                        <div class="psis-ai-bubble is-user" x-text="m.text"></div>
+                    </template>
+                    <template x-if="m.role !== 'user'">
+                        <div class="psis-ai-bubble is-bot" x-html="linkify(m.text)"></div>
+                    </template>
                 </div>
             </template>
             <div x-show="loading" class="psis-ai-row is-bot" x-cloak>

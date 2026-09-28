@@ -7,7 +7,7 @@ Dates are in **Asia/Manila**.
 
 ---
 
-## [Unreleased] — 2026-09-21
+## [Unreleased] — 2026-09-28
 
 ### Added
 
@@ -22,6 +22,21 @@ Dates are in **Asia/Manila**.
 - Supply **Purchase History** lists **student shop purchases**, **department released items** (faculty requests), and **supplier stock-in**, with a receiving check: correct item vs wrong item.
 - Local **Ollama** chatbot (`OllamaChatService`): type box restored; listed questions stay rule-based from live PSIS data; free text can use `http://127.0.0.1:11434` when `PSIS_OLLAMA_ENABLED=true`. Cloud APIs are not used. If Ollama is off, keyword answers and the question list still work.
 - AI chat **thread stays** while you navigate the app; it is cleared on **logout** (and on the login page) so the next user does not see it.
+- AI answers **how many items** from live inventory (SKU count, on hand, reserved, available). Ollama now receives that fact so it does not say it has no number.
+- AI chat understands **English, Filipino, and Cebuano** (and mixed Taglish / Bisaya-English) for common stock and request questions.
+- Reports page **Most requested items** bar graph, selectable **by month, semester, or year** (faculty requests + student purchases). The AI can answer the current-month ranking.
+- AI can **list all inventory items** with live available counts (students see Uniform Shop items only).
+- Forecast / Restock Tips now show **most requested (faculty)** and **most purchased (students)** for the month. The AI remembers those tops and predicts which demanded items need restock.
+- Reports **Monthly summary** is organized (counts, faculty, students, restock) and can be exported as **PDF** or **Excel** for the selected month.
+- Reports ranking chart is a **stacked horizontal bar** (faculty blue + student gold). **Demand trend** has its own **semester** filter, with item names on the left, that semester’s months along the bottom, and a predicted finish vs last year.
+- AI can look up **one item** by name/code, a **REQ- / PUR-** number, **what to do next** for the signed-in role, **this month vs last month**, and **semester restock** from last year same month. Faculty can ask if a quantity still fits the department budget. Short follow-ups like “that item” use the last chat turn.
+- Supply / Admin dashboard **work queue**: ready-to-release faculty (`approved` / `reserved`) and students (`payment_verified`), inspect-today deliveries, reserved vs available, actionable low stock with Stock In links, oldest waiting, and today’s physical movements. Supply stat cards no longer treat **Pending Requests** as their queue.
+- Reports **Supplies issuance log** (like the office supplies spreadsheet): filter by **day / week / month / semester / year / all**, Faculty vs Students, one department, export **PDF** and **Excel**. Year/semester PDFs write line-by-line (not DomPDF tables) so large imported logs do not freeze the page.
+- Artisan `psis:import-supplies-xlsx` loads `docs/.supply data/SUPPLIES DATA.xlsx` into inventory + released faculty issuance history (keeps users, students, Uniform Shop items, and student purchases). Blank dates in that spreadsheet follow the last dated item above.
+- Artisan `psis:purge-student-purchases` deletes student purchases, payments, and purchase history while keeping student accounts and the Uniform Shop catalog.
+- AI answers **where to view a page / how to navigate** with the sidebar name and a clickable URL for that role (Reports, Uniform Shop, New Request, and other menu pages). Pages not in the user’s menu are refused and replaced with allowed links.
+- AI item lookup lists **every inventory row with the same name** (and names that start with it), each with item code and available stock. Type a code to see one row in detail.
+- AI live snapshot now includes **departments, categories, units of measurement, shop vs office SKU split, user counts by role, and suppliers** (role-gated). Ollama receives **only items clearly named in the question**, not a 20-SKU sample list, so similar wording does not pick a nearby item.
 
 ### Changed
 
@@ -32,12 +47,19 @@ Dates are in **Asia/Manila**.
 - Desktop **sidebar stays on screen** while the main page scrolls (`#psis-sidebar` is fixed; content uses `.psis-main-col`).
 - Floating AI chat **Choose a question** list is collapsed until you expand it, so the thread has more room.
 - Chatbot icon can be dragged a short way up and left (bottom-right pocket). **Click** opens the panel pinned to the lower-right corner; closing puts the icon back where you left it.
+- AI greeting no longer lists **English / Filipino / Cebuano**. The bubble is a short “type or pick a question” intro; the assistant still answers in the language the user typed.
+- AI item lists, rankings, restock, and forecasts use a **short intro plus one bullet per line** (including Ollama when it rewrites a list).
 
 ### Removed
 
 - Unused inventory **`barcode`** column and the item-detail **QR** graphic. Run `php artisan migrate` if the column is still on an existing database.
 
 ### Fixed
+
+- AI assistant answers **how many available / by type** from live inventory (totals plus category counts) instead of hanging. Ollama only gets a short sample of items, and its timeout is capped so other typed questions still get a reply if the local model is slow.
+- Supply spreadsheet QTY values that Excel turned into dates (typed **1/2**, stored as 46054) are imported as **1 unit** using TOTAL AMOUNT ÷ UNIT PRICE, so they no longer dominate demand trend.
+- Supply spreadsheet dates now follow the **visible month/day** on the cell (same as `1/14/2025` = January 14). Excel serials that used day/month (`1/8/2025` stored as August 1) no longer shift items such as RJ45 onto the wrong month.
+- Reports, Restock Tips, and the AI can **forecast items likely to trend** in the remaining months of the selected/current semester (last year those months, or current pace) and **suggest restock** when available stock cannot cover that prediction.
 
 - Viewing an uploaded payment receipt from another PC no longer hits Apache **403 Forbidden** on the `/storage` symlink. Receipts open through a logged-in Laravel route (`purchases.receipt.show`).
 - **Add Item** opened `/inventory/create` as a 404 because `create` was treated as an inventory id. Create/edit routes are registered first; show only accepts numeric ids.

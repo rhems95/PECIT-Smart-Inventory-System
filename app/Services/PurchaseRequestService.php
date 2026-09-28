@@ -2,12 +2,19 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Inventory;
+use App\Models\InventorySizeStock;
 use App\Models\Payment;
+use App\Models\PsisNotification;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
+use App\Models\StockLog;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -273,5 +280,135 @@ class PurchaseRequestService
 
             return $purchase->fresh(['items.inventory', 'user']);
         });
+    }
+
+    /**
+     * Delete all student purchases, payments, and related history. Keeps student users and shop items.
+     *
+     * @return array{purchases: int, students: int}
+     */
+    public function purgeAllHistory(): array
+    {
+        return DB::transaction(function () {
+            $purchases = PurchaseRequest::query()->with(['items', 'payments'])->get();
+            $purchaseCount = $purchases->count();
+            $ids = $purchases->pluck('id')->all();
+
+            foreach ($purchases as $purchase) {
+                foreach ($purchase->items as $item) {
+                    $qty = (int) $item->quantity;
+                    if ($qty <= 0 || ! $item->inventory_id) {
+                        continue;
+                    }
+                    $inventory = Inventory::query()->whereKey($item->inventory_id)->lockForUpdate()->first();
+                    if (! $inventory) {
+                        continue;
+                    }
+                    if ($purchase->status === 'payment_verified') {
+                        $this->clearReservedStock($inventory, $qty, $item->size);
+                    } elseif ($purchase->status === 'released') {
+                        $this->returnReleasedStock($inventory, $qty, $item->size);
+                    }
+                }
+
+                foreach ($purchase->payments as $payment) {
+                    if (is_string($payment->receipt_path) && $payment->receipt_path !== '') {
+                        Storage::disk('public')->delete($payment->receipt_path);
+                    }
+                }
+            }
+
+            if ($ids !== []) {
+                Transaction::query()
+                    ->where('reference_type', PurchaseRequest::class)
+                    ->whereIn('reference_id', $ids)
+                    ->delete();
+            }
+
+            StockLog::query()
+                ->where(function ($query) {
+                    $query->where('notes', 'like', '%purchase PUR-%')
+                        ->orWhere('notes', 'like', 'Student purchase %');
+                })
+                ->delete();
+
+            Schema::disableForeignKeyConstraints();
+            Payment::query()->delete();
+            PurchaseRequestItem::query()->delete();
+            PurchaseRequest::query()->delete();
+            Schema::enableForeignKeyConstraints();
+
+            PsisNotification::query()
+                ->where(function ($query) {
+                    $query->where('type', 'like', 'payment_%')
+                        ->orWhere('type', 'like', 'purchase_%')
+                        ->orWhere('link', 'like', '%/purchases%')
+                        ->orWhere('link', 'like', '%accounting/payments%')
+                        ->orWhere('link', 'like', '%supply/purchases%');
+                })
+                ->delete();
+
+            AuditLog::query()
+                ->where(function ($query) {
+                    $query->where('model_type', PurchaseRequest::class)
+                        ->orWhere('action', 'like', 'purchase.%');
+                })
+                ->delete();
+
+            return [
+                'purchases' => $purchaseCount,
+                'students' => User::query()->role('Student')->count(),
+            ];
+        });
+    }
+
+    protected function clearReservedStock(Inventory $inventory, int $quantity, ?string $size): void
+    {
+        if ($size) {
+            $stock = InventorySizeStock::query()
+                ->where('inventory_id', $inventory->id)
+                ->where('size', $size)
+                ->lockForUpdate()
+                ->first();
+            if ($stock) {
+                $stock->reserved_quantity = max(0, (int) $stock->reserved_quantity - $quantity);
+                $stock->save();
+                $inventory->syncAggregatesFromSizeStocks();
+            } else {
+                $inventory->reserved_quantity = max(0, (int) $inventory->reserved_quantity - $quantity);
+                $inventory->save();
+            }
+        } else {
+            $inventory->reserved_quantity = max(0, (int) $inventory->reserved_quantity - $quantity);
+            $inventory->save();
+        }
+
+        $inventory->refresh();
+        $inventory->updateStatus();
+    }
+
+    protected function returnReleasedStock(Inventory $inventory, int $quantity, ?string $size): void
+    {
+        if ($size) {
+            $stock = InventorySizeStock::query()
+                ->where('inventory_id', $inventory->id)
+                ->where('size', $size)
+                ->lockForUpdate()
+                ->first();
+            if ($stock) {
+                $stock->quantity = (int) $stock->quantity + $quantity;
+                $stock->save();
+                $inventory->syncAggregatesFromSizeStocks();
+            } else {
+                $inventory->quantity = (int) $inventory->quantity + $quantity;
+                $inventory->save();
+            }
+        } else {
+            $inventory->quantity = (int) $inventory->quantity + $quantity;
+            $inventory->save();
+        }
+
+        $inventory->refresh();
+        $inventory->updateStatus();
     }
 }

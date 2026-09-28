@@ -202,7 +202,7 @@ class SupplyOperationsController extends Controller
     public function releases(): View
     {
         $requests = SupplyRequest::with(['user.department', 'department'])
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'reserved'])
             ->latest()
             ->paginate(15);
 

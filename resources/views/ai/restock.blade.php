@@ -6,8 +6,16 @@
 @section('content')
 <div class="space-y-4">
     <div class="psis-card p-5">
-        <p class="text-sm">{{ $summary }}</p>
-        <p class="text-xs text-slate-500 mt-2">Based on the last 90 days of releases/stock-outs. Suggested reorder aims to cover about 30 days of usage.</p>
+        @include('partials.monthly-summary', [
+            'summaryReport' => $summaryReport,
+            'title' => 'Monthly summary',
+            'canExport' => true,
+        ])
+        @include('partials.semester-trend-forecast', [
+            'semesterForecast' => $semesterForecast,
+            'wrapClass' => 'mt-4',
+        ])
+        <p class="text-xs text-slate-500 mt-3">The usage table below also uses the last 90 days of releases/stock-outs (about 30 days of cover).</p>
     </div>
 
     <div class="psis-card overflow-x-auto">

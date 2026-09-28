@@ -72,7 +72,54 @@ class FacultyBudgetService
             'period_label' => "{$label} AY {$ay}",
             'starts_at' => $starts,
             'ends_at' => $ends,
+            'key' => $ay.'-'.$semester,
         ];
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string, starts_at: CarbonInterface, ends_at: CarbonInterface}>
+     */
+    public function recentSemesters(int $count = 8): array
+    {
+        $options = [];
+        $cursor = now();
+
+        for ($i = 0; $i < $count + 2; $i++) {
+            $period = $this->period($cursor);
+            $key = (string) ($period['key'] ?? $period['academic_year'].'-'.$period['semester']);
+            if (! isset($options[$key])) {
+                $options[$key] = [
+                    'value' => $key,
+                    'label' => $period['period_label'],
+                    'starts_at' => $period['starts_at'],
+                    'ends_at' => $period['ends_at'],
+                ];
+            }
+            if (count($options) >= $count) {
+                break;
+            }
+            $cursor = $period['starts_at']->copy()->subDay();
+        }
+
+        return array_values($options);
+    }
+
+    /**
+     * @return array{semester: int, label: string, academic_year: string, period_label: string, starts_at: CarbonInterface, ends_at: CarbonInterface, key: string}|null
+     */
+    public function periodFromKey(?string $key): ?array
+    {
+        if (! is_string($key) || ! preg_match('/^(\d{4})-(\d{4})-([12])$/', $key, $m)) {
+            return null;
+        }
+
+        $startYear = (int) $m[1];
+        $semester = (int) $m[3];
+        $at = $semester === 1
+            ? Carbon::create($startYear, 6, 15)
+            : Carbon::create($startYear, 12, 15);
+
+        return $this->period($at);
     }
 
     public function limitFor(?Department $department): float

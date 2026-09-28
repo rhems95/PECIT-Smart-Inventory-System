@@ -22,7 +22,7 @@
     x-data='{
         tab: "in",
         items: @json($itemMeta),
-        itemId: "",
+        itemId: @json((string) request('item', '')),
         size: "",
         source: "manual_external",
         get needsSize() {
@@ -55,7 +55,7 @@
         <select name="inventory_id" class="psis-input" required x-model="itemId">
             <option value="">Select item</option>
             @foreach ($items as $item)
-                <option value="{{ $item->id }}">{{ $item->item_name }} ({{ $item->item_code }})</option>
+                <option value="{{ $item->id }}" @selected((string) request('item') === (string) $item->id)>{{ $item->item_name }} ({{ $item->item_code }})</option>
             @endforeach
         </select>
         <div x-show="needsSize">
