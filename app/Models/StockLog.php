@@ -20,8 +20,8 @@ class StockLog extends Model
     protected function casts(): array
     {
         return [
-            'quantity' => 'integer',
-            'balance_after' => 'integer',
+            'quantity' => 'decimal:4',
+            'balance_after' => 'decimal:4',
         ];
     }
 

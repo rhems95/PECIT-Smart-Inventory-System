@@ -17,8 +17,8 @@
     @forelse ($report['departments'] as $row)
         <tr>
             <td>{{ $row['department'] }}</td>
-            <td>{{ $row['faculty_qty'] }}</td>
-            <td>{{ $row['student_qty'] }}</td>
+            <td>{{ \App\Support\Qty::format($row['faculty_qty']) }}</td>
+            <td>{{ \App\Support\Qty::format($row['student_qty']) }}</td>
             <td>{{ number_format($row['faculty_amount'], 2) }}</td>
             <td>{{ number_format($row['student_amount'], 2) }}</td>
         </tr>
@@ -37,7 +37,7 @@
         <tr>
             <td>{{ $row['date']?->format('m/d/Y') }}</td>
             <td>{{ $row['item'] }}</td>
-            <td>{{ $row['qty'] }}</td>
+            <td>{{ \App\Support\Qty::format($row['qty']) }}</td>
             <td>{{ $row['unit'] }}</td>
             <td>{{ number_format($row['unit_price'], 2) }}</td>
             <td>{{ number_format($row['total_amount'], 2) }}</td>
@@ -60,7 +60,7 @@
         <tr>
             <td>{{ $row['date']?->format('m/d/Y') }}</td>
             <td>{{ $row['item'] }}</td>
-            <td>{{ $row['qty'] }}</td>
+            <td>{{ \App\Support\Qty::format($row['qty']) }}</td>
             <td>{{ $row['unit'] }}</td>
             <td>{{ number_format($row['unit_price'], 2) }}</td>
             <td>{{ number_format($row['total_amount'], 2) }}</td>

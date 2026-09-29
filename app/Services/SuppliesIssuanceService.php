@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PurchaseRequestItem;
 use App\Models\RequestItem;
+use App\Support\Qty;
 use App\Support\SimplePdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class SuppliesIssuanceService
      *     to: ?Carbon,
      *     faculty: Collection<int, array<string, mixed>>,
      *     student: Collection<int, array<string, mixed>>,
-     *     departments: Collection<int, array{department: string, faculty_qty: int, student_qty: int, faculty_amount: float, student_amount: float}>,
+     *     departments: Collection<int, array{department: string, faculty_qty: float, student_qty: float, faculty_amount: float, student_amount: float}>,
      *     totals: array{faculty_lines: int, student_lines: int, faculty_amount: float, student_amount: float}
      * }
      */
@@ -81,8 +82,8 @@ class SuppliesIssuanceService
         $pdf->paragraph('Per department');
         $deptRows = $report['departments']->map(fn (array $row) => [
             $row['department'],
-            (string) $row['faculty_qty'],
-            (string) $row['student_qty'],
+            Qty::format($row['faculty_qty']),
+            Qty::format($row['student_qty']),
             number_format((float) $row['faculty_amount'], 2),
             number_format((float) $row['student_amount'], 2),
         ])->all();
@@ -124,7 +125,7 @@ class SuppliesIssuanceService
         return $rows->map(fn (array $row) => [
             optional($row['date'])->format('m/d/Y') ?: '—',
             (string) $row['item'],
-            (string) $row['qty'],
+            Qty::format($row['qty']),
             (string) $row['unit'],
             number_format((float) $row['unit_price'], 2),
             number_format((float) $row['total_amount'], 2),
@@ -224,7 +225,7 @@ class SuppliesIssuanceService
             ->map(function (RequestItem $line) {
                 $request = $line->supplyRequest;
                 $date = $request?->released_at;
-                $qty = (int) ($line->quantity_released ?: $line->quantity_approved ?: $line->quantity_requested);
+                $qty = Qty::of($line->quantity_released ?: $line->quantity_approved ?: $line->quantity_requested);
                 $price = (float) $line->unit_price;
                 $department = $request?->department?->name
                     ?? $request?->user?->department?->name
@@ -267,7 +268,7 @@ class SuppliesIssuanceService
             ->map(function (PurchaseRequestItem $line) {
                 $purchase = $line->purchaseRequest;
                 $date = $purchase?->released_at;
-                $qty = (int) $line->quantity;
+                $qty = Qty::of($line->quantity);
                 $price = (float) $line->unit_price;
                 $name = $line->inventory?->item_name ?? 'Item';
                 if ($line->size) {
@@ -295,7 +296,7 @@ class SuppliesIssuanceService
     /**
      * @param  Collection<int, array<string, mixed>>  $faculty
      * @param  Collection<int, array<string, mixed>>  $student
-     * @return Collection<int, array{department: string, faculty_qty: int, student_qty: int, faculty_amount: float, student_amount: float}>
+     * @return Collection<int, array{department: string, faculty_qty: float, student_qty: float, faculty_amount: float, student_amount: float}>
      */
     protected function departmentSummary(Collection $faculty, Collection $student): Collection
     {
@@ -310,7 +311,7 @@ class SuppliesIssuanceService
                 'faculty_amount' => 0.0,
                 'student_amount' => 0.0,
             ];
-            $map[$key]['faculty_qty'] += (int) $row['qty'];
+            $map[$key]['faculty_qty'] = Qty::add($map[$key]['faculty_qty'], $row['qty']);
             $map[$key]['faculty_amount'] += (float) $row['total_amount'];
         }
 
@@ -323,7 +324,7 @@ class SuppliesIssuanceService
                 'faculty_amount' => 0.0,
                 'student_amount' => 0.0,
             ];
-            $map[$key]['student_qty'] += (int) $row['qty'];
+            $map[$key]['student_qty'] = Qty::add($map[$key]['student_qty'], $row['qty']);
             $map[$key]['student_amount'] += (float) $row['total_amount'];
         }
 

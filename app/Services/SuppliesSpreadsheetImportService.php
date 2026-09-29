@@ -26,7 +26,19 @@ class SuppliesSpreadsheetImportService
 {
     public function defaultPath(): string
     {
-        return base_path('docs/.supply data/SUPPLIES DATA.xlsx');
+        $dir = base_path('docs/.supply data');
+        $updated = $dir.DIRECTORY_SEPARATOR.'SUPPLIES DATA updated.xlsx';
+        $legacy = $dir.DIRECTORY_SEPARATOR.'SUPPLIES DATA.xlsx';
+
+        if (is_file($updated)) {
+            return $updated;
+        }
+
+        if (is_file($legacy)) {
+            return $legacy;
+        }
+
+        return $updated;
     }
 
     /**
@@ -214,7 +226,7 @@ class SuppliesSpreadsheetImportService
     }
 
     /**
-     * @return list<array{date: Carbon, item_name: string, item_key: string, qty: int, unit: string, unit_price: float, department_raw: string, department_key: string}>
+     * @return list<array{date: Carbon, item_name: string, item_key: string, qty: float, unit: string, unit_price: float, department_raw: string, department_key: string}>
      */
     public function parseSpreadsheet(string $path): array
     {
@@ -257,6 +269,9 @@ class SuppliesSpreadsheetImportService
                     $sheet->getCell([5, $r])->getValue(),
                     $sheet->getCell([6, $r])->getValue(),
                 );
+                if ($qty <= 0) {
+                    continue;
+                }
                 $unit = $this->canonicalUnit((string) $sheet->getCell([4, $r])->getValue());
                 $priceRaw = $sheet->getCell([5, $r])->getValue();
                 $price = is_numeric($priceRaw) ? round((float) $priceRaw, 2) : 0.0;
@@ -481,15 +496,26 @@ class SuppliesSpreadsheetImportService
             in_array($n, ['cps', 'cpies', 'copies'], true) => 'copy',
             in_array($n, ['bot', 'bots', 'bottle', 'bottles'], true) => 'bottle',
             in_array($n, ['pck', 'pcks', 'pack', 'packs', 'pac'], true) => 'pack',
-            in_array($n, ['litr', 'lit', 'ltr', 'ltrs', 'l', 'liter', 'liters'], true) => 'L',
+            in_array($n, ['litr', 'lit', 'ltr', 'ltrs', 'lrts', 'l', 'liter', 'liters'], true) => 'L',
             in_array($n, ['ml', 'nl'], true) => 'ml',
+            in_array($n, ['qrt', 'qtr', 'qry', 'qtrs', 'quart', 'quarts'], true) => 'qt',
             in_array($n, ['box'], true) => 'box',
-            in_array($n, ['set'], true) => 'set',
+            in_array($n, ['set', 'sets'], true) => 'set',
             in_array($n, ['roll', 'rolls'], true) => 'roll',
-            in_array($n, ['tube'], true) => 'tube',
+            in_array($n, ['tube', 'tubes'], true) => 'tube',
             in_array($n, ['unit', 'units'], true) => 'unit',
             in_array($n, ['kl', 'kls', 'kis', 'kg'], true) => 'kg',
             in_array($n, ['m', 'mtr', 'mtrs'], true) => 'm',
+            in_array($n, ['can', 'cans'], true) => 'can',
+            in_array($n, ['pad', 'pads'], true) => 'pad',
+            in_array($n, ['bag', 'bags'], true) => 'bag',
+            in_array($n, ['sck', 'scks', 'sack', 'sacks'], true) => 'sack',
+            in_array($n, ['bun', 'bund', 'bundle', 'bundles'], true) => 'bundle',
+            in_array($n, ['pair', 'pairs'], true) => 'pair',
+            in_array($n, ['doz', 'dozen'], true) => 'dozen',
+            in_array($n, ['tank'], true) => 'tank',
+            in_array($n, ['sachet'], true) => 'sachet',
+            in_array($n, ['case'], true) => 'case',
             $n === '' => 'pc',
             default => $n,
         };
@@ -506,6 +532,7 @@ class SuppliesSpreadsheetImportService
             'pack' => 'Pack',
             'L' => 'Liter',
             'ml' => 'Milliliter',
+            'qt' => 'Quart',
             'box' => 'Box',
             'set' => 'Set',
             'roll' => 'Roll',
@@ -513,6 +540,16 @@ class SuppliesSpreadsheetImportService
             'unit' => 'Unit',
             'kg' => 'Kilogram',
             'm' => 'Meter',
+            'can' => 'Can',
+            'pad' => 'Pad',
+            'bag' => 'Bag',
+            'sack' => 'Sack',
+            'bundle' => 'Bundle',
+            'pair' => 'Pair',
+            'dozen' => 'Dozen',
+            'tank' => 'Tank',
+            'sachet' => 'Sachet',
+            'case' => 'Case',
         ];
 
         $name = $names[$symbol] ?? ucfirst($symbol);
@@ -540,7 +577,7 @@ class SuppliesSpreadsheetImportService
      * while TOTAL AMOUNT still has unit price × 0.5. Prefer the amount, then a
      * visible n/d fraction, never the date serial as a quantity.
      */
-    public function resolveIssuanceQuantity(mixed $qtyRaw, mixed $qtyFormatted, mixed $unitPrice, mixed $totalAmount): int
+    public function resolveIssuanceQuantity(mixed $qtyRaw, mixed $qtyFormatted, mixed $unitPrice, mixed $totalAmount): float
     {
         $qty = $this->quantityFromCell($qtyRaw, $qtyFormatted);
         $price = is_numeric($unitPrice) ? (float) $unitPrice : 0.0;
@@ -554,7 +591,7 @@ class SuppliesSpreadsheetImportService
             }
         }
 
-        return max(1, (int) round($qty));
+        return round(max(0.0, $qty), 4);
     }
 
     protected function quantityFromCell(mixed $raw, mixed $formatted): float

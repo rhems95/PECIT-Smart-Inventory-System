@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Qty;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,8 +18,8 @@ class InventorySizeStock extends Model
     protected function casts(): array
     {
         return [
-            'quantity' => 'integer',
-            'reserved_quantity' => 'integer',
+            'quantity' => 'decimal:4',
+            'reserved_quantity' => 'decimal:4',
         ];
     }
 
@@ -27,8 +28,8 @@ class InventorySizeStock extends Model
         return $this->belongsTo(Inventory::class);
     }
 
-    public function availableQuantity(): int
+    public function availableQuantity(): float
     {
-        return max(0, $this->quantity - $this->reserved_quantity);
+        return max(0, Qty::sub($this->quantity, $this->reserved_quantity));
     }
 }

@@ -32,7 +32,7 @@ Dates are in **Asia/Manila**.
 - AI can look up **one item** by name/code, a **REQ- / PUR-** number, **what to do next** for the signed-in role, **this month vs last month**, and **semester restock** from last year same month. Faculty can ask if a quantity still fits the department budget. Short follow-ups like “that item” use the last chat turn.
 - Supply / Admin dashboard **work queue**: ready-to-release faculty (`approved` / `reserved`) and students (`payment_verified`), inspect-today deliveries, reserved vs available, actionable low stock with Stock In links, oldest waiting, and today’s physical movements. Supply stat cards no longer treat **Pending Requests** as their queue.
 - Reports **Supplies issuance log** (like the office supplies spreadsheet): filter by **day / week / month / semester / year / all**, Faculty vs Students, one department, export **PDF** and **Excel**. Year/semester PDFs write line-by-line (not DomPDF tables) so large imported logs do not freeze the page.
-- Artisan `psis:import-supplies-xlsx` loads `docs/.supply data/SUPPLIES DATA.xlsx` into inventory + released faculty issuance history (keeps users, students, Uniform Shop items, and student purchases). Blank dates in that spreadsheet follow the last dated item above.
+- Artisan `psis:import-supplies-xlsx` loads `docs/.supply data/SUPPLIES DATA updated.xlsx` (year sheets 2024–2026) into inventory + released faculty issuance history (keeps users, students, Uniform Shop items, and student purchases). Blank dates in that spreadsheet follow the last dated item above.
 - Artisan `psis:purge-student-purchases` deletes student purchases, payments, and purchase history while keeping student accounts and the Uniform Shop catalog.
 - AI answers **where to view a page / how to navigate** with the sidebar name and a clickable URL for that role (Reports, Uniform Shop, New Request, and other menu pages). Pages not in the user’s menu are refused and replaced with allowed links.
 - AI item lookup lists **every inventory row with the same name** (and names that start with it), each with item code and available stock. Type a code to see one row in detail.
@@ -40,6 +40,7 @@ Dates are in **Asia/Manila**.
 
 ### Changed
 
+- Stock, faculty request, and imported issuance quantities are **decimal (4 places)** so half-reams and pump liters (0.5, 3.74) store as written. Uniform Shop cart stays whole pieces.
 - Academic departments are now **CCS** (College of Computer Studies), **CC** (College of Criminology), **CTHM** (College of Tourism and Hospitality Management), **CTE** (College of Teacher Education), and **CBA** (College of Business Administration), plus **SHS**, **Administration** (`ADMIN`), and **Supply Office** (`SUPPLY`). Existing records were remapped **CIT→CCS**, **COE→CC**, **COB→CBA**. Demo student `STU-COE-001` is now `STU-CC-001` (Mendoza / Criminology).
 - Student login: **Last name** first (visible); **Student ID** below, hidden while typing, with a Show Student ID checkbox. Staff/Student tabs work with HTML + CSS (no Alpine), so the form still works when JS assets fail to load.
 - App URLs follow the incoming request (`SetRootUrlFromRequest`, trusted proxies, relative Vite paths) so login and CSS/JS work when the site is opened from another PC or a port-forward / tunnel, not only `APP_URL` localhost.
@@ -57,7 +58,8 @@ Dates are in **Asia/Manila**.
 ### Fixed
 
 - AI assistant answers **how many available / by type** from live inventory (totals plus category counts) instead of hanging. Ollama only gets a short sample of items, and its timeout is capped so other typed questions still get a reply if the local model is slow.
-- Supply spreadsheet QTY values that Excel turned into dates (typed **1/2**, stored as 46054) are imported as **1 unit** using TOTAL AMOUNT ÷ UNIT PRICE, so they no longer dominate demand trend.
+- Supply spreadsheet QTY values that Excel turned into dates (typed **1/2**, stored as 46054) are imported as **0.5** using TOTAL AMOUNT ÷ UNIT PRICE, so they no longer dominate demand trend.
+- Supplies issuance log **QTY** now shows fractions (0.5, 3.74) instead of rounding them with `number_format()`.
 - Supply spreadsheet dates now follow the **visible month/day** on the cell (same as `1/14/2025` = January 14). Excel serials that used day/month (`1/8/2025` stored as August 1) no longer shift items such as RJ45 onto the wrong month.
 - Reports, Restock Tips, and the AI can **forecast items likely to trend** in the remaining months of the selected/current semester (last year those months, or current pace) and **suggest restock** when available stock cannot cover that prediction.
 

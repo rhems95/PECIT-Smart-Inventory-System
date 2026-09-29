@@ -14,6 +14,7 @@ use App\Models\SupplyRequest;
 use App\Models\Transaction;
 use App\Models\UnitOfMeasurement;
 use App\Models\User;
+use App\Support\Qty;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -133,8 +134,8 @@ class AiInsightService
                 continue;
             }
 
-            $facultyQty = (int) ($faculty[$id] ?? 0);
-            $studentQty = (int) ($student[$id] ?? 0);
+            $facultyQty = Qty::of($faculty[$id] ?? 0);
+            $studentQty = Qty::of($student[$id] ?? 0);
 
             $rows[] = [
                 'inventory_id' => (int) $id,
@@ -229,25 +230,25 @@ class AiInsightService
             }
             $monthValues = [];
             foreach ($months as $month) {
-                $monthValues[] = (int) ($currentMap[$id][$month['key']] ?? 0);
+                $monthValues[] = Qty::of($currentMap[$id][$month['key']] ?? 0);
             }
-            $total = (int) array_sum($monthValues);
-            $soFar = 0;
+            $total = Qty::of(array_sum($monthValues));
+            $soFar = 0.0;
             foreach ($elapsedKeys as $key) {
-                $soFar += (int) ($currentMap[$id][$key] ?? 0);
+                $soFar = Qty::add($soFar, $currentMap[$id][$key] ?? 0);
             }
-            $priorTotal = (int) array_sum($priorMap[$id] ?? []);
-            $priorRemaining = 0;
+            $priorTotal = Qty::of(array_sum($priorMap[$id] ?? []));
+            $priorRemaining = 0.0;
             foreach ($remainingKeys as $key) {
                 $priorKey = Carbon::createFromFormat('Y-m', $key)->subYear()->format('Y-m');
-                $priorRemaining += (int) ($priorMap[$id][$priorKey] ?? 0);
+                $priorRemaining = Qty::add($priorRemaining, $priorMap[$id][$priorKey] ?? 0);
             }
             if ($complete) {
                 $predicted = $total;
             } elseif ($priorTotal >= 50) {
-                $predicted = $soFar + $priorRemaining;
+                $predicted = Qty::add($soFar, $priorRemaining);
             } elseif ($elapsedCount > 0) {
-                $predicted = (int) round(($soFar / $elapsedCount) * $totalMonths);
+                $predicted = Qty::of(($soFar / $elapsedCount) * $totalMonths);
             } else {
                 $predicted = $total;
             }
@@ -272,11 +273,11 @@ class AiInsightService
             ];
         }
 
-        $currentTotal = (int) array_sum(array_column($items, 'total'));
-        $projectedTotal = (int) array_sum(array_column($items, 'predicted'));
+        $currentTotal = Qty::of(array_sum(array_column($items, 'total')));
+        $projectedTotal = Qty::of(array_sum(array_column($items, 'predicted')));
         $priorTotal = 0;
         foreach ($topIds as $id) {
-            $priorTotal += (int) array_sum($priorMap[$id] ?? []);
+            $priorTotal = Qty::add($priorTotal, array_sum($priorMap[$id] ?? []));
         }
         $compare = $complete ? $currentTotal : $projectedTotal;
         $prediction = $this->trendPredictionCopy(
@@ -407,7 +408,7 @@ class AiInsightService
             $available = $inventory->availableQuantity();
             $shortfall = max(0, $predictedRemaining - $available);
             $recommended = $shortfall > 0
-                ? max($shortfall, max(0, ((int) $inventory->minimum_stock * 2) - $available), 5)
+                ? max($shortfall, max(0, (Qty::of($inventory->minimum_stock) * 2) - $available), 5)
                 : 0;
 
             $rows[] = [
@@ -473,8 +474,8 @@ class AiInsightService
             $rows[] = [
                 'month' => $month->format('Y-m'),
                 'label' => $month->format('M Y'),
-                'faculty' => (int) array_sum(array_column($items, 'faculty_qty')),
-                'student' => (int) array_sum(array_column($items, 'student_qty')),
+                'faculty' => Qty::of(array_sum(array_column($items, 'faculty_qty'))),
+                'student' => Qty::of(array_sum(array_column($items, 'student_qty'))),
             ];
         }
 
@@ -547,17 +548,17 @@ class AiInsightService
             }
 
             $available = $item->availableQuantity();
-            $demand = (int) $row['total'];
-            $shortfall = max(0, $demand - $available);
+            $demand = Qty::of($row['total']);
+            $shortfall = max(0, Qty::sub($demand, $available));
             $needsRestock = $shortfall > 0 || $item->isLowStock() || $item->isOutOfStock();
 
             if (! $needsRestock) {
                 continue;
             }
 
-            $recommended = max($shortfall, max(0, ((int) $item->minimum_stock * 2) - $available), 5);
+            $recommended = max($shortfall, max(0, (Qty::of($item->minimum_stock) * 2) - $available), 5);
             $daysLeft = null;
-            $urgency = $this->urgency($available, (int) $item->minimum_stock, $daysLeft);
+            $urgency = $this->urgency($available, Qty::of($item->minimum_stock), $daysLeft);
             $sources = [];
             if ($row['faculty_qty'] > 0) {
                 $sources[] = 'faculty '.$row['faculty_qty'];
@@ -579,9 +580,9 @@ class AiInsightService
                 'item_code' => $item->item_code,
                 'unit' => $item->unit,
                 'available' => $available,
-                'minimum_stock' => (int) $item->minimum_stock,
-                'faculty_qty' => (int) $row['faculty_qty'],
-                'student_qty' => (int) $row['student_qty'],
+                'minimum_stock' => Qty::of($item->minimum_stock),
+                'faculty_qty' => Qty::of($row['faculty_qty']),
+                'student_qty' => Qty::of($row['student_qty']),
                 'demand' => $demand,
                 'shortfall' => $shortfall,
                 'recommended_reorder' => $recommended,
@@ -647,7 +648,7 @@ class AiInsightService
             'low_stock_items' => $this->lowStockItems()->take(10)->map(fn (Inventory $i) => [
                 'item' => $i->item_name,
                 'available' => $i->availableQuantity(),
-                'minimum' => (int) $i->minimum_stock,
+                'minimum' => Qty::of($i->minimum_stock),
             ])->values()->all(),
         ];
     }
@@ -1125,10 +1126,10 @@ class AiInsightService
 
         Inventory::with(['category'])->orderBy('item_name')->get()->each(
             function (Inventory $item) use ($usageByInventory, $maxDays, &$forecasts) {
-                $used = (int) ($usageByInventory[$item->id] ?? 0);
+                $used = Qty::of($usageByInventory[$item->id] ?? 0);
                 $dailyRate = $used > 0 ? round($used / $this->lookbackDays, 3) : 0.0;
                 $available = $item->availableQuantity();
-                $onHand = (int) $item->quantity;
+                $onHand = Qty::of($item->quantity);
 
                 $daysLeft = $dailyRate > 0 ? (int) floor($available / $dailyRate) : null;
 
@@ -1150,7 +1151,7 @@ class AiInsightService
                 $message = match (true) {
                     $available <= 0 => "{$item->item_name} is out of stock.",
                     $daysLeft !== null => "{$item->item_name} may run out within {$daysLeft} day(s) (avg {$dailyRate}/day over {$this->lookbackDays} days).",
-                    default => "{$item->item_name} is below minimum stock ({$available} available / min {$item->minimum_stock}).",
+                    default => "{$item->item_name} is below minimum stock ({$available} available / min ".Qty::format($item->minimum_stock).").",
                 };
 
                 $forecasts[] = [
@@ -1160,9 +1161,9 @@ class AiInsightService
                     'category' => $item->category?->name,
                     'unit' => $item->unit,
                     'on_hand' => $onHand,
-                    'reserved' => (int) $item->reserved_quantity,
+                    'reserved' => Qty::of($item->reserved_quantity),
                     'available' => $available,
-                    'minimum_stock' => (int) $item->minimum_stock,
+                    'minimum_stock' => Qty::of($item->minimum_stock),
                     'daily_rate' => $dailyRate,
                     'days_until_depletion' => $daysLeft,
                     'recommended_reorder' => $recommended,
@@ -1182,7 +1183,7 @@ class AiInsightService
         return $forecasts;
     }
 
-    protected function urgency(int $available, int $minimum, ?int $daysLeft): string
+    protected function urgency(float $available, float $minimum, ?int $daysLeft): string
     {
         if ($available <= 0) {
             return 'critical';
@@ -1783,14 +1784,14 @@ class AiInsightService
 
         $inventory = Inventory::query()->with(['sizeStocks', 'category'])->get();
         $skus = $inventory->count();
-        $onHand = (int) $inventory->sum('quantity');
-        $reserved = (int) $inventory->sum('reserved_quantity');
-        $available = (int) $inventory->sum(fn (Inventory $i) => $i->availableQuantity());
+        $onHand = Qty::of($inventory->sum('quantity'));
+        $reserved = Qty::of($inventory->sum('reserved_quantity'));
+        $available = Qty::of($inventory->sum(fn (Inventory $i) => $i->availableQuantity()));
         $byType = $inventory
             ->groupBy(fn (Inventory $item) => $item->category?->name ?: 'Uncategorized')
             ->map(function ($rows, $name) {
                 $types = $rows->count();
-                $qty = (int) $rows->sum(fn (Inventory $item) => $item->availableQuantity());
+                $qty = Qty::of($rows->sum(fn (Inventory $item) => $item->availableQuantity()));
 
                 return "{$name}: {$types} type(s), available {$qty}";
             })
@@ -2764,14 +2765,14 @@ class AiInsightService
     protected function answerItemLookup(User $user, Inventory $item): string
     {
         $available = $item->availableQuantity();
-        $onHand = (int) $item->quantity;
-        $reserved = (int) $item->reserved_quantity;
-        $min = (int) $item->minimum_stock;
+        $onHand = Qty::of($item->quantity);
+        $reserved = Qty::of($item->reserved_quantity);
+        $min = Qty::of($item->minimum_stock);
         $unit = trim($item->unitLabel()) ?: 'unit';
         $demand = $this->demandRowForItem($item);
-        $faculty = (int) ($demand['faculty_qty'] ?? 0);
-        $student = (int) ($demand['student_qty'] ?? 0);
-        $total = (int) ($demand['total'] ?? 0);
+        $faculty = Qty::of($demand['faculty_qty'] ?? 0);
+        $student = Qty::of($demand['student_qty'] ?? 0);
+        $total = Qty::of($demand['total'] ?? 0);
         $month = Carbon::now()->format('F Y');
         $supplier = $user->hasRole('Student') ? null : $this->lastSupplierName($item);
 
@@ -2863,7 +2864,7 @@ class AiInsightService
         $lookup = $this->answerItemLookup($user, $item);
         $available = $item->availableQuantity();
         $demand = $this->demandRowForItem($item);
-        $total = (int) ($demand['total'] ?? 0);
+        $total = Qty::of($demand['total'] ?? 0);
 
         $reason = match (true) {
             $available <= 0 => $this->inLang(
@@ -3211,7 +3212,7 @@ class AiInsightService
                 continue;
             }
             $id = (int) $line->inventory_id;
-            $map[$id][$ym] = ($map[$id][$ym] ?? 0) + (int) $line->quantity_requested;
+            $map[$id][$ym] = Qty::add($map[$id][$ym] ?? 0, $line->quantity_requested);
         }
 
         $student = PurchaseRequestItem::query()
@@ -3227,7 +3228,7 @@ class AiInsightService
                 continue;
             }
             $id = (int) $line->inventory_id;
-            $map[$id][$ym] = ($map[$id][$ym] ?? 0) + (int) $line->quantity;
+            $map[$id][$ym] = Qty::add($map[$id][$ym] ?? 0, $line->quantity);
         }
 
         return $map;

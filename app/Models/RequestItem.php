@@ -25,9 +25,9 @@ class RequestItem extends Model
     protected function casts(): array
     {
         return [
-            'quantity_requested' => 'integer',
-            'quantity_approved' => 'integer',
-            'quantity_released' => 'integer',
+            'quantity_requested' => 'decimal:4',
+            'quantity_approved' => 'decimal:4',
+            'quantity_released' => 'decimal:4',
             'unit_price' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'inspection_status' => ReceivingInspectionStatus::class,

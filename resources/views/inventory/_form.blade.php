@@ -55,7 +55,7 @@
     @if (! $item)
         <div>
             <label class="psis-label">Initial Quantity</label>
-            <input type="number" name="quantity" value="{{ old('quantity', 0) }}" class="psis-input" required>
+            <input type="number" name="quantity" min="0" step="any" value="{{ old('quantity', 0) }}" class="psis-input" required>
             <p class="text-xs text-slate-500 mt-1 psis-uniform-size">Quantity applies to the selected size below.</p>
         </div>
         <div class="psis-uniform-size">
@@ -73,7 +73,7 @@
     @endif
     <div>
         <label class="psis-label">Minimum Stock</label>
-        <input type="number" name="minimum_stock" value="{{ old('minimum_stock', $item?->minimum_stock ?? 10) }}" class="psis-input" required>
+        <input type="number" name="minimum_stock" min="0" step="any" value="{{ old('minimum_stock', $item?->minimum_stock ?? 10) }}" class="psis-input" required>
     </div>
     <div>
         <label class="psis-label">Location</label>

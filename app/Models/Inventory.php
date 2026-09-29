@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Qty;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,9 +33,9 @@ class Inventory extends Model
     {
         return [
             'unit_price' => 'decimal:2',
-            'quantity' => 'integer',
-            'reserved_quantity' => 'integer',
-            'minimum_stock' => 'integer',
+            'quantity' => 'decimal:4',
+            'reserved_quantity' => 'decimal:4',
+            'minimum_stock' => 'decimal:4',
             'student_shop' => 'boolean',
         ];
     }
@@ -155,7 +156,7 @@ class Inventory extends Model
 
     public function deletionBlockReason(): ?string
     {
-        if ((int) $this->reserved_quantity > 0) {
+        if (Qty::of($this->reserved_quantity) > 0) {
             return 'Cannot delete: stock is reserved. Release or cancel related requests first.';
         }
 
@@ -178,19 +179,19 @@ class Inventory extends Model
     /**
      * Available qty overall, or for a specific size when this item tracks sizes.
      */
-    public function availableQuantity(?string $size = null): int
+    public function availableQuantity(?string $size = null): float
     {
         if ($this->requiresSize()) {
             if ($size !== null && $size !== '') {
                 $stock = $this->sizeStockFor($size);
 
-                return $stock ? $stock->availableQuantity() : 0;
+                return $stock ? $stock->availableQuantity() : 0.0;
             }
 
-            return (int) $this->sizeStocks->sum(fn (InventorySizeStock $s) => $s->availableQuantity());
+            return Qty::of($this->sizeStocks->sum(fn (InventorySizeStock $s) => $s->availableQuantity()));
         }
 
-        return max(0, $this->quantity - $this->reserved_quantity);
+        return max(0, Qty::sub($this->quantity, $this->reserved_quantity));
     }
 
     public function sizeStockFor(string $size): ?InventorySizeStock
@@ -205,7 +206,7 @@ class Inventory extends Model
     }
 
     /**
-     * @return array<string, int> size => available qty
+     * @return array<string, float> size => available qty
      */
     public function availableBySize(): array
     {
@@ -227,8 +228,8 @@ class Inventory extends Model
         }
 
         $stocks = $this->sizeStocks()->get();
-        $this->quantity = (int) $stocks->sum('quantity');
-        $this->reserved_quantity = (int) $stocks->sum('reserved_quantity');
+        $this->quantity = Qty::of($stocks->sum('quantity'));
+        $this->reserved_quantity = Qty::of($stocks->sum('reserved_quantity'));
         $this->save();
     }
 

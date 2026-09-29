@@ -4,6 +4,7 @@ namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Schema;
+use App\Support\Qty;
 use Spatie\Permission\Models\Role;
 
 abstract class TestCase extends BaseTestCase
@@ -19,5 +20,10 @@ abstract class TestCase extends BaseTestCase
                 Role::findOrCreate($role);
             }
         }
+    }
+
+    protected function assertQty(int|float $expected, mixed $actual): void
+    {
+        $this->assertSame(Qty::of($expected), Qty::of($actual));
     }
 }

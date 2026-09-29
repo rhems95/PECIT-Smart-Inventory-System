@@ -408,7 +408,7 @@ npm run build
 npm run dev
 ```
 
-`psis:import-supplies-xlsx` loads `docs/.supply data/SUPPLIES DATA.xlsx` into inventory and released faculty issuance history. It keeps users, students, Uniform Shop items, and student purchases. Re-running it wipes imported faculty history first.
+`psis:import-supplies-xlsx` loads `docs/.supply data/SUPPLIES DATA updated.xlsx` (or `SUPPLIES DATA.xlsx` if the updated file is missing) into inventory and released faculty issuance history. Same names on later year sheets stay one item; each line is history. Fractional QTY (0.5 ream, 3.74 L) is kept. It keeps users, students, Uniform Shop items, and student purchases. Re-running it wipes imported faculty history first.
 
 ---
 
@@ -511,9 +511,9 @@ erDiagram
         string unit
         bigint unit_of_measurement_id FK
         decimal unit_price
-        int quantity
-        int reserved_quantity
-        int minimum_stock
+        decimal quantity
+        decimal reserved_quantity
+        decimal minimum_stock
         string location
         enum status
         boolean student_shop
@@ -531,8 +531,8 @@ erDiagram
         bigint id PK
         bigint inventory_id FK
         string size
-        int quantity
-        int reserved_quantity
+        decimal quantity
+        decimal reserved_quantity
     }
 
     REQUESTS {
@@ -553,9 +553,9 @@ erDiagram
         bigint id PK
         bigint request_id FK
         bigint inventory_id FK
-        int quantity_requested
-        int quantity_approved
-        int quantity_released
+        decimal quantity_requested
+        decimal quantity_approved
+        decimal quantity_released
         decimal unit_price
         decimal subtotal
     }
@@ -575,7 +575,7 @@ erDiagram
         bigint purchase_request_id FK
         bigint inventory_id FK
         string size
-        int quantity
+        decimal quantity
         decimal unit_price
         decimal subtotal
     }
@@ -598,9 +598,9 @@ erDiagram
         bigint inventory_id FK
         string type
         string source_type
-        int quantity_in
-        int quantity_out
-        int balance_after
+        decimal quantity_in
+        decimal quantity_out
+        decimal balance_after
         decimal unit_cost
         bigint supplier_id FK
         string reference_number
@@ -613,8 +613,8 @@ erDiagram
         bigint id PK
         bigint inventory_id FK
         enum action
-        int quantity
-        int balance_after
+        decimal quantity
+        decimal balance_after
         string delivery_recipient
         bigint performed_by FK
     }

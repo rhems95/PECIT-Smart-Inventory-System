@@ -44,7 +44,7 @@ class FacultyRequestController extends Controller
             'purpose' => ['required', 'string', 'max:1000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.inventory_id' => ['required', 'exists:inventory,id'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0.0001'],
         ]);
 
         try {

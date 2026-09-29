@@ -57,7 +57,7 @@ class DashboardController extends Controller
             'total_items' => $inventory->count(),
             'total_quantity' => $inventory->sum('quantity'),
             'available_stock' => $inventory->sum(fn (Inventory $i) => $i->availableQuantity()),
-            'reserved_stock' => (int) $inventory->sum('reserved_quantity'),
+            'reserved_stock' => $inventory->sum('reserved_quantity'),
             'low_stock' => $inventory->filter(fn (Inventory $i) => $i->isLowStock())->count(),
             'out_of_stock' => $inventory->filter(fn (Inventory $i) => $i->isOutOfStock())->count(),
             'pending_requests' => SupplyRequest::whereIn('status', ['pending', 'accounting_review', 'admin_review'])->count(),

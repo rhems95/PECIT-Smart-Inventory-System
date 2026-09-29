@@ -32,8 +32,8 @@ class CancelRestoresReservedStockTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame('cancelled', $request->fresh()->status);
-        $this->assertSame(10, $request->items->first()->inventory->fresh()->quantity);
-        $this->assertSame(0, $request->items->first()->inventory->fresh()->reserved_quantity);
+        $this->assertQty(10, $request->items->first()->inventory->fresh()->quantity);
+        $this->assertQty(0, $request->items->first()->inventory->fresh()->reserved_quantity);
     }
 
     public function test_cancelling_approved_request_restores_reserved_stock(): void
@@ -45,8 +45,8 @@ class CancelRestoresReservedStockTest extends TestCase
         app(SupplyRequestService::class)->approve($request, $admin);
 
         $item = $request->items->first()->inventory->fresh();
-        $this->assertSame(10, $item->quantity);
-        $this->assertSame(3, $item->reserved_quantity);
+        $this->assertQty(10, $item->quantity);
+        $this->assertQty(3, $item->reserved_quantity);
 
         $this->actingAs($faculty)
             ->post(route('requests.cancel', $request))
@@ -54,9 +54,9 @@ class CancelRestoresReservedStockTest extends TestCase
 
         $item->refresh();
         $this->assertSame('cancelled', $request->fresh()->status);
-        $this->assertSame(10, $item->quantity);
-        $this->assertSame(0, $item->reserved_quantity);
-        $this->assertSame(10, $item->availableQuantity());
+        $this->assertQty(10, $item->quantity);
+        $this->assertQty(0, $item->reserved_quantity);
+        $this->assertQty(10, $item->availableQuantity());
     }
 
     public function test_cancelling_verified_purchase_restores_reserved_size_stock(): void
@@ -78,8 +78,8 @@ class CancelRestoresReservedStockTest extends TestCase
         app(PurchaseRequestService::class)->verifyPayment($purchase, $accounting);
 
         $uniform->refresh()->load('sizeStocks');
-        $this->assertSame(2, $uniform->sizeStockFor('M')?->reserved_quantity);
-        $this->assertSame(3, $uniform->availableQuantity('M'));
+        $this->assertQty(2, $uniform->sizeStockFor('M')?->reserved_quantity);
+        $this->assertQty(3, $uniform->availableQuantity('M'));
 
         $this->actingAs($student)
             ->from(route('purchases.show', $purchase))
@@ -88,9 +88,9 @@ class CancelRestoresReservedStockTest extends TestCase
 
         $uniform->refresh()->load('sizeStocks');
         $this->assertSame('cancelled', $purchase->fresh()->status);
-        $this->assertSame(5, $uniform->sizeStockFor('M')?->quantity);
-        $this->assertSame(0, $uniform->sizeStockFor('M')?->reserved_quantity);
-        $this->assertSame(5, $uniform->availableQuantity('M'));
+        $this->assertQty(5, $uniform->sizeStockFor('M')?->quantity);
+        $this->assertQty(0, $uniform->sizeStockFor('M')?->reserved_quantity);
+        $this->assertQty(5, $uniform->availableQuantity('M'));
     }
 
     public function test_cannot_cancel_released_request(): void

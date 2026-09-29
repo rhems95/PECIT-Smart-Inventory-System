@@ -9,9 +9,9 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('request_id')->constrained()->cascadeOnDelete();
             $table->foreignId('inventory_id')->constrained('inventory')->cascadeOnDelete();
-            $table->integer('quantity_requested');
-            $table->integer('quantity_approved')->nullable();
-            $table->integer('quantity_released')->default(0);
+            $table->decimal('quantity_requested', 12, 4);
+            $table->decimal('quantity_approved', 12, 4)->nullable();
+            $table->decimal('quantity_released', 12, 4)->default(0);
             $table->decimal('unit_price', 12, 2)->default(0);
             $table->decimal('subtotal', 12, 2)->default(0);
             $table->timestamps();

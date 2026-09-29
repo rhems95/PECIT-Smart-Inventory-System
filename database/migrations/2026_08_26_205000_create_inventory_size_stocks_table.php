@@ -13,8 +13,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('inventory_id')->constrained('inventory')->cascadeOnDelete();
             $table->string('size', 10);
-            $table->unsignedInteger('quantity')->default(0);
-            $table->unsignedInteger('reserved_quantity')->default(0);
+            $table->decimal('quantity', 12, 4)->default(0);
+            $table->decimal('reserved_quantity', 12, 4)->default(0);
             $table->timestamps();
 
             $table->unique(['inventory_id', 'size']);

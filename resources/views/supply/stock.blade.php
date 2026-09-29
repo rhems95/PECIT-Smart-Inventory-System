@@ -91,7 +91,7 @@
             <label class="psis-label">Delivery receipt number</label>
             <input name="delivery_receipt_number" class="psis-input" placeholder="DR number">
         </div>
-        <input type="number" name="quantity" min="1" class="psis-input" placeholder="Quantity to add" required>
+        <input type="number" name="quantity" min="0.0001" step="any" class="psis-input" placeholder="Quantity to add" required>
         <div x-show="source === 'purchase_order' || source === 'emergency_purchase' || source === 'manual_external' || source === 'other'">
             <label class="psis-label">Bought by</label>
             <select name="purchased_by" class="psis-input">
@@ -136,7 +136,7 @@
             </select>
             <p class="text-xs text-slate-500 mt-1" x-text="sizeHint() || 'Sets on-hand for that size.'"></p>
         </div>
-        <input type="number" name="new_quantity" min="0" class="psis-input" placeholder="New on-hand quantity" required>
+        <input type="number" name="new_quantity" min="0" step="any" class="psis-input" placeholder="New on-hand quantity" required>
         <input name="notes" class="psis-input" placeholder="Reason (required)" required>
         <button class="psis-btn-secondary">Adjust</button>
     </form>

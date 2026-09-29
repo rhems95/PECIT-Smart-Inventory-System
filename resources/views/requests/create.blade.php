@@ -33,7 +33,7 @@
                 </div>
                 <div>
                     <label class="psis-label">Quantity</label>
-                    <input type="number" min="1" class="psis-input" name="items[{{ $index }}][quantity]" value="{{ $oldLine['quantity'] ?? 1 }}" required>
+                    <input type="number" min="0.0001" step="any" class="psis-input" name="items[{{ $index }}][quantity]" value="{{ $oldLine['quantity'] ?? 1 }}" required>
                 </div>
             </div>
             @endforeach

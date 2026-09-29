@@ -10,6 +10,7 @@ use App\Models\InventorySizeStock;
 use App\Models\StockLog;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Support\Qty;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -21,7 +22,7 @@ class InventoryService
     ) {}
     public function stockIn(
         Inventory $inventory,
-        int $quantity,
+        float $quantity,
         User $performedBy,
         ?string $notes = null,
         ?string $referenceType = null,
@@ -29,6 +30,7 @@ class InventoryService
         ?string $size = null,
         array $extra = [],
     ): Transaction {
+        $quantity = Qty::of($quantity);
         if ($quantity <= 0) {
             throw new RuntimeException('Stock-in quantity must be greater than zero.');
         }
@@ -42,7 +44,7 @@ class InventoryService
             if ($size !== null) {
                 $stock = $this->lockOrCreateSizeStock($locked, $size);
                 $before = $stock->quantity;
-                $stock->quantity += $quantity;
+                $stock->quantity = Qty::add($stock->quantity, $quantity);
                 $stock->save();
                 $locked->syncAggregatesFromSizeStocks();
                 $locked->refresh();
@@ -51,7 +53,7 @@ class InventoryService
                 $qtyAfterForTxn = $stock->quantity;
             } else {
                 $before = $locked->quantity;
-                $locked->quantity += $quantity;
+                $locked->quantity = Qty::add($locked->quantity, $quantity);
                 $locked->save();
                 $locked->updateStatus();
                 $qtyAfterForTxn = $locked->quantity;
@@ -95,7 +97,7 @@ class InventoryService
 
     public function stockOut(
         Inventory $inventory,
-        int $quantity,
+        float $quantity,
         User $performedBy,
         ?string $notes = null,
         ?string $referenceType = null,
@@ -104,6 +106,7 @@ class InventoryService
         ?string $size = null,
         array $extra = [],
     ): Transaction {
+        $quantity = Qty::of($quantity);
         if ($quantity <= 0) {
             throw new RuntimeException('Stock-out quantity must be greater than zero.');
         }
@@ -133,7 +136,7 @@ class InventoryService
                     throw new RuntimeException("Insufficient available stock for size {$size}.");
                 }
                 $before = $stock->quantity;
-                $stock->quantity -= $quantity;
+                $stock->quantity = Qty::sub($stock->quantity, $quantity);
                 $stock->save();
                 $locked->syncAggregatesFromSizeStocks();
                 $locked->refresh();
@@ -145,7 +148,7 @@ class InventoryService
                     throw new RuntimeException('Insufficient available stock.');
                 }
                 $before = $locked->quantity;
-                $locked->quantity -= $quantity;
+                $locked->quantity = Qty::sub($locked->quantity, $quantity);
                 $locked->save();
                 $locked->updateStatus();
                 $qtyAfterForTxn = $locked->quantity;
@@ -190,7 +193,7 @@ class InventoryService
 
     public function recordDamage(
         Inventory $inventory,
-        int $quantity,
+        float $quantity,
         User $performedBy,
         string $reason,
         ?string $size = null,
@@ -214,7 +217,7 @@ class InventoryService
 
     public function recordBadOrder(
         Inventory $inventory,
-        int $quantity,
+        float $quantity,
         User $performedBy,
         string $reason,
         ?string $size = null,
@@ -238,7 +241,7 @@ class InventoryService
 
     public function returnToSupplier(
         Inventory $inventory,
-        int $quantity,
+        float $quantity,
         User $performedBy,
         string $reason,
         int $supplierId,
@@ -264,13 +267,14 @@ class InventoryService
 
     public function reserve(
         Inventory $inventory,
-        int $quantity,
+        float $quantity,
         User $performedBy,
         ?string $notes = null,
         ?string $referenceType = null,
         ?int $referenceId = null,
         ?string $size = null,
     ): Transaction {
+        $quantity = Qty::of($quantity);
         if ($quantity <= 0) {
             throw new RuntimeException('Reserve quantity must be greater than zero.');
         }
@@ -291,7 +295,7 @@ class InventoryService
                     throw new RuntimeException("Insufficient available stock to reserve for {$locked->item_name} size {$size}.");
                 }
                 $before = $stock->quantity;
-                $stock->reserved_quantity += $quantity;
+                $stock->reserved_quantity = Qty::add($stock->reserved_quantity, $quantity);
                 $stock->save();
                 $locked->syncAggregatesFromSizeStocks();
                 $locked->refresh();
@@ -302,7 +306,7 @@ class InventoryService
                     throw new RuntimeException("Insufficient available stock to reserve for {$locked->item_name}.");
                 }
                 $before = $locked->quantity;
-                $locked->reserved_quantity += $quantity;
+                $locked->reserved_quantity = Qty::add($locked->reserved_quantity, $quantity);
                 $locked->save();
                 $locked->updateStatus();
             }
@@ -327,7 +331,7 @@ class InventoryService
 
     public function release(
         Inventory $inventory,
-        int $quantity,
+        float $quantity,
         User $performedBy,
         ?string $notes = null,
         ?string $referenceType = null,
@@ -335,6 +339,7 @@ class InventoryService
         ?string $deliveryRecipient = null,
         ?string $size = null,
     ): Transaction {
+        $quantity = Qty::of($quantity);
         if ($quantity <= 0) {
             throw new RuntimeException('Release quantity must be greater than zero.');
         }
@@ -356,8 +361,8 @@ class InventoryService
                     throw new RuntimeException("Insufficient on-hand stock for {$locked->item_name} size {$size}.");
                 }
                 $before = $stock->quantity;
-                $stock->quantity -= $quantity;
-                $stock->reserved_quantity = max(0, $stock->reserved_quantity - $quantity);
+                $stock->quantity = Qty::sub($stock->quantity, $quantity);
+                $stock->reserved_quantity = max(0, Qty::sub($stock->reserved_quantity, $quantity));
                 $stock->save();
                 $locked->syncAggregatesFromSizeStocks();
                 $locked->refresh();
@@ -369,8 +374,8 @@ class InventoryService
                     throw new RuntimeException("Insufficient on-hand stock for {$locked->item_name}.");
                 }
                 $before = $locked->quantity;
-                $locked->quantity -= $quantity;
-                $locked->reserved_quantity = max(0, $locked->reserved_quantity - $quantity);
+                $locked->quantity = Qty::sub($locked->quantity, $quantity);
+                $locked->reserved_quantity = max(0, Qty::sub($locked->reserved_quantity, $quantity));
                 $locked->save();
                 $locked->updateStatus();
                 $qtyAfterForTxn = $locked->quantity;
@@ -408,13 +413,14 @@ class InventoryService
 
     public function restore(
         Inventory $inventory,
-        int $quantity,
+        float $quantity,
         User $performedBy,
         ?string $notes = null,
         ?string $referenceType = null,
         ?int $referenceId = null,
         ?string $size = null,
     ): Transaction {
+        $quantity = Qty::of($quantity);
         if ($quantity <= 0) {
             throw new RuntimeException('Restore quantity must be greater than zero.');
         }
@@ -435,7 +441,7 @@ class InventoryService
                     throw new RuntimeException("Insufficient reserved stock to restore for size {$size}.");
                 }
                 $before = $stock->quantity;
-                $stock->reserved_quantity -= $quantity;
+                $stock->reserved_quantity = Qty::sub($stock->reserved_quantity, $quantity);
                 $stock->save();
                 $locked->syncAggregatesFromSizeStocks();
                 $locked->refresh();
@@ -447,7 +453,7 @@ class InventoryService
                     throw new RuntimeException('Insufficient reserved stock to restore.');
                 }
                 $before = $locked->quantity;
-                $locked->reserved_quantity -= $quantity;
+                $locked->reserved_quantity = Qty::sub($locked->reserved_quantity, $quantity);
                 $locked->save();
                 $locked->updateStatus();
             }
@@ -472,11 +478,12 @@ class InventoryService
 
     public function adjust(
         Inventory $inventory,
-        int $newQuantity,
+        float $newQuantity,
         User $performedBy,
         ?string $notes = null,
         ?string $size = null,
     ): Transaction {
+        $newQuantity = Qty::of($newQuantity);
         if ($newQuantity < 0) {
             throw new RuntimeException('Adjusted quantity cannot be negative.');
         }
@@ -494,7 +501,7 @@ class InventoryService
                     );
                 }
                 $before = $stock->quantity;
-                $difference = abs($newQuantity - $before);
+                $difference = Qty::of(abs($newQuantity - $before));
                 $stock->quantity = $newQuantity;
                 $stock->save();
                 $locked->syncAggregatesFromSizeStocks();
@@ -504,7 +511,7 @@ class InventoryService
                 $qtyAfterForTxn = $stock->quantity;
             } else {
                 $before = $locked->quantity;
-                $difference = abs($newQuantity - $before);
+                $difference = Qty::of(abs($newQuantity - $before));
                 $locked->quantity = $newQuantity;
                 if ($locked->reserved_quantity > $locked->quantity) {
                     $locked->reserved_quantity = $locked->quantity;
@@ -564,15 +571,18 @@ class InventoryService
     public function logTransaction(
         Inventory $inventory,
         string $type,
-        int $quantity,
-        int $quantityBefore,
-        int $quantityAfter,
+        float $quantity,
+        float $quantityBefore,
+        float $quantityAfter,
         User $performedBy,
         ?string $notes = null,
         ?string $referenceType = null,
         ?int $referenceId = null,
         array $extra = [],
     ): Transaction {
+        $quantity = Qty::of($quantity);
+        $quantityBefore = Qty::of($quantityBefore);
+        $quantityAfter = Qty::of($quantityAfter);
         $type = (string) ($extra['type'] ?? $type);
         [$quantityIn, $quantityOut] = $this->splitInOut($type, $quantity, $quantityBefore, $quantityAfter);
         $unitCost = isset($extra['unit_cost']) && $extra['unit_cost'] !== '' && $extra['unit_cost'] !== null
@@ -614,17 +624,18 @@ class InventoryService
 
     public function recordOpeningBalance(
         Inventory $inventory,
-        int $quantity,
+        float $quantity,
         User $performedBy,
         ?string $size = null,
     ): ?Transaction {
+        $quantity = Qty::of($quantity);
         if ($quantity <= 0) {
             return null;
         }
 
         $after = $size
-            ? (int) ($inventory->sizeStockFor($size)?->quantity ?? $quantity)
-            : (int) $inventory->quantity;
+            ? Qty::of($inventory->sizeStockFor($size)?->quantity ?? $quantity)
+            : Qty::of($inventory->quantity);
 
         return $this->logTransaction(
             $inventory,
@@ -667,9 +678,9 @@ class InventoryService
     }
 
     /**
-     * @return array{0: int, 1: int}
+     * @return array{0: float, 1: float}
      */
-    protected function splitInOut(string $type, int $quantity, int $before, int $after): array
+    protected function splitInOut(string $type, float $quantity, float $before, float $after): array
     {
         $enum = InventoryTransactionType::tryFrom($type);
 
@@ -722,7 +733,7 @@ class InventoryService
         return $size;
     }
 
-    protected function reserveAcrossSizes(Inventory $inventory, int $quantity): void
+    protected function reserveAcrossSizes(Inventory $inventory, float $quantity): void
     {
         $remaining = $quantity;
         $stocks = InventorySizeStock::query()
@@ -736,10 +747,10 @@ class InventoryService
             if ($take <= 0) {
                 continue;
             }
-            $stock->reserved_quantity += $take;
+            $stock->reserved_quantity = Qty::add($stock->reserved_quantity, $take);
             $stock->save();
-            $remaining -= $take;
-            if ($remaining === 0) {
+            $remaining = Qty::sub($remaining, $take);
+            if ($remaining <= 0) {
                 break;
             }
         }
@@ -751,7 +762,7 @@ class InventoryService
         $inventory->syncAggregatesFromSizeStocks();
     }
 
-    protected function releaseAcrossSizes(Inventory $inventory, int $quantity): void
+    protected function releaseAcrossSizes(Inventory $inventory, float $quantity): void
     {
         $remaining = $quantity;
         $stocks = InventorySizeStock::query()
@@ -765,11 +776,11 @@ class InventoryService
             if ($take <= 0) {
                 continue;
             }
-            $stock->quantity -= $take;
-            $stock->reserved_quantity = max(0, $stock->reserved_quantity - $take);
+            $stock->quantity = Qty::sub($stock->quantity, $take);
+            $stock->reserved_quantity = max(0, Qty::sub($stock->reserved_quantity, $take));
             $stock->save();
-            $remaining -= $take;
-            if ($remaining === 0) {
+            $remaining = Qty::sub($remaining, $take);
+            if ($remaining <= 0) {
                 break;
             }
         }
@@ -781,7 +792,7 @@ class InventoryService
         $inventory->syncAggregatesFromSizeStocks();
     }
 
-    protected function restoreAcrossSizes(Inventory $inventory, int $quantity): void
+    protected function restoreAcrossSizes(Inventory $inventory, float $quantity): void
     {
         $remaining = $quantity;
         $stocks = InventorySizeStock::query()
@@ -795,10 +806,10 @@ class InventoryService
             if ($take <= 0) {
                 continue;
             }
-            $stock->reserved_quantity -= $take;
+            $stock->reserved_quantity = Qty::sub($stock->reserved_quantity, $take);
             $stock->save();
-            $remaining -= $take;
-            if ($remaining === 0) {
+            $remaining = Qty::sub($remaining, $take);
+            if ($remaining <= 0) {
                 break;
             }
         }
@@ -810,7 +821,7 @@ class InventoryService
         $inventory->syncAggregatesFromSizeStocks();
     }
 
-    protected function deductAvailableAcrossSizes(Inventory $inventory, int $quantity): void
+    protected function deductAvailableAcrossSizes(Inventory $inventory, float $quantity): void
     {
         $remaining = $quantity;
         $stocks = InventorySizeStock::query()
@@ -824,10 +835,10 @@ class InventoryService
             if ($take <= 0) {
                 continue;
             }
-            $stock->quantity -= $take;
+            $stock->quantity = Qty::sub($stock->quantity, $take);
             $stock->save();
-            $remaining -= $take;
-            if ($remaining === 0) {
+            $remaining = Qty::sub($remaining, $take);
+            if ($remaining <= 0) {
                 break;
             }
         }

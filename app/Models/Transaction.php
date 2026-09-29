@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\InventoryTransactionType;
 use App\Enums\ReceivingInspectionStatus;
 use App\Enums\StockSourceType;
+use App\Support\Qty;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,12 +47,12 @@ class Transaction extends Model
         return [
             'type' => InventoryTransactionType::class,
             'source_type' => StockSourceType::class,
-            'quantity' => 'integer',
-            'quantity_in' => 'integer',
-            'quantity_out' => 'integer',
-            'quantity_before' => 'integer',
-            'quantity_after' => 'integer',
-            'balance_after' => 'integer',
+            'quantity' => 'decimal:4',
+            'quantity_in' => 'decimal:4',
+            'quantity_out' => 'decimal:4',
+            'quantity_before' => 'decimal:4',
+            'quantity_after' => 'decimal:4',
+            'balance_after' => 'decimal:4',
             'unit_cost' => 'decimal:2',
             'total_cost' => 'decimal:2',
             'transaction_date' => 'datetime',
@@ -129,9 +130,9 @@ class Transaction extends Model
         return $type instanceof InventoryTransactionType ? $type->label() : (string) $type;
     }
 
-    public function runningBalance(): int
+    public function runningBalance(): float
     {
-        return (int) ($this->balance_after ?? $this->quantity_after);
+        return Qty::of($this->balance_after ?? $this->quantity_after);
     }
 
     public function buyerName(): string

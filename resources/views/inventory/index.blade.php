@@ -48,9 +48,9 @@
                     <td class="px-4 py-3 font-mono text-xs">{{ $item->item_code }}</td>
                     <td class="px-4 py-3 font-medium">{{ $item->item_name }}</td>
                     <td class="px-4 py-3">{{ $item->category?->name }}</td>
-                    <td class="px-4 py-3 font-semibold">{{ $item->quantity }}</td>
-                    <td class="px-4 py-3 text-slate-500">{{ $item->reserved_quantity }}</td>
-                    <td class="px-4 py-3">{{ $item->availableQuantity() }} {{ $item->unitLabel() }}</td>
+                    <td class="px-4 py-3 font-semibold">{{ \App\Support\Qty::format($item->quantity) }}</td>
+                    <td class="px-4 py-3 text-slate-500">{{ \App\Support\Qty::format($item->reserved_quantity) }}</td>
+                    <td class="px-4 py-3">{{ \App\Support\Qty::format($item->availableQuantity()) }} {{ $item->unitLabel() }}</td>
                     <td class="px-4 py-3">₱{{ number_format($item->unit_price, 2) }}</td>
                     <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full @if($item->status==='low_stock') bg-amber-100 text-amber-800 @elseif($item->status==='out_of_stock') bg-red-100 text-red-800 @else bg-green-100 text-green-800 @endif">{{ str_replace('_',' ', $item->status) }}</span></td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">

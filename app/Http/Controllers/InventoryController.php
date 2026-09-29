@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\InventoryService;
 use App\Services\AuditLogService;
 use App\Services\StockCardService;
+use App\Support\Qty;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -84,7 +85,7 @@ class InventoryController extends Controller
             if ($item->requiresSize()) {
                 $item->sizeStocks()->create([
                     'size' => $size,
-                    'quantity' => (int) ($data['quantity'] ?? 0),
+                    'quantity' => Qty::of($data['quantity'] ?? 0),
                     'reserved_quantity' => 0,
                 ]);
                 $item->syncAggregatesFromSizeStocks();
@@ -94,7 +95,7 @@ class InventoryController extends Controller
 
             $inventoryService->recordOpeningBalance(
                 $item->fresh(['sizeStocks']),
-                (int) ($data['quantity'] ?? 0),
+                Qty::of($data['quantity'] ?? 0),
                 $request->user(),
                 $item->requiresSize() ? $size : null,
             );
@@ -228,14 +229,14 @@ class InventoryController extends Controller
             'category_id' => ['required', 'exists:categories,id'],
             'unit_of_measurement_id' => ['required', 'exists:units_of_measurement,id'],
             'unit_price' => ['required', 'numeric', 'min:0'],
-            'minimum_stock' => ['required', 'integer', 'min:0'],
+            'minimum_stock' => ['required', 'numeric', 'min:0'],
             'location' => ['nullable', 'string', 'max:255'],
             'student_shop' => ['sometimes', 'boolean'],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
         ];
 
         if (! $inventory) {
-            $rules['quantity'] = ['required', 'integer', 'min:0'];
+            $rules['quantity'] = ['required', 'numeric', 'min:0'];
             $rules['size'] = [$needsSize ? 'required' : 'nullable', 'string', Rule::in($sizes)];
         } else {
             $rules['status'] = ['nullable', 'in:available,low_stock,out_of_stock,discontinued'];

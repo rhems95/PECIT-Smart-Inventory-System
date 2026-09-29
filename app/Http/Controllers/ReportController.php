@@ -11,6 +11,7 @@ use App\Models\Transaction;
 use App\Services\AiInsightService;
 use App\Services\FacultyBudgetService;
 use App\Services\SuppliesIssuanceService;
+use App\Support\Qty;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -390,7 +391,7 @@ class ReportController extends Controller
                 $rows->push([
                     optional($row['date'])->format('m/d/Y'),
                     $row['item'],
-                    $row['qty'],
+                    Qty::format($row['qty']),
                     $row['unit'],
                     $row['unit_price'],
                     $row['total_amount'],

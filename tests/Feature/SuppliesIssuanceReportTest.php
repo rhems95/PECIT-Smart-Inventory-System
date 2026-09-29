@@ -132,6 +132,51 @@ class SuppliesIssuanceReportTest extends TestCase
             ->assertDontSee($other->item_name);
     }
 
+    public function test_issuance_log_shows_fractional_qty(): void
+    {
+        [$paper] = $this->seedReleasedRows();
+        $faculty = User::query()->whereHas('roles', fn ($q) => $q->where('name', 'Faculty'))->first();
+        $gasoline = Inventory::create([
+            'item_code' => 'OFF-GAS-FRAC',
+            'item_name' => 'Issuance Gasoline Pump',
+            'category_id' => $paper->category_id,
+            'unit' => 'L',
+            'unit_price' => 50,
+            'quantity' => 20,
+            'reserved_quantity' => 0,
+            'minimum_stock' => 2,
+            'status' => 'available',
+        ]);
+        $request = SupplyRequest::create([
+            'request_number' => 'REQ-GAS-FRAC',
+            'user_id' => $faculty->id,
+            'department_id' => $faculty->department_id,
+            'type' => 'faculty',
+            'status' => 'released',
+            'purpose' => 'Pump',
+            'total_amount' => 285,
+            'released_at' => now(),
+        ]);
+        RequestItem::create([
+            'request_id' => $request->id,
+            'inventory_id' => $gasoline->id,
+            'quantity_requested' => 5.7,
+            'quantity_approved' => 5.7,
+            'quantity_released' => 5.7,
+            'unit_price' => 50,
+            'subtotal' => 285,
+        ]);
+
+        $supply = User::factory()->create();
+        $supply->assignRole('Supply Personnel');
+
+        $this->actingAs($supply)
+            ->get(route('reports.supplies-issuance', ['period' => 'all']))
+            ->assertOk()
+            ->assertSee('Issuance Gasoline Pump')
+            ->assertSee('5.7');
+    }
+
     /**
      * @return array{0: Inventory, 1: Inventory}
      */

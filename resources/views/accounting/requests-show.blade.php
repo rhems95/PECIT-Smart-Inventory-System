@@ -43,6 +43,7 @@
                                 name="items[{{ $index }}][quantity_approved]"
                                 value="{{ old("items.$index.quantity_approved", $line->quantity_approved ?: $line->quantity_requested) }}"
                                 min="0"
+                                step="any"
                                 class="psis-input w-28"
                                 required
                             >

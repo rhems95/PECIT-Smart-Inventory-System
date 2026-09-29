@@ -7,6 +7,7 @@ use App\Models\Inventory;
 use App\Models\RequestItem;
 use App\Models\SupplyRequest;
 use App\Models\User;
+use App\Support\Qty;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -31,7 +32,7 @@ class SupplyRequestService
 
             foreach ($items as $row) {
                 $inventory = Inventory::findOrFail($row['inventory_id']);
-                $qty = (int) $row['quantity'];
+                $qty = Qty::of($row['quantity']);
                 $subtotal = (float) $inventory->unit_price * $qty;
                 $total += $subtotal;
                 $prepared[] = [
@@ -94,7 +95,7 @@ class SupplyRequestService
                 $request->loadMissing('items.inventory');
 
                 foreach ($request->items as $item) {
-                    $qty = (int) ($item->quantity_approved ?: $item->quantity_requested);
+                    $qty = Qty::of($item->quantity_approved ?: $item->quantity_requested);
                     if ($qty <= 0) {
                         continue;
                     }
@@ -142,7 +143,7 @@ class SupplyRequestService
 
             foreach ($pricedItems as $row) {
                 $item = RequestItem::where('request_id', $request->id)->findOrFail($row['id']);
-                $qtyApproved = (int) ($row['quantity_approved'] ?? $item->quantity_requested);
+                $qtyApproved = Qty::of($row['quantity_approved'] ?? $item->quantity_requested);
                 $unitPrice = (float) ($row['unit_price'] ?? $item->unit_price);
                 $subtotal = $qtyApproved * $unitPrice;
 
@@ -195,7 +196,7 @@ class SupplyRequestService
             $request->loadMissing(['items.inventory', 'user']);
 
             foreach ($request->items as $item) {
-                $qty = (int) ($item->quantity_approved ?: $item->quantity_requested);
+                $qty = Qty::of($item->quantity_approved ?: $item->quantity_requested);
                 if ($qty <= 0) {
                     continue;
                 }
@@ -276,7 +277,7 @@ class SupplyRequestService
             $request->loadMissing(['items.inventory', 'user']);
 
             foreach ($request->items as $item) {
-                $qty = (int) ($item->quantity_approved ?: $item->quantity_requested);
+                $qty = Qty::of($item->quantity_approved ?: $item->quantity_requested);
                 if ($qty <= 0) {
                     continue;
                 }

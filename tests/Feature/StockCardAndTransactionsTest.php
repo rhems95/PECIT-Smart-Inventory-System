@@ -34,14 +34,14 @@ class StockCardAndTransactionsTest extends TestCase
             ->assertRedirect();
 
         $item->refresh();
-        $this->assertSame(15, $item->quantity);
+        $this->assertQty(15, $item->quantity);
 
         $txn = Transaction::where('inventory_id', $item->id)->latest('id')->first();
         $this->assertNotNull($txn);
         $this->assertSame(InventoryTransactionType::StockIn, $txn->type);
-        $this->assertSame(5, $txn->quantity_in);
-        $this->assertSame(0, $txn->quantity_out);
-        $this->assertSame(15, $txn->runningBalance());
+        $this->assertQty(5, $txn->quantity_in);
+        $this->assertQty(0, $txn->quantity_out);
+        $this->assertQty(15, $txn->runningBalance());
     }
 
     public function test_reserve_does_not_change_on_hand_and_is_hidden_from_stock_card(): void
@@ -52,8 +52,8 @@ class StockCardAndTransactionsTest extends TestCase
         app(InventoryService::class)->reserve($item, 3, $supply, 'Hold for request');
 
         $item->refresh();
-        $this->assertSame(10, $item->quantity);
-        $this->assertSame(3, $item->reserved_quantity);
+        $this->assertQty(10, $item->quantity);
+        $this->assertQty(3, $item->reserved_quantity);
 
         $this->assertDatabaseHas('transactions', [
             'inventory_id' => $item->id,
@@ -102,8 +102,8 @@ class StockCardAndTransactionsTest extends TestCase
             'inventory_id' => $item->id,
             'type' => 'stock_out',
         ]);
-        $this->assertSame(8, $item->fresh()->quantity);
-        $this->assertSame(0, $item->fresh()->reserved_quantity);
+        $this->assertQty(8, $item->fresh()->quantity);
+        $this->assertQty(0, $item->fresh()->reserved_quantity);
     }
 
     public function test_restore_is_not_a_stock_in(): void
@@ -119,7 +119,7 @@ class StockCardAndTransactionsTest extends TestCase
             'type' => 'restore',
         ]);
         $this->assertSame(0, (int) Transaction::where('inventory_id', $item->id)->where('type', 'restore')->value('quantity_in'));
-        $this->assertSame(10, $item->fresh()->quantity);
+        $this->assertQty(10, $item->fresh()->quantity);
     }
 
     public function test_faculty_cannot_open_stock_card(): void
@@ -153,7 +153,7 @@ class StockCardAndTransactionsTest extends TestCase
             ])
             ->assertSessionHasErrors('notes');
 
-        $this->assertSame(10, $item->fresh()->quantity);
+        $this->assertQty(10, $item->fresh()->quantity);
     }
 
     public function test_damage_deducts_available_stock(): void
@@ -169,7 +169,7 @@ class StockCardAndTransactionsTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame(8, $item->fresh()->quantity);
+        $this->assertQty(8, $item->fresh()->quantity);
         $this->assertDatabaseHas('transactions', [
             'inventory_id' => $item->id,
             'type' => 'damage',
@@ -206,13 +206,35 @@ class StockCardAndTransactionsTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame(8, $item->fresh()->quantity);
+        $this->assertQty(8, $item->fresh()->quantity);
         $this->assertDatabaseHas('transactions', [
             'inventory_id' => $item->id,
             'type' => 'return_to_supplier',
             'quantity_out' => 2,
             'supplier_id' => $supplier->id,
         ]);
+    }
+
+    public function test_stock_in_accepts_half_ream_quantity(): void
+    {
+        $item = $this->item(quantity: 1);
+        $supply = $this->userWithRole('Supply Personnel');
+
+        $this->actingAs($supply)
+            ->post(route('supply.stock.in'), [
+                'inventory_id' => $item->id,
+                'quantity' => 0.5,
+                'source_type' => 'manual_external',
+                'notes' => 'Half ream leftover',
+            ])
+            ->assertRedirect();
+
+        $item->refresh();
+        $this->assertQty(1.5, $item->quantity);
+
+        $txn = Transaction::where('inventory_id', $item->id)->latest('id')->first();
+        $this->assertQty(0.5, $txn?->quantity_in);
+        $this->assertQty(1.5, $txn?->runningBalance());
     }
 
     public function test_student_cannot_manage_suppliers(): void
@@ -245,7 +267,7 @@ class StockCardAndTransactionsTest extends TestCase
         return $user;
     }
 
-    protected function item(int $quantity = 5): Inventory
+    protected function item(int|float $quantity = 5): Inventory
     {
         $category = Category::create([
             'name' => 'Office Supplies',

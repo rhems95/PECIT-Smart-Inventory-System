@@ -16,6 +16,7 @@ use App\Services\AuditLogService;
 use App\Services\InventoryService;
 use App\Services\PurchaseRequestService;
 use App\Services\SupplyRequestService;
+use App\Support\Qty;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -46,7 +47,7 @@ class SupplyOperationsController extends Controller
 
         $data = $request->validate([
             'inventory_id' => ['required', 'exists:inventory,id'],
-            'quantity' => ['required', 'integer', 'min:1'],
+            'quantity' => ['required', 'numeric', 'min:0.0001'],
             'notes' => ['nullable', 'string', 'max:500'],
             'size' => ['nullable', 'string', Rule::in($sizes)],
             'source_type' => ['required', Rule::in($sourceValues)],
@@ -177,7 +178,7 @@ class SupplyOperationsController extends Controller
 
         $data = $request->validate([
             'inventory_id' => ['required', 'exists:inventory,id'],
-            'new_quantity' => ['required', 'integer', 'min:0'],
+            'new_quantity' => ['required', 'numeric', 'min:0'],
             'notes' => ['required', 'string', 'max:500'],
             'size' => ['nullable', 'string', Rule::in($sizes)],
         ]);
@@ -349,7 +350,7 @@ class SupplyOperationsController extends Controller
 
     public function inspectDepartmentItem(Request $request, RequestItem $item, AuditLogService $auditLog): RedirectResponse
     {
-        if ((int) $item->quantity_released <= 0) {
+        if (Qty::of($item->quantity_released) <= 0) {
             abort(404);
         }
 
@@ -508,7 +509,7 @@ class SupplyOperationsController extends Controller
 
         return $request->validate([
             'inventory_id' => ['required', 'exists:inventory,id'],
-            'quantity' => ['required', 'integer', 'min:1'],
+            'quantity' => ['required', 'numeric', 'min:0.0001'],
             'notes' => ['required', 'string', 'max:500'],
             'size' => ['nullable', 'string', Rule::in($sizes)],
             'supplier_id' => [$supplierRequired ? 'required' : 'nullable', 'exists:suppliers,id'],

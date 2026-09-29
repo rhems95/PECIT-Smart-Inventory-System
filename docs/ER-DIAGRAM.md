@@ -126,9 +126,9 @@ erDiagram
         string unit "legacy label"
         bigint unit_of_measurement_id FK "nullable"
         decimal unit_price "selling price"
-        int quantity "on hand"
-        int reserved_quantity
-        int minimum_stock
+        decimal quantity "on hand"
+        decimal reserved_quantity
+        decimal minimum_stock
         string location
         enum status
         boolean student_shop
@@ -138,8 +138,8 @@ erDiagram
         bigint id PK
         bigint inventory_id FK
         string size UK "unique per item"
-        int quantity "on hand for size"
-        int reserved_quantity
+        decimal quantity "on hand for size"
+        decimal reserved_quantity
     }
 
     INVENTORY_PRICE_ADJUSTMENTS {
@@ -173,9 +173,9 @@ erDiagram
         bigint id PK
         bigint request_id FK
         bigint inventory_id FK
-        int quantity_requested
-        int quantity_approved
-        int quantity_released
+        decimal quantity_requested
+        decimal quantity_approved
+        decimal quantity_released
         decimal unit_price
         decimal subtotal
         string inspection_status "pending correct incorrect"
@@ -198,7 +198,7 @@ erDiagram
         bigint purchase_request_id FK
         bigint inventory_id FK
         string size "nullable; required for clothing"
-        int quantity
+        decimal quantity
         decimal unit_price
         decimal subtotal
     }
@@ -221,12 +221,12 @@ erDiagram
         bigint inventory_id FK
         string type "varchar 40"
         string source_type "nullable"
-        int quantity
-        int quantity_in
-        int quantity_out
-        int quantity_before
-        int quantity_after
-        int balance_after
+        decimal quantity
+        decimal quantity_in
+        decimal quantity_out
+        decimal quantity_before
+        decimal quantity_after
+        decimal balance_after
         decimal unit_cost "optional delivery cost"
         decimal total_cost
         bigint supplier_id FK "nullable"
@@ -247,8 +247,8 @@ erDiagram
         bigint id PK
         bigint inventory_id FK
         enum action
-        int quantity
-        int balance_after
+        decimal quantity
+        decimal balance_after
         string delivery_recipient
         bigint performed_by FK
     }

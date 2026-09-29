@@ -58,13 +58,13 @@ return new class extends Migration
                 $table->string('source_type', 40)->nullable();
             }
             if (! Schema::hasColumn('transactions', 'quantity_in')) {
-                $table->unsignedInteger('quantity_in')->default(0);
+                $table->decimal('quantity_in', 12, 4)->default(0);
             }
             if (! Schema::hasColumn('transactions', 'quantity_out')) {
-                $table->unsignedInteger('quantity_out')->default(0);
+                $table->decimal('quantity_out', 12, 4)->default(0);
             }
             if (! Schema::hasColumn('transactions', 'balance_after')) {
-                $table->integer('balance_after')->nullable();
+                $table->decimal('balance_after', 12, 4)->nullable();
             }
             if (! Schema::hasColumn('transactions', 'unit_cost')) {
                 $table->decimal('unit_cost', 12, 2)->nullable();

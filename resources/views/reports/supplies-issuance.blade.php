@@ -132,8 +132,8 @@
                 @forelse ($report['departments'] as $row)
                     <tr class="border-t border-[var(--psis-border)]">
                         <td class="px-4 py-3">{{ $row['department'] }}</td>
-                        <td class="px-4 py-3">{{ number_format($row['faculty_qty']) }}</td>
-                        <td class="px-4 py-3">{{ number_format($row['student_qty']) }}</td>
+                        <td class="px-4 py-3">{{ \App\Support\Qty::format($row['faculty_qty']) }}</td>
+                        <td class="px-4 py-3">{{ \App\Support\Qty::format($row['student_qty']) }}</td>
                         <td class="px-4 py-3">₱{{ number_format($row['faculty_amount'], 2) }}</td>
                         <td class="px-4 py-3">₱{{ number_format($row['student_amount'], 2) }}</td>
                     </tr>
@@ -169,7 +169,7 @@
                     <tr class="border-t border-[var(--psis-border)]">
                         <td class="px-4 py-3 whitespace-nowrap">{{ $row['date']?->format('M d, Y') ?? '—' }}</td>
                         <td class="px-4 py-3">{{ $row['item'] }}</td>
-                        <td class="px-4 py-3">{{ number_format($row['qty']) }}</td>
+                        <td class="px-4 py-3">{{ \App\Support\Qty::format($row['qty']) }}</td>
                         <td class="px-4 py-3">{{ $row['unit'] }}</td>
                         <td class="px-4 py-3">₱{{ number_format($row['unit_price'], 2) }}</td>
                         <td class="px-4 py-3">₱{{ number_format($row['total_amount'], 2) }}</td>
@@ -220,7 +220,7 @@
                     <tr class="border-t border-[var(--psis-border)]">
                         <td class="px-4 py-3 whitespace-nowrap">{{ $row['date']?->format('M d, Y') ?? '—' }}</td>
                         <td class="px-4 py-3">{{ $row['item'] }}</td>
-                        <td class="px-4 py-3">{{ number_format($row['qty']) }}</td>
+                        <td class="px-4 py-3">{{ \App\Support\Qty::format($row['qty']) }}</td>
                         <td class="px-4 py-3">{{ $row['unit'] }}</td>
                         <td class="px-4 py-3">₱{{ number_format($row['unit_price'], 2) }}</td>
                         <td class="px-4 py-3">₱{{ number_format($row['total_amount'], 2) }}</td>

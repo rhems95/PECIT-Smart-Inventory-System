@@ -40,5 +40,5 @@
 @if ($showDr)
     <input name="delivery_receipt_number" class="psis-input" placeholder="Delivery receipt number (optional)">
 @endif
-<input type="number" name="quantity" min="1" class="psis-input" placeholder="Quantity" required>
+<input type="number" name="quantity" min="0.0001" step="any" class="psis-input" placeholder="Quantity" required>
 <input name="notes" class="psis-input" placeholder="Reason / remarks (required)" required>

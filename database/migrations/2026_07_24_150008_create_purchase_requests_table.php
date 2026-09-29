@@ -22,7 +22,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('purchase_request_id')->constrained()->cascadeOnDelete();
             $table->foreignId('inventory_id')->constrained('inventory')->cascadeOnDelete();
-            $table->integer('quantity');
+            $table->decimal('quantity', 12, 4);
             $table->decimal('unit_price', 12, 2);
             $table->decimal('subtotal', 12, 2);
             $table->timestamps();

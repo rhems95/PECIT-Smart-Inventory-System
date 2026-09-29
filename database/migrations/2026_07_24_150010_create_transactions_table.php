@@ -10,9 +10,9 @@ return new class extends Migration {
             $table->string('transaction_number')->unique();
             $table->foreignId('inventory_id')->constrained('inventory')->cascadeOnDelete();
             $table->enum('type', ['stock_in','stock_out','adjustment','reserve','release','restore']);
-            $table->integer('quantity');
-            $table->integer('quantity_before');
-            $table->integer('quantity_after');
+            $table->decimal('quantity', 12, 4);
+            $table->decimal('quantity_before', 12, 4);
+            $table->decimal('quantity_after', 12, 4);
             $table->string('reference_type')->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();
             $table->text('notes')->nullable();

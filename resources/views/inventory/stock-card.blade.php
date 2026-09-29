@@ -9,7 +9,7 @@
         <div>
             <p class="font-semibold">{{ $inventory->item_name }}</p>
             <p class="text-sm text-slate-500 font-mono">{{ $inventory->item_code }} · Unit: {{ $inventory->unitLabel() }}</p>
-            <p class="text-sm mt-1">On hand {{ $inventory->quantity }} · Reserved {{ $inventory->reserved_quantity }} · Available {{ $inventory->availableQuantity() }}</p>
+            <p class="text-sm mt-1">On hand {{ \App\Support\Qty::format($inventory->quantity) }} · Reserved {{ \App\Support\Qty::format($inventory->reserved_quantity) }} · Available {{ \App\Support\Qty::format($inventory->availableQuantity()) }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('inventory.show', $inventory) }}" class="psis-btn-outline">Item details</a>

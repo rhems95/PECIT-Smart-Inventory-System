@@ -40,7 +40,7 @@ class AccountingController extends Controller
         $data = $httpRequest->validate([
             'items' => ['required', 'array'],
             'items.*.id' => ['required', 'exists:request_items,id'],
-            'items.*.quantity_approved' => ['required', 'integer', 'min:0'],
+            'items.*.quantity_approved' => ['required', 'numeric', 'min:0'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
         ]);
 

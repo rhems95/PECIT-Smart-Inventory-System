@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 class ImportSuppliesSpreadsheetCommand extends Command
 {
     protected $signature = 'psis:import-supplies-xlsx
-        {--path= : Path to SUPPLIES DATA.xlsx}
+        {--path= : Path to the Supply workbook (default: SUPPLIES DATA updated.xlsx)}
         {--force : Run without confirmation}';
 
     protected $description = 'Replace office inventory and faculty request history from the Supply spreadsheet. Keeps users, students, and student purchases.';

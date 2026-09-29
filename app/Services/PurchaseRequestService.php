@@ -12,6 +12,7 @@ use App\Models\PurchaseRequestItem;
 use App\Models\StockLog;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Support\Qty;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -47,7 +48,7 @@ class PurchaseRequestService
                 }
 
                 $inventoryId = (int) $line['inventory_id'];
-                $qty = (int) $line['quantity'];
+                $qty = Qty::of($line['quantity']);
                 $size = $line['size'] ?? null;
 
                 if ($inventoryId <= 0 || $qty <= 0) {
@@ -132,7 +133,7 @@ class PurchaseRequestService
 
                 $this->inventoryService->reserve(
                     $inventory,
-                    (int) $item->quantity,
+                    Qty::of($item->quantity),
                     $verifier,
                     "Reserved for {$purchase->purchase_number}",
                     PurchaseRequest::class,
@@ -193,7 +194,7 @@ class PurchaseRequestService
                 $purchase->loadMissing('items.inventory');
 
                 foreach ($purchase->items as $item) {
-                    $qty = (int) $item->quantity;
+                    $qty = Qty::of($item->quantity);
                     if ($qty <= 0) {
                         continue;
                     }
@@ -246,7 +247,7 @@ class PurchaseRequestService
 
                 $this->inventoryService->release(
                     $inventory,
-                    (int) $item->quantity,
+                    Qty::of($item->quantity),
                     $releaser,
                     "Student purchase {$purchase->purchase_number}",
                     PurchaseRequest::class,
@@ -296,7 +297,7 @@ class PurchaseRequestService
 
             foreach ($purchases as $purchase) {
                 foreach ($purchase->items as $item) {
-                    $qty = (int) $item->quantity;
+                    $qty = Qty::of($item->quantity);
                     if ($qty <= 0 || ! $item->inventory_id) {
                         continue;
                     }
@@ -362,8 +363,9 @@ class PurchaseRequestService
         });
     }
 
-    protected function clearReservedStock(Inventory $inventory, int $quantity, ?string $size): void
+    protected function clearReservedStock(Inventory $inventory, float $quantity, ?string $size): void
     {
+        $quantity = Qty::of($quantity);
         if ($size) {
             $stock = InventorySizeStock::query()
                 ->where('inventory_id', $inventory->id)
@@ -371,15 +373,15 @@ class PurchaseRequestService
                 ->lockForUpdate()
                 ->first();
             if ($stock) {
-                $stock->reserved_quantity = max(0, (int) $stock->reserved_quantity - $quantity);
+                $stock->reserved_quantity = max(0, Qty::sub($stock->reserved_quantity, $quantity));
                 $stock->save();
                 $inventory->syncAggregatesFromSizeStocks();
             } else {
-                $inventory->reserved_quantity = max(0, (int) $inventory->reserved_quantity - $quantity);
+                $inventory->reserved_quantity = max(0, Qty::sub($inventory->reserved_quantity, $quantity));
                 $inventory->save();
             }
         } else {
-            $inventory->reserved_quantity = max(0, (int) $inventory->reserved_quantity - $quantity);
+            $inventory->reserved_quantity = max(0, Qty::sub($inventory->reserved_quantity, $quantity));
             $inventory->save();
         }
 
@@ -387,8 +389,9 @@ class PurchaseRequestService
         $inventory->updateStatus();
     }
 
-    protected function returnReleasedStock(Inventory $inventory, int $quantity, ?string $size): void
+    protected function returnReleasedStock(Inventory $inventory, float $quantity, ?string $size): void
     {
+        $quantity = Qty::of($quantity);
         if ($size) {
             $stock = InventorySizeStock::query()
                 ->where('inventory_id', $inventory->id)
@@ -396,15 +399,15 @@ class PurchaseRequestService
                 ->lockForUpdate()
                 ->first();
             if ($stock) {
-                $stock->quantity = (int) $stock->quantity + $quantity;
+                $stock->quantity = Qty::add($stock->quantity, $quantity);
                 $stock->save();
                 $inventory->syncAggregatesFromSizeStocks();
             } else {
-                $inventory->quantity = (int) $inventory->quantity + $quantity;
+                $inventory->quantity = Qty::add($inventory->quantity, $quantity);
                 $inventory->save();
             }
         } else {
-            $inventory->quantity = (int) $inventory->quantity + $quantity;
+            $inventory->quantity = Qty::add($inventory->quantity, $quantity);
             $inventory->save();
         }
 

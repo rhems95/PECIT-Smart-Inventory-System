@@ -13,9 +13,9 @@ return new class extends Migration {
             $table->foreignId('category_id')->constrained()->cascadeOnDelete();
             $table->string('unit');
             $table->decimal('unit_price', 12, 2)->default(0);
-            $table->integer('quantity')->default(0);
-            $table->integer('reserved_quantity')->default(0);
-            $table->integer('minimum_stock')->default(10);
+            $table->decimal('quantity', 12, 4)->default(0);
+            $table->decimal('reserved_quantity', 12, 4)->default(0);
+            $table->decimal('minimum_stock', 12, 4)->default(10);
             $table->string('location')->nullable();
             $table->enum('status', ['available','low_stock','out_of_stock','discontinued'])->default('available');
             $table->timestamps();

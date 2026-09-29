@@ -33,11 +33,11 @@
             </div>
             <div>
                 <dt class="text-slate-500 text-sm">On hand</dt>
-                <dd class="mt-0.5">{{ $inventory->quantity }} {{ $inventory->unitLabel() }} (reserved: {{ $inventory->reserved_quantity }})</dd>
+                <dd class="mt-0.5">{{ \App\Support\Qty::format($inventory->quantity) }} {{ $inventory->unitLabel() }} (reserved: {{ \App\Support\Qty::format($inventory->reserved_quantity) }})</dd>
             </div>
             <div>
                 <dt class="text-slate-500 text-sm">Available</dt>
-                <dd class="mt-0.5">{{ $inventory->availableQuantity() }}</dd>
+                <dd class="mt-0.5">{{ \App\Support\Qty::format($inventory->availableQuantity()) }}</dd>
             </div>
             <div>
                 <dt class="text-slate-500 text-sm">Unit price</dt>

@@ -84,11 +84,12 @@ class SuppliesSpreadsheetDateFillTest extends TestCase
     {
         $service = app(SuppliesSpreadsheetImportService::class);
 
-        $this->assertSame(1, $service->resolveIssuanceQuantity(46054, '1/2', 816, 408));
-        $this->assertSame(1, $service->resolveIssuanceQuantity(46054, '1/2', 150, 75));
-        $this->assertSame(12, $service->resolveIssuanceQuantity(12, '12', 40, 480));
-        $this->assertSame(20000, $service->resolveIssuanceQuantity(20000, '20000', 1, 20000));
-        $this->assertSame(10, $service->resolveIssuanceQuantity(10, '10', 0, null));
+        $this->assertSame(0.5, $service->resolveIssuanceQuantity(46054, '1/2', 816, 408));
+        $this->assertSame(0.5, $service->resolveIssuanceQuantity(46054, '1/2', 150, 75));
+        $this->assertSame(12.0, $service->resolveIssuanceQuantity(12, '12', 40, 480));
+        $this->assertSame(20000.0, $service->resolveIssuanceQuantity(20000, '20000', 1, 20000));
+        $this->assertSame(10.0, $service->resolveIssuanceQuantity(10, '10', 0, null));
+        $this->assertSame(3.74, $service->resolveIssuanceQuantity(3.74, '3.74', 68.5, 256.19));
     }
 
     public function test_parse_spreadsheet_does_not_keep_date_serial_as_qty(): void
@@ -102,6 +103,7 @@ class SuppliesSpreadsheetDateFillTest extends TestCase
             ['2/4/2025', 'Cellophane', 46054, 'rm', 816, 408, '', 'Accounting'],
             ['2/4/2025', 'Pen', 12, 'pc', 40, 480, '', 'CCS'],
             ['4/14/2025', 'concreate nail yellow', 46054, 'kl', 150, 75, '', 'General Services'],
+            ['6/1/2025', 'Gasoline', 3.74, 'L', 68.5, 256.19, '', 'Supply Office'],
         ], null, 'A1');
 
         (new Xlsx($spreadsheet))->save($path);
@@ -114,8 +116,32 @@ class SuppliesSpreadsheetDateFillTest extends TestCase
         }
 
         $byName = collect($rows)->keyBy('item_name');
-        $this->assertSame(1, $byName['Cellophane']['qty']);
-        $this->assertSame(12, $byName['Pen']['qty']);
-        $this->assertSame(1, $byName['concreate nail yellow']['qty']);
+        $this->assertSame(0.5, $byName['Cellophane']['qty']);
+        $this->assertSame(12.0, $byName['Pen']['qty']);
+        $this->assertSame(0.5, $byName['concreate nail yellow']['qty']);
+        $this->assertSame(3.74, $byName['Gasoline']['qty']);
+        $this->assertSame('L', $byName['Gasoline']['unit']);
+    }
+
+    public function test_canonical_unit_maps_liter_aliases_and_quart(): void
+    {
+        $service = app(SuppliesSpreadsheetImportService::class);
+
+        $this->assertSame('L', $service->canonicalUnit('litr.'));
+        $this->assertSame('L', $service->canonicalUnit('Ltrs'));
+        $this->assertSame('L', $service->canonicalUnit('lrts'));
+        $this->assertSame('qt', $service->canonicalUnit('qrt.'));
+        $this->assertSame('gal', $service->canonicalUnit('gal.'));
+        $this->assertSame('ream', $service->canonicalUnit('rm.'));
+    }
+
+    public function test_default_path_prefers_updated_workbook_name(): void
+    {
+        $path = str_replace('\\', '/', app(SuppliesSpreadsheetImportService::class)->defaultPath());
+
+        $this->assertTrue(
+            str_ends_with($path, 'SUPPLIES DATA updated.xlsx')
+            || str_ends_with($path, 'SUPPLIES DATA.xlsx')
+        );
     }
 }

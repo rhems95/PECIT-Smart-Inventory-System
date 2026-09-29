@@ -73,6 +73,8 @@ Prefer extending these services over putting stock math in controllers.
 available = quantity - reserved_quantity
 ```
 
+Quantities are **decimal (4 places)** so 0.5 ream and 3.74 L store as written. Uniform Shop cart stays whole pieces.
+
 Inventory UI should show **On Hand**, **Reserved**, and **Available**.
 
 ### Faculty department budget (do not break)
@@ -119,6 +121,7 @@ app/Http/Controllers/   # Thin controllers (incl. AiAssistantController)
 app/Services/           # Business logic (AiInsightService, OllamaChatService)
 app/Policies/           # Inventory, SupplyRequest, PurchaseRequest
 app/Support/PsisMenu.php# Sidebar items + isActive() matching
+app/Support/Qty.php      # Decimal quantity rounding (4 dp)
 app/Mail/               # Email for notifications
 config/psis.php         # PSIS_MAIL_*, PSIS_OLLAMA_*
 
@@ -322,7 +325,7 @@ php artisan psis:purge-student-purchases --force
 npm run build
 ```
 
-`psis:import-supplies-xlsx` replaces office inventory and faculty request history from `docs/.supply data/SUPPLIES DATA.xlsx`. It **keeps** users, students, Uniform Shop items, and student purchases. Do not re-run unless asked (it wipes imported faculty history first). QTY cells that Excel stored as dates (typed `1/2`) are read as half a unit from TOTAL AMOUNT ÷ UNIT PRICE. Date cells follow the visible **month/day** on the sheet, not Excel’s day/month serial.
+`psis:import-supplies-xlsx` replaces office inventory and faculty request history from `docs/.supply data/SUPPLIES DATA updated.xlsx` (falls back to `SUPPLIES DATA.xlsx`). It **keeps** users, students, Uniform Shop items, and student purchases. Do not re-run unless asked (it wipes imported faculty history first). Same item names across 2024/2025/2026 sheets stay **one SKU**; each row is issuance history. QTY cells that Excel stored as dates (typed `1/2`) are read as **0.5** from TOTAL AMOUNT ÷ UNIT PRICE. Pump liters such as 3.74 stay decimals, not rounded to whole units. Date cells follow the visible **month/day** on the sheet, not Excel’s day/month serial.
 
 `psis:purge-student-purchases` deletes student purchases and payment history. It **keeps** student accounts and the Uniform Shop catalog.
 

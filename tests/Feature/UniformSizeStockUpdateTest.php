@@ -40,10 +40,10 @@ class UniformSizeStockUpdateTest extends TestCase
         $item->refresh();
         $item->load('sizeStocks');
 
-        $this->assertSame(10, $item->sizeStockFor('M')?->quantity);
-        $this->assertSame(9, $item->availableQuantity('M'));
-        $this->assertSame(3, $item->sizeStockFor('L')?->quantity);
-        $this->assertSame(13, $item->quantity);
+        $this->assertQty(10, $item->sizeStockFor('M')?->quantity);
+        $this->assertQty(9, $item->availableQuantity('M'));
+        $this->assertQty(3, $item->sizeStockFor('L')?->quantity);
+        $this->assertQty(13, $item->quantity);
     }
 
     public function test_add_item_form_loads(): void
@@ -106,8 +106,8 @@ class UniformSizeStockUpdateTest extends TestCase
         $item = Inventory::where('item_code', 'UNI-NEW')->first();
         $this->assertNotNull($item);
         $this->assertTrue($item->student_shop);
-        $this->assertSame(8, $item->sizeStockFor('L')?->quantity);
-        $this->assertSame(8, $item->quantity);
+        $this->assertQty(8, $item->sizeStockFor('L')?->quantity);
+        $this->assertQty(8, $item->quantity);
     }
 
     public function test_shop_uniform_without_size_does_not_error(): void
@@ -148,7 +148,7 @@ class UniformSizeStockUpdateTest extends TestCase
             ->assertSessionHas('error');
 
         $item->refresh();
-        $this->assertSame(4, $item->sizeStockFor('M')?->quantity);
+        $this->assertQty(4, $item->sizeStockFor('M')?->quantity);
     }
 
     protected function supplyUser(): User
